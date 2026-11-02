@@ -1,0 +1,10 @@
+{
+  "description": "This web application streamlines the creation of product requirement documents, enabling forecasters and COE teams to visualize workflows through intuitive wireframes.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}

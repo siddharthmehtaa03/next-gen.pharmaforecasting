@@ -1,0 +1,1224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta name="gate-palette" content="exempt: vision prototype in the NextGen Forecasting prototype's own design tokens (Instrument Sans, #0B0F2E ink, scenario colours); not a CoE brand page">
+<title>Velsipity forecast · NextGen Forecasting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+/* NextGen forecaster — vision prototype · design tokens read off pharmaforecasting.figma.site (Instrument Sans, #F6F7FB canvas,
+   #0B0F2E ink, #0000C9 accent, scenario colours teal / green / red / amber / purple). Not a CoE brand page: palette exempt by declaration. */
+:root{--bg:#F6F7FB;--ink:#0B0F2E;--mut:#4A5070;--mut2:#8A8FA8;--line:#DFE2EC;--line2:#EEF0F6;--acc:#0000C9;--acc-soft:#E8EBFF;--green:#0A7D4F;--green-soft:#E4F4EC;--amber:#A35A00;--amber-soft:#FFF4E5;--gold:#B7791F;--red:#C4122F;--red-soft:#FBE7EA;--card:#FFF;--mono:"JetBrains Mono",ui-monospace,Consolas,monospace;--sans:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:13.5px;line-height:1.45}
+button,select,input{font:inherit;color:inherit}
+a{color:var(--acc)}
+.app{display:grid;grid-template-columns:76px minmax(0,1fr);min-height:100vh}
+/* sidebar */
+.side{background:#FFF;border-right:1px solid var(--line);display:flex;flex-direction:column;align-items:center;padding:14px 0;gap:6px;position:sticky;top:0;height:100vh}
+.side .logo{width:34px;height:34px;border-radius:50%;background:var(--acc);color:#FFF;display:grid;place-items:center;font-weight:700;margin-bottom:14px;font-size:15px}
+.side .ic{width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:var(--mut);border:0;background:transparent;cursor:pointer}
+.side .ic.on{background:var(--acc-soft);color:var(--acc)}
+.side .ic svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.side .me{margin-top:auto;width:34px;height:34px;border-radius:50%;background:#0B0F2E;color:#FFF;display:grid;place-items:center;font-size:11px;font-weight:700}
+/* top */
+.main{min-width:0}
+.crumb{display:flex;align-items:center;gap:10px;padding:14px 28px;font-size:13px;color:var(--mut);border-bottom:1px solid var(--line);background:#FFF}
+.crumb b{color:var(--acc);font-weight:600}
+.crumb .right{margin-left:auto;display:flex;gap:10px;align-items:center}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:7px;padding:3px 9px;font-size:10.5px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.pill.green{background:var(--green-soft);color:var(--green)}.pill.blue{background:var(--acc-soft);color:var(--acc)}.pill.grey{background:#EEF0F6;color:var(--mut)}.pill.amber{background:var(--amber-soft);color:var(--amber)}.pill.red{background:var(--red-soft);color:var(--red)}
+.hdr{padding:18px 28px 0;background:#FFF;border-bottom:1px solid var(--line)}
+.hdr .kick{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:700}
+.hdr .title{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:2px 0 4px}
+.hdr h1{font-size:24px;margin:0;font-weight:700;letter-spacing:-.01em}
+.hdr .sub{color:var(--mut);font-size:12.5px;margin:0 0 12px}
+.hdr .right{margin-left:auto;display:flex;gap:8px;align-items:center}
+.hdr .net{font-family:var(--mono);font-size:12.5px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:5px 10px}
+.hdr .net b{color:var(--acc)}
+#tabs{display:flex;gap:4px;overflow:auto}
+.tab{background:none;border:0;border-bottom:2px solid transparent;padding:10px 12px;font-size:13px;color:var(--mut);cursor:pointer;white-space:nowrap;font-weight:500}
+.tab.on{color:var(--acc);border-color:var(--acc);font-weight:600}
+.tab .count{display:inline-block;margin-left:6px;background:#EEF0F6;color:var(--mut);border-radius:6px;padding:0 6px;font-size:11px}
+#view{padding:18px 28px 40px;max-width:1560px}
+/* generic */
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px;margin:0 0 14px}
+.nl{color:var(--mut2);font-size:11.5px;font-weight:400}
+.gh{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 8px}.gh b{font-size:14px}
+.ch{display:flex;align-items:center;gap:12px;flex-wrap:wrap;justify-content:space-between;margin:0 0 6px}
+.ctl{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:8px 0 0}
+.ctl label,.scpick label,.scyear label{font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);font-weight:700}
+select,input[type=number],input[type=text],input:not([type]){border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:#FFF;font-size:13px;min-width:0}
+input[type=number]{width:110px}
+button.primary{background:var(--acc);color:#FFF;border:0;border-radius:9px;padding:8px 14px;font-weight:600;cursor:pointer}
+button.primary.sm{padding:6px 11px;font-size:12.5px}
+button.ghost{background:#FFF;border:1px solid var(--line);border-radius:9px;padding:7px 12px;color:var(--ink);cursor:pointer;font-weight:500}
+button.ghost.sm{padding:5px 10px;font-size:12px}
+button.ghost.danger{color:var(--red)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button.link{background:none;border:0;color:var(--acc);cursor:pointer;padding:0 4px;font-size:12px;text-decoration:underline}
+button.link.danger{color:var(--red)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:9px;overflow:hidden;background:#FFF}
+.seg button{border:0;background:none;padding:6px 11px;font-size:12.5px;color:var(--mut);cursor:pointer}
+.seg button.on{background:var(--acc);color:#FFF;font-weight:600}
+.chip{display:inline-block;background:#EEF0F6;color:var(--ink);border-radius:6px;padding:2px 7px;font-size:11px;margin:1px 2px 1px 0;white-space:nowrap}
+.chip.amber{background:var(--amber-soft);color:var(--amber)}.chip.gold{background:#FFF7E0;color:var(--gold)}
+.up{color:var(--green)}.dn{color:var(--red)}
+.num{text-align:right;font-family:var(--mono);font-size:12px;white-space:nowrap}
+.sechead{margin:0 0 14px}.sechead h2{margin:6px 0 4px;font-size:22px;letter-spacing:-.01em}.sechead p{margin:0;color:var(--mut);max-width:980px}
+h3.sub{font-size:15px;margin:18px 0 8px}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:1000px){.two{grid-template-columns:1fr}}
+ul.plain{list-style:none;margin:0;padding:0}ul.plain li{display:flex;gap:10px;align-items:baseline;padding:6px 0;border-bottom:1px solid var(--line2)}ul.plain li .num{margin-left:auto}
+/* scenario bar */
+.scbar{display:flex;align-items:center;gap:18px;flex-wrap:wrap;background:#FFF;border:1px solid var(--line);border-radius:14px;padding:10px 14px;margin:0 0 6px}
+.scpick,.scyear{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.scpick select{font-weight:600;min-width:200px}
+.chk{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;cursor:pointer;color:var(--mut)}
+.chk input{display:none}.chk i{width:12px;height:12px;border-radius:50%;border:2px solid var(--c);background:#FFF;display:inline-block}
+.chk input:checked+i{background:var(--c)}
+.chk.sm{font-size:11.5px;margin-right:6px}
+.scnote{margin:0 0 12px 4px;font-size:12px;color:var(--mut)}
+/* forecast layout */
+.fgrid{display:grid;grid-template-columns:300px minmax(0,1fr);gap:16px;align-items:start}
+@media(max-width:1100px){.fgrid{grid-template-columns:1fr}}
+.fmap{background:#FFF;border:1px solid var(--line);border-radius:14px;padding:12px}
+.fmaph{display:flex;justify-content:space-between;align-items:baseline;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:700;margin:0 0 8px}
+.stage{margin:0 0 10px;padding:0 0 8px;border-bottom:1px dashed var(--line)}.stage:last-child{border:0;margin:0;padding:0}
+.stname{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--acc);font-weight:700;margin:4px 0 6px}
+.stname .nl{text-transform:none;letter-spacing:0;font-weight:400;margin-left:4px}
+.node{display:grid;grid-template-columns:1fr auto;grid-template-areas:"k k" "n v" "d d";width:100%;text-align:left;background:#FFF;border:1px solid var(--line);border-radius:10px;padding:7px 10px;margin:0 0 6px;cursor:pointer;position:relative}
+.node:hover{border-color:var(--acc)}
+.node.input{background:#FFFCF6;border-color:#F3E3C6}
+.node.sel{background:var(--acc);border-color:var(--acc);color:#FFF}.node.sel .nk,.node.sel .nd{color:#C9D0FF}
+.node.out{border-width:2px;border-color:var(--ink)}
+.node .nk{grid-area:k;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut2);font-weight:700}
+.node .nn{grid-area:n;font-weight:600;font-size:12.5px}
+.node .nv{grid-area:v;font-family:var(--mono);font-weight:700;font-size:12.5px;align-self:center}
+.node .nd{grid-area:d;font-size:10.5px;color:var(--mut2)}
+.chartcard{padding:12px 14px 10px}
+.metricsel{font-weight:600;margin-left:6px}
+.unit{display:block;font-size:11.5px;color:var(--mut2);margin:4px 0 0}
+.chart svg{width:100%;height:auto;display:block}
+.chart .grid{stroke:var(--line2)}.chart .ytick{font:10.5px var(--mono);fill:var(--mut2);text-anchor:end}.chart .xtick{font:10.5px var(--sans);fill:var(--mut2);text-anchor:middle}
+.chart .ln{fill:none;stroke-width:2}.chart .ln.dash{stroke-dasharray:5 4;stroke-width:1.6}.chart .ln.dot{stroke-dasharray:2 3}
+.chart .aend{stroke:var(--mut2);stroke-dasharray:2 3}.chart .aendt{font:10px var(--sans);fill:var(--mut2)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin:4px 0 0;font-size:11.5px;color:var(--mut)}
+.legend .lg i{display:inline-block;width:14px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+/* compact funnel (v1.1) */
+.fgrid{grid-template-columns:232px minmax(0,1fr)}
+.fmap{padding:10px}
+.fmkey{margin:0 0 8px;font-size:10px;color:var(--mut2)}
+.fmkey i,.node i{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:4px;vertical-align:middle}
+.fi{background:var(--amber)}.fo{background:#FF9F1C;border:1px solid var(--amber)}.fe{background:var(--gold)}
+.stage{margin:0 0 6px;padding:0 0 5px}
+.stname{font-size:9.5px;margin:2px 0 4px}.stname .nl{display:none}
+.node{grid-template-columns:1fr auto;grid-template-areas:"n v" "d d";padding:4px 8px;margin:0 0 3px;border-radius:8px}
+.node .nn{font-size:11.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.node .nv{font-size:11px}
+.node .nd{font-size:9.5px;line-height:1.1}
+.node.sel .nd{color:#C9D0FF}
+.rcol>.card{margin-bottom:12px}
+.seg.sm button{padding:3px 9px;font-size:11.5px}
+.gridcard .gh .seg{margin-left:auto}
+table.grid .rowh{min-width:170px;max-width:220px}
+table.grid th,table.grid td{padding:4px 7px}
+/* funnels on the scenario summary */
+.funnel{display:flex;flex-direction:column;gap:2px;margin:6px 0 4px}
+.band{height:24px;display:flex;align-items:center;justify-content:center;gap:6px;color:#FFF;font-size:11px;font-weight:600;background:var(--c);white-space:nowrap}
+.band .bv{font-family:var(--mono);font-weight:700}.band .bd{font-size:9.5px;opacity:.9;font-weight:400}
+.strip{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:6px 0 0}
+.strip div{background:var(--bg);border-radius:8px;padding:5px 8px;font-size:10.5px;color:var(--mut)}
+.strip b{display:block;font-family:var(--mono);font-size:12px;color:var(--ink)}.strip em{font-style:normal;font-size:10px}
+.minis .mini{padding:10px 12px}
+table.grid.cmp th,table.grid.cmp td{font-size:11px;padding:4px 7px}
+/* v1.2 */
+.node.input{background:#FFF;border-color:var(--line)}
+/* v1.4: the selected box is a light tint, never a solid fill (the v1.2 white rule had been overriding the fill and left white text on white) */
+.node.sel,.node.input.sel{background:var(--acc-soft);border-color:var(--acc);color:var(--ink);box-shadow:inset 3px 0 0 var(--acc)}
+.node.sel .nn{color:var(--acc);font-weight:700}.node.sel .nd{color:var(--mut)}
+.chg{margin:10px 0 0;padding:8px 0 0;border-top:1px solid var(--line2)}
+.chgh{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);font-weight:700;margin:0 0 4px}
+.chg ul{margin:0;padding-left:14px;font-size:11px;line-height:1.4}.chg li{margin:0 0 4px}.chg p{margin:0;font-size:11px}
+.sent{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:14px;padding:12px 16px}
+.sent select,.sent input{font-weight:600;padding:5px 8px}.sent input{width:70px}
+.sens2{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(240px,1fr);gap:16px;align-items:center}
+@media(max-width:900px){.sens2{grid-template-columns:1fr}}
+.sres{display:grid;gap:8px}
+.sr{background:var(--bg);border-radius:10px;padding:8px 12px;display:grid;grid-template-columns:1fr auto;grid-template-areas:"l l" "b e" "k k";gap:0 10px}
+.sr .nl{grid-area:l}.sr b{grid-area:b;font-family:var(--mono);font-size:20px}.sr em{grid-area:e;font-style:normal;font-size:12px;align-self:center;font-weight:600}
+.sr.up em{color:var(--green)}.sr.dn em{color:var(--red)}.sr .link{grid-area:k;justify-self:start;padding:0;font-size:11px}
+select.inl{display:inline;font-weight:700;padding:2px 6px;margin-left:4px}
+.inss{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:12px}
+.ins p{margin:4px 0 0;font-size:12.5px;color:var(--mut)}
+table.grid th.part{color:var(--mut)}
+/* v1.3 */
+.legend .tog{background:none;border:0;cursor:pointer;padding:0;font:inherit;font-size:11.5px;color:var(--mut);display:inline-flex;align-items:center;gap:5px}
+.legend .tog i{width:9px;height:9px;border-radius:50%;background:var(--c);margin:0}
+.legend .tog b{font-family:var(--mono);color:var(--ink)}
+.legend .tog.off{opacity:.38}
+/* v1.4 */
+.kg{display:flex;align-items:flex-start;gap:10px;margin:8px 0 0}
+.kg .gv{font-family:var(--mono);font-size:17px;font-weight:700;line-height:1.1;white-space:nowrap}
+.kg .gl{font-size:10.5px;color:var(--mut2);line-height:1.35}
+table.grid th.yh.fold{background:#EEF0F6;color:var(--mut);cursor:pointer}table.grid th.yh[data-year]{cursor:pointer;user-select:none}table.grid th.yh[data-year]:hover{color:var(--acc)}
+table.grid td.fold{background:#F7F8FC;font-weight:600;border-left:1px solid var(--line);border-right:1px solid var(--line)}table.grid td.fold.act{background:#ECEEF5}
+table.rank th.num{text-align:right}
+table.cmp2 col.basecol{background:var(--bg)}
+.mov{font-size:10.5px;color:var(--mut2);background:#EEF0F6;border-radius:6px;padding:2px 7px;white-space:nowrap}
+.ach{display:inline-block;border-radius:6px;padding:2px 8px;font-size:10.5px;font-weight:700;letter-spacing:.03em;white-space:nowrap}
+.ach.ok{background:var(--green-soft);color:var(--green)}.ach.mid{background:var(--amber-soft);color:var(--amber)}.ach.no{background:var(--red-soft);color:var(--red)}
+.gsline{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:4px 0 10px;font-size:13px}
+.gsline b{font-family:var(--mono);font-size:22px}.gsline b.tgt{color:var(--acc)}.gsline .arr{color:var(--mut2)}.fylg{align-items:center;margin-top:6px}.fylg>.nl{margin-left:auto}
+.gridcard .adj{padding:0 16px 10px;margin:0 0 10px;border-bottom:1px solid var(--line)}
+.gridcard .adj .adjh{font-size:13.5px}.gridcard .adj .adjrow{margin:8px 0 4px}.gridcard .adj .ovlist{margin-top:4px}
+.evgrid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(280px,1fr);gap:12px;align-items:start}
+@media(max-width:1000px){.evgrid{grid-template-columns:1fr}}
+.evgrid .ctl select{padding:4px 7px;font-size:12px}
+.evtot{display:flex;justify-content:space-between;align-items:baseline;background:var(--bg);border-radius:10px;padding:8px 12px;margin:0 0 6px}
+.evtot b{font-family:var(--mono);font-size:20px}
+.evlist li{font-size:12.5px;padding:7px 0}.evlist .evn{display:flex;flex-direction:column}.evlist .evn .nl{font-size:10.5px}
+.evlist .num{margin-left:auto;font-weight:600}
+table.cmp2{width:100%;border-collapse:collapse;font-size:12.5px}
+table.cmp2 th{text-align:right;font-size:11px;color:var(--mut);font-weight:700;padding:6px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.cmp2 th i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle}
+table.cmp2 th small{display:block;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut2);font-weight:700}
+table.cmp2 td{padding:6px 10px;border-bottom:1px solid var(--line2);vertical-align:top}
+table.cmp2 td.num{font-family:var(--mono);font-size:12px}
+table.cmp2 td.num small{display:block;font-family:var(--sans);font-size:10.5px;font-weight:600;margin-top:1px}
+table.cmp2 td.mname{text-align:left;font-weight:600}table.cmp2 td.mname small{display:block;font-weight:400}
+table.cmp2 tr.grp td{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--acc);font-weight:700;padding:12px 10px 3px;border-bottom:0}
+.sline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px}
+.sline select{font-weight:600}
+.chrow{display:flex;align-items:center;gap:7px;flex-wrap:wrap;background:var(--bg);border-radius:10px;padding:7px 10px;margin:8px 0 0;font-size:13px}
+.chrow select,.chrow input{padding:4px 7px;font-weight:600;font-size:12.5px}.chrow input{width:64px}
+.chrow .ba{margin-left:auto;font-size:12px;display:inline-flex;gap:6px;align-items:baseline;white-space:nowrap}.chrow .ba b{font-family:var(--mono)}.chrow .arr{color:var(--mut2)}
+.chrow .link{font-size:11px}
+.sent2{padding:12px 16px}
+/* ranked tables */
+table.rank{width:100%;border-collapse:collapse;font-size:12px}
+table.rank th{font-size:10.5px;color:var(--mut);text-align:left;padding:4px 8px;border-bottom:1px solid var(--line)}
+table.rank td{padding:5px 8px;border-bottom:1px solid var(--line2);vertical-align:middle}
+table.rank td.num{text-align:right}
+/* adjust */
+.adj .adjh{display:flex;gap:8px;align-items:center;margin:0 0 4px;font-size:14px}
+.adjrow{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin:10px 0 6px}
+.adjrow label{display:flex;flex-direction:column;gap:4px;font-size:10.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--mut);font-weight:700}
+.adjrow label select,.adjrow label input{text-transform:none;letter-spacing:0;font-weight:400}
+.ovlist{margin:8px 0 0;padding-left:18px;font-size:12.5px}.ovlist li{margin:0 0 4px}
+/* grid */
+.gridcard{padding:12px 0 6px}.gridcard .gh{padding:0 16px}
+.gridwrap{overflow:auto;max-height:70vh;border-top:1px solid var(--line)}
+table.grid{border-collapse:separate;border-spacing:0;font-size:12px;min-width:100%}
+table.grid th,table.grid td{padding:5px 8px;border-bottom:1px solid var(--line2);white-space:nowrap;text-align:right;font-variant-numeric:tabular-nums}
+table.grid th{position:sticky;top:0;background:#FFF;font-size:10.5px;color:var(--mut);font-weight:700;z-index:2;border-bottom:1px solid var(--line)}
+table.grid thead tr:nth-child(2) th{top:29px}
+table.grid th.yh{text-align:center;letter-spacing:.06em;background:var(--bg)}table.grid th.yh.cur{color:var(--acc)}
+table.grid th.act{color:var(--mut2)}
+table.grid .rowh{position:sticky;left:0;background:#FFF;text-align:left;z-index:3;min-width:240px;max-width:300px;white-space:normal;border-right:1px solid var(--line)}
+table.grid th.rowh{z-index:4}
+table.grid .rowh .nl{display:block;font-size:10.5px}
+.rowbtn{background:none;border:0;text-align:left;padding:0;cursor:pointer;color:inherit;font:inherit}
+.rowbtn .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amber);margin-right:4px}
+table.grid tr.strow td{text-align:left;background:var(--bg);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--acc);font-weight:700;position:sticky;left:0}
+table.grid tr.strow td .nl{text-transform:none;letter-spacing:0;font-weight:400}
+table.grid td.cell{font-family:var(--mono);font-size:11.5px}
+table.grid td.act{background:#F1F3F8;color:var(--mut)}
+table.grid td.in{color:var(--amber);cursor:text}
+table.grid td.in:focus{outline:2px solid var(--amber);background:#FFF7E8}
+table.grid td.ov{background:var(--amber-soft);font-weight:700}
+table.grid td.ev{box-shadow:inset 0 -2px 0 var(--gold)}
+table.grid td.out{font-weight:700}
+table.grid tr.hl td{background:#F3F5FF}table.grid tr.hl td.act{background:#E9ECF7}
+table.grid td.fyh,table.grid th.fyh{position:sticky;right:0;background:#FFF;border-left:1px solid var(--line);font-weight:700;font-family:var(--mono);font-size:11.5px}
+table.grid tr.input .rowh b{color:var(--amber)}
+table.grid.cmp th,table.grid.cmp td{white-space:normal}
+table.grid.evt th,table.grid.evt td{text-align:left;white-space:normal;vertical-align:top}
+/* KPI cards */
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin:0 0 14px}
+.kpis.three{grid-template-columns:repeat(3,minmax(0,1fr))}.kpis.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+@media(max-width:1100px){.kpis,.kpis.four{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:#FFF;border:1px solid var(--line);border-radius:14px;padding:12px 14px}
+.kpi.out{border-color:var(--acc)}
+.kh b{font-size:12.5px}.kh .nl{display:block}
+.kbig{font-family:var(--mono);font-size:26px;font-weight:700;margin:6px 0 2px;letter-spacing:-.01em}
+.spark{width:100%;height:40px;display:block}.spark path{fill:none;stroke-width:1.8}
+/* scenario summary */
+.minis{display:grid;grid-template-columns:repeat(auto-fit,minmax(205px,1fr));gap:12px;margin:0 0 14px}
+.mini{background:#FFF;border:1px solid var(--line);border-top:4px solid var(--c);border-radius:14px;padding:12px 14px}
+.mh{display:flex;align-items:center;gap:8px;margin:0 0 8px;flex-wrap:wrap}.mh i{width:10px;height:10px;border-radius:50%;background:var(--c);display:inline-block}
+.mrow{display:grid;grid-template-columns:92px 1fr auto;gap:8px;align-items:center;font-size:11.5px;margin:0 0 4px}
+.mrow .ml{color:var(--mut)}.mrow .mb{height:8px;background:var(--line2);border-radius:4px;overflow:hidden}.mrow .mb i{display:block;height:100%;background:var(--c);opacity:.75}
+.mrow .mv{font-family:var(--mono);text-align:right;white-space:nowrap}.mrow .mv em{display:block;font-style:normal;font-size:10px}
+.mfoot{margin:8px 0 0;padding-top:8px;border-top:1px solid var(--line2);font-size:12.5px}.mfoot b{font-family:var(--mono)}
+/* events form */
+.form .imps{display:grid;gap:6px;margin:6px 0}
+.imp{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--bg);border-radius:10px;padding:8px 10px}
+.imp input[type=number]{width:84px}.imp label{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:var(--mut)}
+.result{border-color:var(--acc)}
+.illus{position:fixed;right:14px;bottom:12px;font-size:10.5px;color:var(--mut2);background:#FFF;border:1px solid var(--line);border-radius:8px;padding:4px 9px}
+/* v1.5 · one type scale, last in the file so it wins: 10.5 captions · 11.5 small text and tables · 13 text and controls · 14 card titles · 22 page titles · 26 big figures */
+.stname,.node .nd,.chgh,.band .bd,.strip em,.strip div,table.cmp2 th,table.cmp2 th small,table.cmp2 td.num small,table.cmp2 tr.grp td,.legend,.kg .gl,.mov,.ach,.fmaph,.chip,table.grid th,table.rank th,.pill,.ctl label,.scpick label,.scyear label,.adjrow label,.seg.sm button{font-size:10.5px}
+.node .nn,.node .nv,.band,.band .bv,.strip b,.chg ul,.chg p,.chg li,table.cmp2 td.num,table.cmp2 td.mname,table.rank,table.rank td,.nl,.evlist li,.sr em,.num,.scnote,table.grid,table.grid td.cell,table.grid .rowbtn b,table.grid td.fyh,table.grid th.fyh,.kh b,.legend .tog,button.link,.kg .gl{font-size:11.5px}
+.chrow,.sline,.sent,.seg button,.chrow select,.chrow input,select,input[type=number],input[type=text],input:not([type]),button.ghost,button.ghost.sm,button.primary.sm,.metricsel,.evlist .evn b,.gsline,.sechead p,.unit,.adj .adjh{font-size:13px}
+.gh b,.ch b,.mh b,.adj .adjh b,.kpi .kh b{font-size:14px}.mh b{font-size:13px}
+ul.plain li,.ins p,.ins b,.ins .ch{font-size:13px}.chrow .ba b,.sr .link,.chrow .ba{font-size:11.5px}
+/* v1.6 · tighter, for an executive reader: 10 captions · 11 small text and tables · 12.5 text and controls · 13 card titles · 18 page titles · 22 big figures; calmer grid */
+.stname,.node .nd,.chgh,.band .bd,.strip em,.strip div,table.cmp2 th,table.cmp2 th small,table.cmp2 td.num small,table.cmp2 tr.grp td,.legend,.kg .gl,.mov,.ach,.fmaph,.chip,table.grid th,table.rank th,.pill,.ctl label,.scpick label,.scyear label,.adjrow label,.seg.sm button,.hdr .kick,.tab .count,.illus{font-size:10px}
+.node .nn,.node .nv,.band,.band .bv,.strip b,.chg ul,.chg p,.chg li,table.cmp2 td.num,table.cmp2 td.mname,table.rank,table.rank td,.nl,.evlist li,.sr em,.num,.scnote,table.grid,table.grid td.cell,table.grid .rowbtn b,table.grid td.fyh,table.grid th.fyh,.kh b,.legend .tog,button.link,.kg .gl,.chrow .ba,.chrow .ba b,.sr .link,.hdr .net{font-size:11px}
+.chrow,.sline,.sent,.seg button,.chrow select,.chrow input,select,input[type=number],input[type=text],input:not([type]),button.ghost,button.ghost.sm,button.primary,button.primary.sm,.metricsel,.evlist .evn b,.gsline,.sechead p,.unit,.adj .adjh,ul.plain li,.ins p,.ins b,.ins .ch,.tab,.crumb,html,body{font-size:12.5px}
+.gh b,.ch b,.adj .adjh b,.kpi .kh b{font-size:13px}.mh b{font-size:12.5px}
+.sechead h2{font-size:18px;margin:4px 0 2px}.hdr h1{font-size:20px}
+.kbig{font-size:22px;margin:4px 0 0}.kg .gv{font-size:15px}.sr b,.evtot b,.gsline b{font-size:18px}
+#view{padding:14px 24px 36px}.card{padding:12px 14px;margin:0 0 12px}.kpis{gap:10px;margin:0 0 12px}.kpi{padding:10px 12px}.sechead{margin:0 0 12px}
+.hdr{padding:14px 24px 0}.hdr .sub{margin:0 0 8px;font-size:12px}.crumb{padding:10px 24px}.tab{padding:8px 10px}
+.scbar{padding:8px 12px}.scpick select{min-width:180px}
+button.primary{padding:7px 12px}button.ghost{padding:6px 10px}
+table.grid td.in{color:var(--ink)}table.grid tr.input .rowh b{color:var(--ink)}
+table.grid td.in:focus{outline:2px solid var(--amber);background:#FFF}
+table.grid td.ov{background:#FFF6E6;font-weight:600}table.grid td.ev{box-shadow:inset 0 -1px 0 var(--gold)}
+table.grid tr.hl td{background:#F3F5FF}
+.gridcard .gh .nl .dot{display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--amber);vertical-align:middle;margin:0 2px}
+/* the left flow as a funnel: each stage a centred band, a little narrower than the one above */
+.fmap{padding:10px 8px 8px}
+.fmap .stage{width:var(--w,100%);margin:0 auto 4px;padding:6px 6px 3px;background:var(--bg);border:0;border-radius:10px;position:relative}
+.fmap .stage::after{content:"";position:absolute;left:50%;bottom:-5px;width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:5px solid var(--line);transform:translateX(-50%)}
+.fmap .stage:last-child::after{display:none}
+.fmap .stname{text-align:center;margin:0 0 4px;color:var(--mut);letter-spacing:.08em}
+.fmap .node{margin:0 0 3px;padding:3px 7px}
+.fmap .node.out{border-width:1px;border-color:var(--acc);background:#FFF}
+.fmap .node.out .nn,.fmap .node.out .nv{color:var(--acc);font-weight:700}
+.fmap .node.sel{box-shadow:none;border-color:var(--acc)}
+.fmaph{justify-content:center;gap:8px}.fmaph .nl{text-transform:none;letter-spacing:0;font-weight:400}
+/* neutral cues for assumptions, overrides and events — no scenario colour is reused (amber was the Pessimistic colour) */
+.rowbtn .dot,.gridcard .gh .nl .dot{background:#FFF;border:1.5px solid var(--mut2);width:7px;height:7px;box-sizing:border-box}
+table.grid td.in:focus{outline:2px solid var(--acc);background:#FFF}
+table.grid td.ov{background:#EEF2FF;font-weight:600}
+table.grid td.ev{box-shadow:none;border-bottom:1px dashed var(--mut)}
+.pill.amber{background:#EEF0F6;color:var(--mut)}
+.chip.amber,.chip.gold{background:#EEF0F6;color:var(--mut)}
+.fi,.fo,.fe{display:none}
+/* scenario cards: the same rhythm in every card — two-line header, funnel, strip, then a change list of one-line items */
+.minis{align-items:stretch}
+.minis .mini{display:flex;flex-direction:column;padding:10px 12px 10px}
+.mini .mh{display:grid;grid-template-columns:10px minmax(0,1fr);grid-template-areas:"i n" ". m";column-gap:6px;row-gap:1px;align-items:center;height:36px;margin:0 0 8px}
+.mini .mh i{grid-area:i}.mini .mh b{grid-area:n;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.mini .mh .nl{grid-area:m}
+.mini .funnel{height:146px;margin:0 0 6px}
+.mini .strip{margin:0}
+.mini .chg{flex:1;margin:8px 0 0;padding:8px 0 0}
+.mini .chg ul,.mini .chg p{min-height:72px;margin:0;padding:0;list-style:none}
+.mini .chg li{display:flex;align-items:center;gap:6px;margin:0;height:18px;line-height:18px;white-space:nowrap;overflow:hidden}
+.mini .chg li .txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.mini .chg li{gap:4px;height:auto;min-height:18px;align-items:flex-start;white-space:normal;line-height:15px;padding:2px 0;margin:0 0 2px}
+.mini .chg li .txt{white-space:normal;overflow:visible;text-overflow:clip}
+.mini .chg li .num{font-size:10.5px;flex:none;line-height:15px}
+/* labelled funnel: the label sits left of the shape, the value inside it */
+.frow{display:grid;grid-template-columns:78px minmax(0,1fr);gap:6px;align-items:center;height:20px}
+.frow .fl{font-size:10.5px;color:var(--mut);text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.frow .band{height:18px;justify-content:center}
+.frow .band .bv{font-size:10.5px}
+/* result rows: label · value · gap, the same three lines in every card */
+.mini .strip{display:block;height:57px;margin:0}
+.mini .strip .srow{display:grid;grid-template-columns:minmax(0,1fr) auto 48px;gap:8px;align-items:baseline;height:19px;padding:0 2px;background:none;border-radius:0;border-top:1px solid var(--line2);font-size:10.5px;color:var(--mut)}
+.mini .strip .srow .sl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mini .strip .srow b{display:inline;font-family:var(--mono);font-size:11px;color:var(--ink)}
+.mini .strip .srow em{font-style:normal;font-size:10px;text-align:right;white-space:nowrap}
+.adj .adjh .adjx{margin-left:auto;padding:3px 9px;font-size:11px;color:var(--mut)}
+.chrow .known{display:inline-flex;align-items:center;gap:5px}.chrow .known input{width:78px}
+.gridcard .gh .ghbtns{margin-left:auto;display:inline-flex;align-items:center;gap:8px}.gridcard .gh .ghbtns .seg{margin:0}
+.gridcard.folded{padding-bottom:10px}.gridcard.folded .gh{margin:0}
+/* before / after lines under the override form */
+.ovprev{margin:6px 0 2px}.ovprev p{margin:4px 0 0}
+.ovwrap{overflow:auto}
+table.ovtable{border-collapse:collapse;font-size:11px;white-space:nowrap}
+table.ovtable th{font-weight:600;color:var(--mut);text-align:right;padding:2px 7px;font-size:10px;border-bottom:1px solid var(--line2)}
+table.ovtable thead th:first-child,table.ovtable tbody th{text-align:left;padding-left:2px;position:sticky;left:0;background:#FFF}
+table.ovtable td{font-family:var(--mono);text-align:right;padding:3px 7px;border-bottom:1px solid var(--line2);color:var(--mut)}
+table.ovtable tr.after td{color:var(--ink)}table.ovtable tr.after td.chg{background:#EEF2FF;font-weight:600;color:var(--acc)}
+table.ovtable th.tail,table.ovtable td.tail{color:var(--mut2);background:#FAFBFD}table.ovtable tr.after td.tail.chg{background:#F3F5FF;color:var(--mut)}
+.mini .chg .chip{flex:none;padding:0 4px;line-height:15px;margin:0}
+.minis .mini{padding:10px 10px 10px}
+.band{height:20px;gap:5px}.band .bd{opacity:.85}
+.funnel{gap:1px}
+.strip{gap:5px}.strip div{padding:4px 7px}
+.minis .mini{padding:10px 12px 8px}
+.mini .mh{margin:0 0 6px}
+table.cmp2 th small{text-transform:none;letter-spacing:0;font-weight:400}
+.hdr .sub{font-size:12.5px}
+
+/* ── Fractal skin: restyles the components to the app's design system (ui.tsx: Card, Tag, Seg, Btn). Layout and behaviour unchanged. ── */
+.app{grid-template-columns:minmax(0,1fr);min-height:0}
+.hdr{background:transparent;border-bottom:1px solid var(--line);padding:4px 24px 0}
+.hdr .kick{font-family:var(--mono);font-size:12px;font-weight:400;letter-spacing:.1em;color:var(--acc)}
+.hdr h1{font-size:28px;font-weight:600;letter-spacing:-.025em}
+.hdr .sub{font-size:14px;color:var(--mut);margin:2px 0 14px}
+.hdr .net{border-radius:6px;background:#FFF}
+#tabs{gap:2px;padding:0 0 8px}
+.tab{border:0;border-radius:4px;padding:6px 10px;font-size:12px;font-weight:600;color:var(--mut)}
+.tab:hover{color:var(--ink)}
+.tab.on{background:var(--acc-soft);color:var(--acc)}
+.tab .count{border-radius:4px;background:#FFF}
+#view{padding:20px 24px 40px}
+.card,.scbar,.fmap,.kpi,.mini{border-radius:8px}
+.card{padding:20px}
+.sr,.evtot,.chrow,.imp,.fmap .stage{border-radius:6px}
+.node{border-radius:6px}
+.pill{border-radius:4px;padding:2px 6px;font-size:11px;font-weight:600;letter-spacing:.025em}
+.chip{border-radius:4px}
+.ctl label,.scpick label,.scyear label,.hdr .kick,.fmaph,.pill{font-size:11px}
+.ctl label,.scpick label,.scyear label,.fmaph{font-weight:600;letter-spacing:.025em;color:var(--mut2)}
+.sechead h2{font-size:22px;font-weight:600;letter-spacing:-.025em}
+select,input[type=number],input[type=text],input:not([type]){border-color:#B9BED0;border-radius:6px;height:36px}
+select:focus,input:focus{outline:2px solid var(--acc);outline-offset:-1px}
+button.primary,button.ghost{border-radius:6px;height:36px;padding:0 14px;font-size:13px;font-weight:500}
+button.primary.sm,button.ghost.sm{height:32px;padding:0 10px;font-size:12px}
+button.primary:hover{background:#000A5C}
+button.ghost{border-color:#B9BED0}
+button.ghost:hover{background:#EEF0F7}
+.seg{border-color:#B9BED0;border-radius:6px;padding:2px}
+.seg button{border-radius:4px;padding:4px 10px;font-size:13px;font-weight:500}
+.seg button:hover{color:var(--ink)}
+.seg button.on{background:var(--acc-soft);color:var(--acc)}
+.illus{display:none}
+/* ── Fractal alignment pass: white canvas, yellow editable cells, comparison table and spacing as in the A view ── */
+html,body{background:#FFF}
+:root{--bg:#F4F5F9}
+#view{max-width:none}
+.card,.scbar,.kpis,.minis{margin-bottom:16px}
+.minis,.kpis,.two{gap:16px}
+.fgrid{gap:20px}
+.sechead{margin-bottom:16px}
+table.grid th,table.grid td{padding:6px 10px}
+table.grid .rowh{min-width:200px;max-width:260px}
+table.grid td.in{background:#FFF9E0;color:var(--ink)}
+table.grid td.ov{background:#FDE9A8;font-weight:600}
+table.grid td.in:focus{outline:2px solid var(--acc);outline-offset:-2px;background:#FFF9E0}
+.node.input{background:#FFF9E0;border-color:#F0D98A}
+.rowbtn .dot,.gridcard .gh .nl .dot{background:#FFF9E0;border-color:#E0B840}
+table.cmp2{border:1px solid var(--line);border-radius:8px;border-collapse:separate;border-spacing:0;overflow:hidden}
+table.cmp2 th{background:#F4F5F9;padding:10px 12px;font-size:11px;font-weight:600;letter-spacing:.025em;text-transform:uppercase;color:var(--mut2)}
+table.cmp2 td{padding:8px 12px;border-bottom:1px solid var(--line)}
+table.cmp2 td.mname{position:sticky;left:0;background:#F4F5F9;border-right:1px solid #B9BED0;font-weight:500}
+table.cmp2 tr.grp td{background:#EEF0F7;color:var(--mut2);font-size:10.5px;font-weight:600;letter-spacing:.06em;padding:6px 12px;border-bottom:1px solid var(--line)}
+table.cmp2 col.basecol{background:rgba(232,233,255,.25)}
+.mini{border-top-width:3px}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="main">
+    <div class="hdr">
+      <div class="kick" id="f-cycle">AOP 2027 · US NET REVENUE</div>
+      <div class="title"><h1 id="f-title">Velsipity forecast</h1><span class="pill blue" id="f-arch"></span>
+        <div class="right"><span class="net">Scenario <b id="hdr-sc">Base Case</b> · FY2027 net <b id="hdr-net">—</b></span></div></div>
+      <p class="sub">Brand &amp; commercial forecaster view · illustrative data · the model runs in this page</p>
+      <div id="tabs" role="tablist"></div>
+    </div>
+    <div id="view"></div>
+  </div>
+</div>
+<footer class="illus" title="NextGen forecaster view · built by gen/gen_nextgen_forecaster_page.py from data/nextgen_demo.json">Illustrative data · not a forecast · v1.10 · 26 Oct 2026</footer>
+<script>window.NG_DATA = {"version":"1.10","about":"Illustrative Velsipity-shaped settings for the NextGen forecaster page. The numbers are small illustrative settings chosen so the page behaves like a real forecast; nothing here is a forecast. Actuals are generated inside the page from these seeds and labelled illustrative. The structure (patient pool → advanced-therapy market → new to brand → access × fulfilment × demand share → cohort persistency → segments → prescriptions → list price → gross-to-net → net revenue) is fixed in ng.js; this file sets the numbers, names, descriptions, sources, scenarios and events.","forecast":{"brand":"Velsipity","title":"Velsipity forecast","cycle":"Annual operating plan 2027","scope":"US net revenue","indication":"Ulcerative colitis","archetype":"Patient-Flow (epi-topped, cohort persistency)","start":"2024-01","end":"2028-12","actuals_end":"2026-08","focus_year":2027,"reference_source":"Data Science","owner":"J. Andersen"},"stages":[{"id":"pool","name":"Patient pool","what":"how many people could be treated"},{"id":"ntb","name":"New to brand","what":"who starts on Velsipity each month"},{"id":"book","name":"On treatment","what":"how many stay on drug"},{"id":"volume","name":"Volume","what":"prescriptions"},{"id":"sales","name":"Sales","what":"revenue"}],"metrics":[{"id":"prev","stage":"pool","name":"Prevalent patients","short":"Prevalent","kind":"input","unit":"n","module":"A1.2","source":"Data Science epidemiology","desc":"Adults living with ulcerative colitis in the US.","formula":"epidemiology base × prevalence %, grown 1.5 % a year","base":{"start":1245000,"growth_pa":0.015},"actual_noise":0.002,"lever":{"movability":0.01,"reach":0.03,"why":"epidemiology; the brand cannot move it"}},{"id":"dx_pct","stage":"pool","name":"Diagnosis rate","short":"Diagnosed %","kind":"input","unit":"pct","module":"A1.4","source":"Data Science baseline","desc":"Share of prevalent patients with a confirmed diagnosis.","formula":"held near 78 %, drifting up 0.2 points a year","base":{"start":0.780,"drift_pa":0.002},"actual_noise":0.004,"lever":{"movability":0.03,"reach":0.03,"why":"moves slowly with disease awareness"}},{"id":"diagnosed","stage":"pool","name":"Diagnosed patients","short":"Diagnosed","kind":"calc","unit":"n","module":"A1.4","desc":"Prevalent patients × diagnosis rate.","formula":"prevalent × diagnosis rate"},{"id":"tx_pct","stage":"pool","name":"Treatment rate","short":"Treated %","kind":"input","unit":"pct","module":"A1.5","source":"Claims (ELAAD)","desc":"Share of diagnosed patients on any ulcerative colitis therapy.","formula":"held at 71 %","base":{"start":0.71,"drift_pa":0.0},"actual_noise":0.004,"lever":{"movability":0.03,"reach":0.03,"why":"set by guidelines and physicians"}},{"id":"treated","stage":"pool","name":"Treated patients","short":"Treated","kind":"calc","unit":"n","module":"A1.5","desc":"Diagnosed × treatment rate.","formula":"diagnosed × treatment rate"},{"id":"atx_pct","stage":"pool","name":"Advanced-therapy share","short":"Advanced therapy %","kind":"input","unit":"pct","module":"A1.6","source":"Claims (ELAAD)","desc":"Share of treated patients on an advanced therapy (biologic or small molecule).","formula":"ramps from 24 % to 30 % by Dec 2028","base":{"start":0.24,"target":0.30,"ramp_to":"2028-12"},"actual_noise":0.003,"lever":{"movability":0.06,"reach":0.04,"why":"market-wide; disease education helps a little"}},{"id":"atx","stage":"pool","name":"Advanced-therapy market","short":"Advanced therapy","kind":"calc","unit":"n","module":"A7","desc":"Treated patients on an advanced therapy — the pool Velsipity competes in.","formula":"treated × advanced-therapy share"},{"id":"ntb_rate","stage":"ntb","name":"New-to-brand rate","short":"New-to-brand rate","kind":"input","unit":"pct","module":"A6.1","source":"Claims (ELAAD)","desc":"Share of the advanced-therapy market that starts or switches to a new brand each month.","formula":"held at 2.7 % a month","base":{"start":0.027,"drift_pa":0.0},"actual_noise":0.03,"lever":{"movability":0.05,"reach":0.005,"max":0.1,"why":"market churn; not a brand lever"}},{"id":"ntb","stage":"ntb","name":"New-to-brand patients","short":"New to brand","kind":"calc","unit":"n","module":"A6","desc":"Patients newly choosing a brand this month.","formula":"advanced-therapy market × new-to-brand rate"},{"id":"share_pre","stage":"ntb","name":"Demand share (pre-access)","short":"Demand share","kind":"input","unit":"pct","module":"D2","source":"Panini demand data","desc":"Velsipity's share of new-to-brand patients before access and fulfilment.","formula":"ramps from 12 % to 15.5 % by Dec 2027, then holds","base":{"start":0.120,"target":0.155,"ramp_to":"2027-12"},"actual_noise":0.02,"lever":{"movability":0.28,"reach":0.06,"max":0.6,"why":"the main commercial lever: promotion, field force, messaging"}},{"id":"access_pct","stage":"ntb","name":"Access","short":"Access","kind":"input","unit":"pct","module":"A9","source":"Payer coverage (MMIT)","desc":"Share of demand that payers cover.","formula":"held at 57 %","base":{"start":0.57,"drift_pa":0.0},"actual_noise":0.006,"lever":{"movability":0.18,"reach":0.12,"why":"payer contracting; moves in steps at formulary decisions"}},{"id":"fulfil_pct","stage":"ntb","name":"Fulfilment","short":"Fulfilment","kind":"input","unit":"pct","module":"A9","source":"Hub data","desc":"Share of covered scripts that are actually filled.","formula":"rises from 40 % to 46 % by Jun 2026, then holds","base":{"start":0.40,"target":0.46,"ramp_to":"2026-06"},"actual_noise":0.006,"lever":{"movability":0.12,"reach":0.10,"why":"hub services and copay support"}},{"id":"eff_share","stage":"ntb","name":"Effective share","short":"Effective share","kind":"calc","unit":"pct","module":"A9","desc":"Demand share × access × fulfilment.","formula":"demand share × access × fulfilment"},{"id":"starts","stage":"ntb","name":"New patient starts","short":"New starts","kind":"calc","unit":"n","module":"A1.7","desc":"New-to-brand patients × effective share.","formula":"new-to-brand × effective share"},{"id":"dot_days","stage":"book","name":"Duration of therapy","short":"Days on therapy","kind":"input","unit":"days","module":"E2","source":"Claims (ELAAD) persistency","desc":"Average days a patient stays on therapy.","formula":"held at 240 days (persistence e^(−age ÷ DoT))","base":{"start":240,"drift_pa":0.0},"actual_noise":0.0,"lever":{"movability":0.05,"reach":0.20,"why":"adherence programmes move it a little; mostly clinical"}},{"id":"book","stage":"book","name":"Patients on drug","short":"On drug","kind":"calc","unit":"n","module":"E1.3","desc":"Every past starting cohort × the share of it still on drug.","formula":"Σ starts(c) × e^(−(t − c) ÷ DoT)"},{"id":"continuing","stage":"book","name":"Continuing patients","short":"Continuing","kind":"calc","unit":"n","module":"E1.5","desc":"Patients on drug who did not start this month.","formula":"on drug − new starts"},{"id":"ip_pct","stage":"book","name":"Insured-plan segment","short":"Insured plan %","kind":"input","unit":"pct","module":"B3","source":"Claims (ELAAD)","desc":"Share of patients on drug in the insured-plan segment; the rest are other segments.","formula":"held at 55 %","base":{"start":0.55,"drift_pa":0.0},"actual_noise":0.004,"lever":{"movability":0.02,"reach":0.05,"why":"a mix, not a driver of the total"}},{"id":"book_ip","stage":"book","name":"On drug · insured plan","short":"On drug · IP","kind":"calc","unit":"n","module":"B3","desc":"Patients on drug × insured-plan share.","formula":"on drug × IP share"},{"id":"book_other","stage":"book","name":"On drug · other segments","short":"On drug · other","kind":"calc","unit":"n","module":"B3","desc":"The rest of the patients on drug.","formula":"on drug − insured plan"},{"id":"rx_per_pt","stage":"volume","name":"Scripts per patient-month","short":"Scripts per patient","kind":"input","unit":"x","module":"E4","source":"IQVIA","desc":"Prescriptions each patient on drug fills in a month.","formula":"held at 0.90","base":{"start":0.90,"drift_pa":0.0},"actual_noise":0.01,"lever":{"movability":0.06,"reach":0.08,"max":1.2,"why":"refill behaviour; adherence programmes"}},{"id":"trx","stage":"volume","name":"Total prescriptions (TRx)","short":"Prescriptions","kind":"calc","unit":"n","module":"J1.1","desc":"Patients on drug × scripts per patient-month.","formula":"on drug × scripts per patient-month"},{"id":"nbrx","stage":"volume","name":"New-to-brand prescriptions (NBRx)","short":"New scripts","kind":"calc","unit":"n","module":"J1","desc":"First scripts of new patients.","formula":"new starts × 1"},{"id":"wac","stage":"sales","name":"List price (WAC) per script","short":"List price","kind":"input","unit":"usd","module":"J3.2","source":"Pricing committee","desc":"Wholesale acquisition cost per script, stepping each January.","formula":"$6,699 in 2024, +3.0 % each January","base":{"start":6699,"step_jan_pct":0.03},"actual_noise":0.0,"lever":{"movability":0.05,"reach":0.10,"why":"pricing committee; constrained by inflation caps"}},{"id":"gross","stage":"sales","name":"Gross sales","short":"Gross sales","kind":"calc","unit":"usd_m","module":"J2.1","desc":"Total prescriptions × list price.","formula":"TRx × WAC ÷ 1,000,000"},{"id":"gtn_pct","stage":"sales","name":"Gross-to-net","short":"Gross-to-net %","kind":"input","unit":"pct","module":"J2.4","source":"Finance","desc":"Discounts, rebates and fees as a share of gross sales.","formula":"38 % in 2024–25, 39 % 2026, 40 % from 2027","base":{"start":0.38,"steps":{"2026-01":0.39,"2027-01":0.40}},"actual_noise":0.004,"lever":{"movability":0.10,"reach":0.04,"min":0.2,"why":"contract terms; a lower GTN keeps more of gross"}},{"id":"net","stage":"sales","name":"Net revenue","short":"Net revenue","kind":"calc","unit":"usd_m","module":"J2.2","desc":"Gross × (1 − gross-to-net).","formula":"gross × (1 − GTN)","outcome":true}],"events":[{"id":"ev_formulary","name":"Medicare Part D formulary win","type":"Access event","month":"2027-01","probability":0.70,"impacts":[{"metric":"access_pct","change":0.04,"how":"pts","ramp":3,"shape":"linear"},{"metric":"share_pre","change":0.03,"how":"pts","ramp":3,"shape":"linear"}]},{"id":"ev_wac","name":"January list-price (WAC) increase","type":"Pricing event","month":"2027-01","probability":0.85,"impacts":[{"metric":"wac","change":0.025,"how":"pct","ramp":0,"shape":"step"}]},{"id":"ev_label","name":"Adolescent label expansion","type":"Product event","month":"2027-07","probability":0.50,"impacts":[{"metric":"dx_pct","change":0.015,"how":"pts","ramp":6,"shape":"s-curve"},{"metric":"share_pre","change":0.04,"how":"pts","ramp":6,"shape":"s-curve"}]}],"scenarios":[{"id":"trended","name":"Reference baseline","color":"#0E7490","locked":true,"note":"The Data Science reference baseline: no changes and no events.","overrides":[],"events_on":[]},{"id":"base","name":"Base Case","color":"#0A7D4F","note":"Reference baseline plus the Medicare Part D formulary win and the January list-price (WAC) increase.","overrides":[],"events_on":["ev_formulary","ev_wac"]},{"id":"optimistic","name":"Optimistic","color":"#C4122F","note":"All three events on; demand share ramps to 17%.","overrides":[{"metric":"share_pre","method":"target","start":"2026-09","end":"2027-12","target":0.17,"curve":"linear"}],"events_on":["ev_formulary","ev_wac","ev_label"]},{"id":"pessimistic","name":"Pessimistic","color":"#A35A00","note":"No events; access slips to 52% and gross-to-net reaches 42%.","overrides":[{"metric":"access_pct","method":"target","start":"2026-09","end":"2027-06","target":0.52,"curve":"linear"},{"metric":"gtn_pct","method":"target","start":"2027-01","end":"2027-01","target":0.42,"curve":"linear"}],"events_on":[]},{"id":"finance","name":"Finance","color":"#7C3AED","note":"January list-price (WAC) increase only; gross-to-net held at 41% from 2027.","overrides":[{"metric":"gtn_pct","method":"target","start":"2027-01","end":"2027-01","target":0.41,"curve":"linear"}],"events_on":["ev_wac"]}],"colors_free":["#0000C9","#0E7490","#A35A00","#7C3AED","#C4122F","#0A7D4F"],"curves":[{"id":"linear","name":"Linear","plain":"Even steps from start to end."},{"id":"s-curve","name":"S-curve","plain":"Slow at first, fast in the middle, slow at the end."},{"id":"front","name":"Front-loaded","plain":"Most of the change early, then easing."},{"id":"slow","name":"Slow start","plain":"Little change at first, most of it towards the end."}],"methods":[{"id":"hold","name":"Hold last actual","plain":"Carry the last actual month forward unchanged."},{"id":"target","name":"Target value","plain":"Move from the start month's value to a target by the end month, along the chosen curve, then hold."},{"id":"linear","name":"Linear growth","plain":"Add the same amount every month between start and end."},{"id":"growth","name":"Annual growth %","plain":"Compound a yearly rate, spread over the months."},{"id":"monthly","name":"Monthly entry","plain":"Type a month in the grid; later months move by the same change."}]};</script>
+<script>
+/* NextGen forecaster — brand & commercial forecasters view (vision prototype) · ng.js (the page version is set by the build script)
+   Self-contained: data arrives as window.NG_DATA (data/nextgen_demo.json). Everything is computed here, in the page.
+   Engine: monthly Patient-Flow with cohort persistency; annual view = flows summed, rates and stocks averaged; H1 ladder pins actuals;
+   overrides are projection methods on an input path; events ramp a metric from a date; effect = with − without. */
+(function () {
+  'use strict';
+  const D = window.NG_DATA;
+  const $ = (s, el) => (el || document).querySelector(s);
+  const $$ = (s, el) => Array.from((el || document).querySelectorAll(s));
+  const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  // ───────────────────────── time ─────────────────────────
+  const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  function ym(key) { const [y, m] = key.split('-').map(Number); return { y, m }; }
+  function key(y, m) { return y + '-' + String(m).padStart(2, '0'); }
+  const T = [];
+  (function buildTime() {
+    let { y, m } = ym(D.forecast.start); const e = ym(D.forecast.end);
+    while (y < e.y || (y === e.y && m <= e.m)) {
+      T.push({ y, m, key: key(y, m), label: MONTHS[m - 1] + ' ' + String(y).slice(2), long: MONTHS[m - 1] + ' ' + y, days: new Date(y, m, 0).getDate(), weeks: [4, 4, 5][(m - 1) % 3] });   // label for ticks and columns, long for sentences
+      m++; if (m > 12) { m = 1; y++; }
+    }
+  })();
+  const N = T.length;
+  const IDX = Object.fromEntries(T.map((t, i) => [t.key, i]));
+  const AEND = IDX[D.forecast.actuals_end];              // last actual month index
+  const YEARS = Array.from(new Set(T.map(t => t.y)));
+  const FOCUS = D.forecast.focus_year;
+
+  // ───────────────────────── metrics ─────────────────────────
+  const M = D.metrics; const MX = Object.fromEntries(M.map(x => [x.id, x]));
+  const INPUTS = M.filter(x => x.kind === 'input').map(x => x.id);
+  const FLOWS = new Set(['ntb', 'starts', 'trx', 'nbrx', 'gross', 'net']);
+  const agg = id => FLOWS.has(id) ? 'sum' : 'avg';
+  const STAGE = Object.fromEntries(D.stages.map(s => [s.id, s]));
+
+  // ───────────────────────── deterministic noise (illustrative actuals) ─────────────────────────
+  function noise(id, i) { let h = 2166136261; const s = id + ':' + i; for (let k = 0; k < s.length; k++) { h ^= s.charCodeAt(k); h = Math.imul(h, 16777619); } const u = ((h >>> 0) % 100000) / 100000; return Math.sin(u * 6.2831853) * 1.2; }
+
+  // ───────────────────────── system (reference) paths ─────────────────────────
+  function curveF(kind, x) { x = Math.max(0, Math.min(1, x)); if (kind === 's-curve') return x * x * (3 - 2 * x); if (kind === 'front') return 1 - (1 - x) * (1 - x); if (kind === 'slow') return x * x; return x; }
+  function systemPath(id) {
+    const b = MX[id].base; const out = new Array(N);
+    for (let i = 0; i < N; i++) {
+      let v = b.start;
+      if (b.growth_pa) v = b.start * Math.pow(1 + b.growth_pa, i / 12);
+      if (b.drift_pa) v = b.start + b.drift_pa * i / 12;
+      if (b.target != null && b.ramp_to) { const end = IDX[b.ramp_to]; v = b.start + (b.target - b.start) * Math.min(1, i / end); }
+      if (b.step_jan_pct) { const years = T[i].y - T[0].y; v = b.start * Math.pow(1 + b.step_jan_pct, years); }
+      if (b.steps) { for (const k of Object.keys(b.steps).sort()) if (i >= IDX[k]) v = b.steps[k]; }
+      out[i] = v;
+    }
+    return out;
+  }
+  const SYSTEM = Object.fromEntries(INPUTS.map(id => [id, systemPath(id)]));
+  // actual inputs = system × (1 + noise) for months ≤ AEND (illustrative)
+  const ACT_IN = Object.fromEntries(INPUTS.map(id => [id, SYSTEM[id].map((v, i) => i <= AEND ? v * (1 + (MX[id].actual_noise || 0) * noise(id, i)) : null)]));
+
+  // ───────────────────────── overrides & events on an input path ─────────────────────────
+  function applyOverrides(id, series, overrides, actuals) {
+    const out = series.slice();
+    for (const o of overrides.filter(o => o.metric === id)) {
+      const s = IDX[o.start], e = o.end ? IDX[o.end] : s; if (s == null) continue;
+      const prev = s > 0 ? (s - 1 <= AEND ? actuals[s - 1] : out[s - 1]) : out[0];
+      if (o.method === 'shift') { for (let i = s; i < N; i++) out[i] += o.delta; continue; }
+      if (o.method === 'hold') { const last = actuals[AEND]; for (let i = Math.max(s, AEND + 1); i < N; i++) out[i] = last; continue; }
+      for (let i = Math.max(s, AEND + 1); i < N; i++) {
+        const k = i - s + 1, n = Math.max(1, e - s + 1);
+        if (o.method === 'target') out[i] = i <= e ? prev + (o.target - prev) * curveF(o.curve, k / n) : o.target;
+        else if (o.method === 'linear') out[i] = prev + o.delta * Math.min(k, n);
+        else if (o.method === 'growth') out[i] = prev * Math.pow(1 + o.rate, Math.min(k, n) / 12);
+      }
+    }
+    return out;
+  }
+  function rampF(shape, x) { if (shape === 'step') return 1; if (shape === 's-curve') return curveF('s-curve', x); if (shape === 'front') return curveF('front', x); return Math.min(1, x); }
+  function applyEvents(id, series, events, probabilityWeighted) {
+    const out = series.slice();
+    for (const ev of events) for (const imp of ev.impacts) {
+      if (imp.metric !== id) continue;
+      const s = IDX[ev.month]; if (s == null) continue;
+      const w = probabilityWeighted ? ev.probability : 1;
+      for (let i = s; i < N; i++) {
+        const f = imp.ramp > 0 ? rampF(imp.shape, (i - s + 1) / imp.ramp) : 1;
+        if (imp.how === 'pct') out[i] *= 1 + imp.change * f * w; else out[i] += imp.change * f * w;
+      }
+    }
+    return out;
+  }
+
+  // ───────────────────────── the engine ─────────────────────────
+  const MONTH_DAYS = 30.4;
+  function computeFrom(inputs) {
+    const r = {}; const g = id => inputs[id];
+    for (const id of INPUTS) r[id] = inputs[id];
+    r.diagnosed = g('prev').map((v, i) => v * g('dx_pct')[i]);
+    r.treated = r.diagnosed.map((v, i) => v * g('tx_pct')[i]);
+    r.atx = r.treated.map((v, i) => v * g('atx_pct')[i]);
+    r.ntb = r.atx.map((v, i) => v * g('ntb_rate')[i]);
+    r.eff_share = g('share_pre').map((v, i) => v * g('access_pct')[i] * g('fulfil_pct')[i]);
+    r.starts = r.ntb.map((v, i) => v * r.eff_share[i]);
+    // cohort book: warm-up of 36 steady months before the horizon, then every cohort × e^(−age ÷ DoT)
+    const book = new Array(N).fill(0);
+    const dotM = i => Math.max(1, g('dot_days')[Math.max(0, i)] / MONTH_DAYS);
+    for (let i = 0; i < N; i++) {
+      let b = 0;
+      for (let c = 0; c <= i; c++) b += r.starts[c] * Math.exp(-(i - c) / dotM(c));
+      for (let a = 1; a <= 36; a++) b += r.starts[0] * Math.exp(-(i + a) / dotM(0));
+      book[i] = b;
+    }
+    r.book = book;
+    r.continuing = book.map((v, i) => Math.max(0, v - r.starts[i]));
+    r.book_ip = book.map((v, i) => v * g('ip_pct')[i]);
+    r.book_other = book.map((v, i) => v - r.book_ip[i]);
+    r.trx = book.map((v, i) => v * g('rx_per_pt')[i]);
+    r.nbrx = r.starts.slice();
+    r.gross = r.trx.map((v, i) => v * g('wac')[i] / 1e6);
+    r.net = r.gross.map((v, i) => v * (1 - g('gtn_pct')[i]));
+    return r;
+  }
+  // actuals for every metric: computed from the (illustrative) actual inputs, pinned ≤ AEND
+  const ACTUALS = (function () { const full = Object.fromEntries(INPUTS.map(id => [id, SYSTEM[id].map((v, i) => i <= AEND ? ACT_IN[id][i] : v)])); const r = computeFrom(full); const a = {}; for (const id in r) a[id] = r[id].map((v, i) => i <= AEND ? v : null); return a; })();
+
+  const cache = new Map();
+  function scenarioInputs(sc, opts) {
+    opts = opts || {}; const events = (opts.events || sc.events_on).map(id => EV.find(e => e.id === id)).filter(Boolean);
+    const inputs = {};
+    for (const id of INPUTS) {
+      let s = SYSTEM[id].slice();
+      s = applyOverrides(id, s, opts.overrides || sc.overrides, ACT_IN[id]);
+      if (!opts.noEvents) s = applyEvents(id, s, events, S.probWeighted);
+      for (let i = 0; i <= AEND; i++) s[i] = ACT_IN[id][i];                  // H1: actuals are pinned
+      inputs[id] = s;
+    }
+    return inputs;
+  }
+  function run(sc, opts) {
+    const k = sc.id + '|' + JSON.stringify(opts || {}) + '|' + JSON.stringify(sc.overrides) + '|' + sc.events_on.join(',') + '|' + S.probWeighted + '|' + JSON.stringify(EV);
+    if (cache.has(k)) return cache.get(k);
+    const r = computeFrom(scenarioInputs(sc, opts)); cache.set(k, r); return r;
+  }
+  function annual(series, y, id) { const idx = T.map((t, i) => t.y === y ? i : -1).filter(i => i >= 0).filter(i => series[i] != null); if (!idx.length) return null; const vals = idx.map(i => series[i]); return agg(id) === 'sum' ? vals.reduce((a, b) => a + b, 0) : vals.reduce((a, b) => a + b, 0) / vals.length; }
+  function fy(sc, id, y, opts) { return annual(run(sc, opts)[id], y, id); }
+
+  // ───────────────────────── formatting ─────────────────────────
+  function fmt(v, unit, compact) {
+    if (v == null || isNaN(v)) return '—';
+    if (unit === 'pct') return (v * 100).toFixed(1) + '%';
+    if (unit === 'usd') return '$' + Math.round(v).toLocaleString('en-US');
+    if (unit === 'usd_m') return '$' + (Math.abs(v) >= 100 ? Math.round(v).toLocaleString('en-US') : v.toFixed(1)) + 'M';
+    if (unit === 'x') return v.toFixed(2);
+    if (unit === 'days') return Math.round(v) + ' days';
+    if (compact && Math.abs(v) >= 1e6) return (v / 1e6).toFixed(2) + 'M';
+    if (compact && Math.abs(v) >= 1e4) return (v / 1e3).toFixed(1) + 'k';
+    return Math.abs(v) >= 100 || Number.isInteger(v) ? Math.round(v).toLocaleString('en-US') : v.toFixed(1);
+  }
+  function fmtDelta(v, unit) { if (v == null || isNaN(v)) return '—'; const s = v > 0 ? '+' : v < 0 ? '−' : ''; const a = Math.abs(v); if (unit === 'pct') return s + (a * 100).toFixed(1) + ' pts'; return s + fmt(a, unit, true); }
+  function pctChange(a, b) { if (a == null || b == null || !b) return null; return a / b - 1; }
+  const fmtPct = v => v == null || isNaN(v) ? '—' : (v > 0 ? '+' : v < 0 ? '−' : '') + (Math.abs(v) * 100).toFixed(1) + '%';
+
+  // ───────────────────────── state ─────────────────────────
+  const EV = JSON.parse(JSON.stringify(D.events));
+  const S = {
+    scenarios: JSON.parse(JSON.stringify(D.scenarios)),
+    current: 'base', shown: new Set(['base', 'optimistic', 'pessimistic']),
+    metric: 'net', node: 'net', period: 'monthly', chartMode: 'monthly', year: FOCUS, tab: 'forecast',
+    collapsed: new Set(YEARS.filter(y => y < T[AEND].y)),                     // years folded to one column in the monthly grid
+    gridHidden: false, adjHidden: false,                                      // the model folded away · the override box closed
+    actMode: 'mom', actSince: null, probWeighted: false, evOutput: 'net', evScenario: 'base', sumYear: FOCUS,
+    sens: { sc: 'base', year: FOCUS, changes: [{ metric: 'share_pre', how: 'pts', step: 1, from: key(FOCUS, 1), to: key(FOCUS, 12) }] },
+    goal: { sc: 'base', output: 'net', year: FOCUS, target: null, levers: ['share_pre'], known: {}, from: key(FOCUS, 1), to: key(FOCUS, 12), result: null },
+    insights: [
+      { type: 'scenario', when: 'Today, 09:12', who: 'J. Andersen', title: 'Optimistic opens a gap to Base Case from mid-2027', body: 'The label expansion adds about 4 points of demand share from Jul 2027; most of the 2028 gap is that event.' },
+      { type: 'view', when: 'Yesterday, 16:30', who: 'S. Lindqvist', title: 'Effective share flattens once fulfilment reaches 46%', body: 'Saved view: Effective share · Base Case vs Reference baseline, monthly.' },
+      { type: 'note', when: 'Mon, 14:05', who: 'J. Andersen', title: 'Pricing committee: list price +2.5% assumed in Base Case', body: 'Gross-to-net absorbs part of the increase. If the committee lands below 2% we revisit the January list-price event.' },
+    ],
+  };
+  const cur = () => S.scenarios.find(s => s.id === S.current) || S.scenarios[0];
+  const scById = id => S.scenarios.find(s => s.id === id);
+  const REF = () => S.scenarios.find(s => s.locked) || S.scenarios[0];
+
+  // ───────────────────────── shell: tabs ─────────────────────────
+  const TABS = [['forecast', 'Forecast'], ['actuals', 'Actuals'], ['events', 'Events'], ['scenarios', 'Scenario summary'], ['sensitivity', 'Sensitivity'], ['goalseek', 'Goal seek'], ['review', 'Review'], ['insights', 'Insights']];
+  function renderTabs() {
+    $('#tabs').innerHTML = TABS.map(([id, label]) => `<button class="tab${S.tab === id ? ' on' : ''}" data-tab="${id}" role="tab">${label}${id === 'scenarios' ? `<span class="count">${S.scenarios.length}</span>` : ''}${id === 'events' ? `<span class="count">${EV.length}</span>` : ''}${id === 'insights' ? `<span class="count">${S.insights.length}</span>` : ''}</button>`).join('');
+    $$('#tabs .tab').forEach(b => b.onclick = () => { S.tab = b.dataset.tab; render(); window.scrollTo(0, 0); });
+  }
+
+  // ───────────────────────── chart (SVG) ─────────────────────────
+  function chart(opts) {
+    // opts: metric, series: [{name,color,values(monthly),dash,solidUntil}], mode monthly|annual, height
+    const W = opts.width || 920, H = opts.height || 210, padL = 54, padR = 14, padT = 14, padB = 30;   // width in viewBox units: pass the column's real width so text keeps its size
+    const unit = MX[opts.metric].unit;
+    const xs = opts.mode === 'annual' ? YEARS.map(String) : T.map(t => t.key);
+    const toX = i => padL + (W - padL - padR) * (xs.length === 1 ? 0.5 : i / (xs.length - 1));
+    // annual points come from the full series (s.full) so a line that starts at the last actual still shows whole years
+    const lines = opts.series.map(s => ({ ...s, pts: opts.mode === 'annual' ? YEARS.map(y => annual(s.full || s.values, y, opts.metric)) : s.values }));
+    let lo = Infinity, hi = -Infinity;
+    lines.forEach(l => l.pts.forEach(v => { if (v != null && isFinite(v)) { lo = Math.min(lo, v); hi = Math.max(hi, v); } }));
+    if (!isFinite(lo)) { lo = 0; hi = 1; }
+    if (unit === 'pct' || lo > 0) lo = Math.max(0, lo - (hi - lo) * 0.15); hi = hi + (hi - lo) * 0.08; if (hi === lo) hi = lo + 1;
+    const toY = v => padT + (H - padT - padB) * (1 - (v - lo) / (hi - lo));
+    const ticks = 4; let g = '';
+    for (let k = 0; k <= ticks; k++) { const v = lo + (hi - lo) * k / ticks, y = toY(v); g += `<line x1="${padL}" x2="${W - padR}" y1="${y}" y2="${y}" class="grid"/><text x="${padL - 8}" y="${y + 4}" class="ytick">${esc(fmt(v, unit, true))}</text>`; }
+    const step = opts.mode === 'annual' ? 1 : 6; let xl = '';
+    for (let i = 0; i < xs.length; i += step) xl += `<text x="${toX(i)}" y="${H - 8}" class="xtick">${esc(opts.mode === 'annual' ? xs[i] : T[i].label)}</text>`;
+    let aend = '';
+    if (opts.mode !== 'annual') { const x = toX(AEND) + (toX(AEND + 1) - toX(AEND)) / 2; aend = `<line x1="${x}" x2="${x}" y1="${padT}" y2="${H - padB}" class="aend"/><text x="${x + 5}" y="${padT + 10}" class="aendt">Actuals end</text>`; }
+    let paths = '';
+    for (const l of lines) {
+      const seg = (from, to, cls) => { let d = '', pen = false; for (let i = from; i <= to; i++) { const v = l.pts[i]; if (v == null || !isFinite(v)) { pen = false; continue; } d += (pen ? 'L' : 'M') + toX(i).toFixed(1) + ' ' + toY(v).toFixed(1) + ' '; pen = true; } return d ? `<path d="${d.trim()}" class="${cls}" style="stroke:${l.color}"/>` : ''; };
+      if (opts.mode === 'annual') paths += seg(0, l.pts.length - 1, 'ln' + (l.dash ? ' dash' : ''));
+      else { const cut = l.solidUntil == null ? l.pts.length - 1 : l.solidUntil; paths += seg(0, cut, 'ln' + (l.dash ? ' dash' : '')); if (cut < l.pts.length - 1) paths += seg(cut, l.pts.length - 1, 'ln' + (l.dash ? ' dash' : l.dotForecast ? ' dot' : '')); }
+    }
+    const legend = opts.legend === false ? '' : `<div class="legend">${opts.series.map(s => `<span class="lg"><i style="background:${s.color};${s.dash ? 'opacity:.55' : ''}"></i>${esc(s.name)}</span>`).join('')}</div>`;
+    return `<div class="chart"><svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">${g}${aend}${paths}${xl}</svg>${legend}</div>`;
+  }
+  function scenarioSeries(metric, ids) {
+    const out = [{ name: 'Actuals (illustrative)', color: '#0B0F2E', values: ACTUALS[metric], solidUntil: AEND }];
+    const ref = REF(); out.push({ name: ref.name, color: '#8A8FA8', dash: true, values: run(ref)[metric] });
+    for (const id of ids) { const sc = scById(id); if (!sc || sc.locked) continue; const full = run(sc)[metric]; out.push({ name: sc.name, color: sc.color, values: full.map((x, i) => i < AEND ? null : x), full, solidUntil: AEND }); }
+    return out;
+  }
+
+  // ───────────────────────── FORECAST tab ─────────────────────────
+  function renderForecast() {
+    const sc = cur(); const r = run(sc); const y = S.year;
+    const scOpts = S.scenarios.map(s => `<option value="${s.id}"${s.id === S.current ? ' selected' : ''}>${esc(s.name)}${s.locked ? ' · read-only' : ''}</option>`).join('');
+    const bar = `<div class="scbar">
+      <div class="scpick"><label>Scenario</label><select id="scsel">${scOpts}</select>
+        <button class="ghost" id="sc-new">New from current</button><button class="ghost" id="sc-dup">Duplicate</button><button class="ghost" id="sc-ren"${sc.locked ? ' disabled' : ''}>Rename</button><button class="ghost danger" id="sc-del"${sc.locked || S.scenarios.length < 2 ? ' disabled' : ''}>Delete</button></div>
+      <div class="scyear"><label>Values for</label><select id="yearsel">${YEARS.map(v => `<option${v === y ? ' selected' : ''}>${v}</option>`).join('')}</select></div>
+    </div>
+    <p class="scnote">${esc(sc.note || '')} ${sc.overrides.length ? `<b>${sc.overrides.length} override${sc.overrides.length > 1 ? 's' : ''}</b>` : 'No overrides'} · ${sc.events_on.length} event${sc.events_on.length === 1 ? '' : 's'} on.</p>`;
+
+    // funnel (left)
+    let funnel = `<div class="fmap"><div class="fmaph"><span>Assumptions</span><span class="nl">${y} · ${esc(sc.name)}</span></div>`;
+    const shown = D.stages.filter(st => M.some(m => m.stage === st.id && (m.kind === 'input' || m.outcome)));
+    shown.forEach((st, k) => {
+      const nodes = M.filter(m => m.stage === st.id && (m.kind === 'input' || m.outcome));
+      // each stage a little narrower than the one above, centred: the flow reads as a funnel
+      funnel += `<div class="stage" style="--w:${(100 - k * (34 / Math.max(1, shown.length - 1))).toFixed(1)}%"><div class="stname">${esc(st.name)}</div>`;
+      for (const mx of nodes) {
+        const v = fy(sc, mx.id, y); const ref = fy(REF(), mx.id, y); const d = v != null && ref != null ? v - ref : null;
+        const ov = sc.overrides.some(o => o.metric === mx.id); const evs = EV.filter(e => sc.events_on.includes(e.id) && e.impacts.some(i => i.metric === mx.id)).length;
+        funnel += `<button class="node ${mx.kind}${S.node === mx.id ? ' sel' : ''}${mx.outcome ? ' out' : ''}" data-node="${mx.id}" title="${esc(mx.desc)} ${agg(mx.id) === 'sum' ? y + ' total' : y + ' average'}${d != null && Math.abs(d) > 1e-9 ? ' · ' + esc(fmtDelta(d, mx.unit)) + ' vs reference' : ''}${ov ? ' · overridden in this scenario' : ''}${evs ? ' · moved by ' + evs + ' event' + (evs > 1 ? 's' : '') : ''}">
+          <span class="nn">${esc(mx.short || mx.name)}</span><span class="nv">${esc(fmt(v, mx.unit, true))}</span>
+          ${d != null && Math.abs(d) > 1e-9 ? `<span class="nd ${d > 0 ? 'up' : 'dn'}">${esc(fmtDelta(d, mx.unit))}</span>` : ''}</button>`;
+      }
+      funnel += '</div>';
+    });
+    funnel += '</div>';
+
+    // chart + adjust (right)
+    const mx = MX[S.metric];
+    const metricOpts = D.stages.map(st => `<optgroup label="${esc(st.name)}">${M.filter(m => m.stage === st.id).map(m => `<option value="${m.id}"${m.id === S.metric ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</optgroup>`).join('');
+    const chartHtml = chart({ metric: S.metric, mode: S.chartMode, height: 170, legend: false, series: scenarioSeries(S.metric, [...S.shown]) });
+    // one legend only: the lines in the chart, each scenario a dot with its FY value; click a scenario to show or hide it
+    const legend = [`<span class="lg"><i style="background:#0B0F2E"></i>Actuals</span>`, `<span class="lg"><i style="background:#8A8FA8;opacity:.55"></i>${esc(REF().name)}</span>`]
+      .concat(S.scenarios.filter(s => !s.locked).map(s => `<button class="lg tog${S.shown.has(s.id) ? '' : ' off'}" data-show="${s.id}" style="--c:${s.color}" title="${S.shown.has(s.id) ? 'in the chart · click to hide' : 'hidden · click to show'}"><i></i>${esc(s.name)} <b>${esc(fmt(fy(s, S.metric, y), mx.unit, true))}</b></button>`)).join('');
+    const right = `<div class="card chartcard">
+      <div class="ch"><div><span class="pill ${mx.kind === 'input' ? 'amber' : 'blue'}">${mx.kind === 'input' ? 'assumption' : 'calculated'}</span>
+        <select id="metricsel" class="metricsel">${metricOpts}</select><span class="unit">${esc(mx.desc)}</span></div>
+        <div class="ctl" style="margin:0"><button class="ghost sm" id="save-ins">Save to Insights</button><span class="seg"><button class="${S.chartMode === 'monthly' ? 'on' : ''}" data-cm="monthly">Monthly</button><button class="${S.chartMode === 'annual' ? 'on' : ''}" data-cm="annual">Annual</button></span></div></div>
+      ${chartHtml}<div class="legend fylg">${legend}<span class="nl" title="click a scenario to show or hide its line">${y} values</span></div></div>`;
+
+    $('#view').innerHTML = `${bar}<div class="fgrid"><div>${funnel}</div><div class="rcol">${right}${renderGrid(sc, r, S.adjHidden ? '' : renderAdjust(sc, mx))}</div></div>`;
+
+    // wiring
+    $('#scsel').onchange = e => { S.current = e.target.value; render(); };
+    $('#yearsel').onchange = e => { S.year = +e.target.value; render(); };
+    $$('[data-period]').forEach(b => b.onclick = () => { S.period = b.dataset.period; render(); });
+    $('#grid-toggle').onclick = () => { S.gridHidden = !S.gridHidden; render(); };
+    $$('[data-cm]').forEach(b => b.onclick = () => { S.chartMode = b.dataset.cm; render(); });
+    $$('[data-show]').forEach(b => b.onclick = () => { const id = b.dataset.show; if (S.shown.has(id)) S.shown.delete(id); else S.shown.add(id); render(); });
+    $$('.node').forEach(b => b.onclick = () => { S.node = b.dataset.node; S.metric = b.dataset.node; S.adjHidden = false; render(); });   // picking an assumption reopens the override box
+    $('#metricsel').onchange = e => { S.metric = e.target.value; S.node = e.target.value; S.adjHidden = false; render(); };
+    $('#sc-new').onclick = () => newScenario(true); $('#sc-dup').onclick = () => newScenario(false);
+    $('#save-ins').onclick = () => { S.insights.unshift({ type: 'view', when: 'Just now', who: D.forecast.owner, title: `${MX[S.metric].name} · ${[...S.shown].map(id => (scById(id) || {}).name).filter(Boolean).join(', ')}`, body: `Saved from the Forecast page · ${S.chartMode} · ${y} values: ${[...S.shown].map(id => { const s = scById(id); return s ? s.name + ' ' + fmt(fy(s, S.metric, y), MX[S.metric].unit, true) : ''; }).filter(Boolean).join(' · ')}` }); S.tab = 'insights'; render(); };
+    $('#sc-ren').onclick = () => { const n = prompt('Scenario name', sc.name); if (n) { sc.name = n; render(); } };
+    $('#sc-del').onclick = () => { if (confirm('Delete scenario "' + sc.name + '"?')) { S.scenarios = S.scenarios.filter(s => s.id !== sc.id); S.shown.delete(sc.id); S.current = scById('base') ? 'base' : S.scenarios[0].id; render(); } };
+    wireAdjust(sc, mx); wireGrid(sc);
+  }
+  function newScenario(fromCurrent) {
+    const base = cur(); const name = prompt(fromCurrent ? 'Name for the new scenario (starts from ' + base.name + ')' : 'Name for the copy', fromCurrent ? 'New scenario' : 'Copy of ' + base.name);
+    if (!name) return;
+    const color = D.colors_free.find(c => !S.scenarios.some(s => s.color === c)) || '#0000C9';
+    const sc = { id: 'sc' + Date.now(), name, color, note: fromCurrent ? 'Started from ' + base.name + '.' : 'Copy of ' + base.name + '.', overrides: JSON.parse(JSON.stringify(base.overrides)), events_on: base.events_on.slice() };
+    S.scenarios.push(sc); S.current = sc.id; S.shown.add(sc.id); render();
+  }
+
+  // adjust panel (metric override) — on the main page
+  function renderAdjust(sc, mx) {
+    // the override box sits at the top of the model grid; a calculated metric has none (its rows are formulas)
+    if (mx.kind !== 'input') return '';
+    const ovs = sc.overrides.filter(o => o.metric === mx.id);
+    const list = ovs.map((o, i) => `<li>${esc(describeOverride(o, mx))} <button class="link" data-rmov="${sc.overrides.indexOf(o)}">remove</button></li>`).join('');
+    const monthOpts = sel => T.filter(t => IDX[t.key] > AEND).map(t => `<option value="${t.key}"${t.key === sel ? ' selected' : ''}>${t.label}</option>`).join('');
+    const first = T[AEND + 1].key, dec = key(FOCUS, 12);
+    return `<div class="adj"><div class="adjh"><span class="pill amber">override</span> <b>${esc(mx.name)}</b> <span class="nl">${esc(sc.name)}${sc.locked ? ' · read-only, pick another scenario' : ''} · actuals to ${esc(T[AEND].long)} are fixed</span><button class="ghost sm adjx" id="ov-close" title="close the override box">× Close</button></div>
+      <div class="adjrow">
+        <label>Method<select id="ov-method">${D.methods.filter(m => m.id !== 'monthly').map(m => `<option value="${m.id}"${m.id === 'target' ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</select></label>
+        <label>From<select id="ov-start">${monthOpts(first)}</select></label>
+        <label>To<select id="ov-end">${monthOpts(dec)}</select></label>
+        <label id="ov-target-l">Target<input id="ov-target" type="number" step="any" placeholder="${mx.unit === 'pct' ? '% e.g. 15.5' : mx.unit === 'usd' ? '$' : ''}"></label>
+        <label id="ov-curve-l">Curve<select id="ov-curve">${D.curves.map(c => `<option value="${c.id}">${esc(c.name)}</option>`).join('')}</select></label>
+        <button class="primary" id="ov-apply"${sc.locked ? ' disabled' : ''}>Apply override</button>
+      </div>
+      <p class="nl" id="ov-help">${esc(D.methods[1].plain)}</p>
+      <div id="ov-prev" class="ovprev"></div>
+      ${ovs.length ? `<ul class="ovlist">${list}</ul>` : ''}</div>`;
+  }
+  // the override as the form describes it right now (null with a reason while it is incomplete)
+  function readOverride(sc, mx) {
+    const meth = $('#ov-method'); if (!meth) return { o: null, why: '' };
+    const method = meth.value, start = $('#ov-start').value, end = $('#ov-end').value; let v = parseFloat($('#ov-target').value);
+    if (IDX[end] < IDX[start]) return { o: null, why: 'The end month is before the start month.' };
+    const o = { metric: mx.id, method, start, end, curve: $('#ov-curve').value };
+    if (method !== 'hold') { if (isNaN(v)) return { o: null, why: method === 'target' ? 'Enter the target value to see the after line.' : 'Enter a value to see the after line.' }; if (method === 'growth') v = v / 100; else if (mx.unit === 'pct') v = v / 100; }   // the fields are in percent / points, always
+    if (method === 'target') o.target = v; if (method === 'linear') o.delta = v; if (method === 'growth') o.rate = v;
+    return { o, why: '' };
+  }
+  // two lines by month under the form: what the assumption is now, and what the override would make it
+  function previewOverride(sc, mx) {
+    const box = $('#ov-prev'); if (!box) return;
+    const { o, why } = readOverride(sc, mx);
+    const start = IDX[$('#ov-start').value], end = Math.min(N - 1, IDX[$('#ov-end').value]);
+    const a = Math.max(AEND + 1, Math.min(start, end)), b = Math.max(a, end); const tail = Math.min(N - 1, b + 2);   // the window, plus two months after it to show the hold
+    const before = run(sc)[mx.id]; const after = o ? computeFrom(scenarioInputs(sc, { overrides: sc.overrides.concat([o]) }))[mx.id] : null;
+    const idx = []; for (let i = a; i <= tail; i++) idx.push(i);
+    const head = idx.map(i => `<th class="${i > b ? 'tail' : ''}">${esc(T[i].label)}</th>`).join('');
+    const row = (lab, ser, cls) => `<tr class="${cls}"><th>${lab}</th>${idx.map(i => { const v = ser ? ser[i] : null; const chg = after && Math.abs(after[i] - before[i]) > 1e-9; return `<td class="${i > b ? 'tail' : ''}${cls === 'after' && chg ? ' chg' : ''}">${ser ? esc(fmt(v, mx.unit, true)) : '·'}</td>`; }).join('')}</tr>`;
+    // events that move this assumption sit on top of the override, so the after line can differ from the typed target
+    const onTop = EV.filter(e => sc.events_on.includes(e.id) && e.impacts.some(im => im.metric === mx.id)).map(e => e.name);
+    box.innerHTML = `<div class="ovwrap"><table class="ovtable"><thead><tr><th></th>${head}</tr></thead><tbody>${row('Before', before, 'before')}${row('After', after, 'after')}</tbody></table></div>
+      <p class="nl">${o ? esc(describeOverride(o, mx)) + (tail > b ? ' · the two greyed months show what follows the period' : '') + (onTop.length ? ' · ' + esc(onTop.join(', ')) + ' add' + (onTop.length === 1 ? 's' : '') + ' on top of the override, so the after line includes ' + (onTop.length === 1 ? 'that event' : 'those events') : '') : esc(why)}</p>`;
+  }
+  function describeOverride(o, mx) {
+    const u = mx.unit, L = k => T[IDX[k]].long, curve = (D.curves.find(c => c.id === o.curve) || { name: o.curve || 'linear' }).name.toLowerCase();
+    if (o.method === 'target') return `Reaches ${fmt(o.target, u)} by ${L(o.end)}, from ${L(o.start)} (${curve}), then holds`;
+    if (o.method === 'shift') return `Moved ${fmtDelta(o.delta, u)} from ${L(o.start)} onwards`;
+    if (o.method === 'hold') return `Holds the last actual from ${L(o.start)}`;
+    if (o.method === 'linear') return `Adds ${fmtDelta(o.delta, u)} a month, ${L(o.start)} to ${L(o.end)}`;
+    if (o.method === 'growth') return `Grows ${fmtPct(o.rate)} a year, ${L(o.start)} to ${L(o.end)}`;
+    return JSON.stringify(o);
+  }
+  function wireAdjust(sc, mx) {
+    $$('[data-goto]').forEach(a => a.onclick = e => { e.preventDefault(); S.metric = a.dataset.goto; S.node = a.dataset.goto; render(); });
+    $$('[data-rmov]').forEach(b => b.onclick = () => { sc.overrides.splice(+b.dataset.rmov, 1); render(); });
+    const meth = $('#ov-method'); if (!meth) return;
+    const help = () => { const m = D.methods.find(x => x.id === meth.value); $('#ov-help').textContent = m.plain; $('#ov-target-l').style.display = meth.value === 'hold' ? 'none' : ''; $('#ov-curve-l').style.display = meth.value === 'target' ? '' : 'none'; $('#ov-target-l').firstChild.textContent = meth.value === 'linear' ? 'Change per month' : meth.value === 'growth' ? 'Growth % a year' : 'Target'; };
+    const preview = () => previewOverride(sc, mx);
+    $('#ov-close').onclick = () => { S.adjHidden = true; render(); };
+    meth.onchange = () => { help(); preview(); }; help(); preview();
+    $$('#ov-start,#ov-end,#ov-curve').forEach(el => el.onchange = preview); $('#ov-target').oninput = preview;
+    $('#ov-apply').onclick = () => {
+      const { o, why } = readOverride(sc, mx); if (!o) { alert(why || 'Complete the override first.'); return; }
+      sc.overrides.push(o); render();
+    };
+  }
+
+  // the full grid (monthly / annual); the override box for the selected assumption sits at its top
+  function renderGrid(sc, r, adj) {
+    const y = S.year; const mode = S.period === 'annual' ? 'annual' : 'monthly';
+    // monthly: a collapsed year is one column holding its annual figure (click the year to fold or unfold it)
+    const cols = [];
+    if (mode === 'annual') for (const yy of YEARS) cols.push({ label: String(yy), year: yy, i: null });
+    else for (const yy of YEARS) { if (S.collapsed.has(yy)) cols.push({ label: String(yy), year: yy, i: null, folded: true }); else for (const t of T.filter(t => t.y === yy)) cols.push({ label: t.label, i: IDX[t.key], month: t }); }
+    let head = '<tr><th class="rowh">Metric</th>';
+    if (mode === 'monthly') {
+      for (const yy of YEARS) head += S.collapsed.has(yy) ? `<th class="yh fold" data-year="${yy}" title="click to show the months">${yy} ▸</th>` : `<th colspan="12" class="yh${yy === y ? ' cur' : ''}" data-year="${yy}" title="click to fold the year to one column">${yy} ▾</th>`;
+      head += '<th class="fyh" title="the year total for flows, the year average for rates">Year ' + y + '</th></tr><tr><th class="rowh sub">monthly</th>';
+      for (const c of cols) head += c.folded ? `<th class="${c.year < T[AEND].y ? 'act' : c.year === T[AEND].y ? 'act part' : ''}">year</th>` : `<th class="${c.i <= AEND ? 'act' : ''}">${esc(c.label.split(' ')[0])}</th>`;
+      head += '<th class="fyh"></th></tr>';
+    }
+    else { head += `<th colspan="${cols.length}" class="yh cur" title="totals for flows such as patients, prescriptions and sales; averages for rates and stocks">by year</th><th class="fyh">Year ${y}</th></tr><tr><th class="rowh sub">annual</th>`; for (const c of cols) head += `<th class="${c.year < T[AEND].y ? 'act' : c.year === T[AEND].y ? 'act part' : ''}">${c.label}${c.year === T[AEND].y ? ' <span class="nl">actual + forecast</span>' : ''}</th>`; head += '<th class="fyh"></th></tr>'; }
+    let body = '';
+    for (const st of D.stages) {
+      body += `<tr class="strow"><td colspan="${cols.length + 2}">${esc(st.name)} <span class="nl">${esc(st.what)}</span></td></tr>`;
+      for (const mx of M.filter(m => m.stage === st.id)) {
+        const ser = r[mx.id]; const isIn = mx.kind === 'input'; const ov = sc.overrides.filter(o => o.metric === mx.id);
+        const evm = new Set(); EV.filter(e => sc.events_on.includes(e.id)).forEach(e => e.impacts.forEach(im => { if (im.metric === mx.id) for (let i = IDX[e.month]; i < N; i++) evm.add(i); }));
+        let cells = '';
+        for (const c of cols) {
+          if (mode === 'annual' || c.folded) {
+            const v = annual(ser, c.year, mx.id); const act = c.year < T[AEND].y;
+            const ovd = ov.some(o => T[IDX[o.start]].y <= c.year), evd = [...evm].some(i => T[i].y === c.year);
+            cells += `<td class="${['cell', act ? 'act' : '', c.folded ? 'fold' : '', ovd && !act ? 'ov' : '', evd && !act ? 'ev' : '', mx.outcome ? 'out' : ''].filter(Boolean).join(' ')}"${c.folded ? ` title="${c.year} ${agg(mx.id) === 'sum' ? 'total' : 'average'}"` : ''}>${esc(fmt(v, mx.unit, true))}</td>`;
+            continue;
+          }
+          const i = c.i; const act = i <= AEND; const v = ser[i];
+          const ovd = ov.some(o => IDX[o.start] <= i); const cls = ['cell', act ? 'act' : '', isIn && !act ? 'in' : '', ovd && !act ? 'ov' : '', evm.has(i) && !act ? 'ev' : '', mx.outcome ? 'out' : ''].filter(Boolean).join(' ');
+          cells += `<td class="${cls}" data-m="${mx.id}" data-i="${i}"${isIn && !act && mode === 'monthly' && !sc.locked ? ' contenteditable="true" spellcheck="false"' : ''}>${esc(fmt(v, mx.unit, true))}</td>`;
+        }
+        const fyv = fy(sc, mx.id, y);
+        body += `<tr class="${mx.kind}${S.metric === mx.id ? ' hl' : ''}" data-row="${mx.id}"><td class="rowh"><button class="rowbtn" data-node="${mx.id}" title="${isIn ? 'Assumption · ' + esc(mx.formula) + ' · type over a forecast month to change it' : 'Calculated · ' + esc(mx.formula)}">${isIn ? '<i class="dot" title="assumption"></i>' : ''}<b>${esc(mx.name)}</b></button></td>${cells}<td class="fyh">${esc(fmt(fyv, mx.unit, true))}</td></tr>`;
+      }
+    }
+    const note = mode === 'monthly' ? 'every month, ' + T[0].label + ' to ' + T[N - 1].label : 'every year, ' + YEARS[0] + ' to ' + YEARS[YEARS.length - 1];
+    // the model can be folded away, leaving the funnel and the chart (the override box, when open, stays)
+    if (S.gridHidden) return `<div class="card gridcard folded">${adj || ''}<div class="gh"><b>Full model · ${esc(sc.name)}</b><span class="nl">hidden · every metric by month or by year</span><span class="ghbtns"><button class="ghost sm" id="grid-toggle">Show model</button></span></div></div>`;
+    return `<div class="card gridcard">${adj || ''}<div class="gh"><b>Full model · ${esc(sc.name)}</b><span class="nl" title="${esc(note)}${mode === 'monthly' ? ' · type over an amber value and later months follow · click a year to fold it' : ''}">grey = actual · <i class="dot"></i> assumption you can type over · blue fill = overridden · dashed underline = moved by an event</span>
+      <span class="ghbtns"><span class="seg sm"><button class="${mode === 'monthly' ? 'on' : ''}" data-period="monthly">Monthly</button><button class="${mode === 'annual' ? 'on' : ''}" data-period="annual">Annual</button></span><button class="ghost sm" id="grid-toggle" title="fold the model away and keep the funnel and the chart">Hide model</button></span></div>
+      <div class="gridwrap"><table class="grid"><thead>${head}</thead><tbody>${body}</tbody></table></div></div>`;
+  }
+  function wireGrid(sc) {
+    $$('.rowbtn').forEach(b => b.onclick = () => { S.metric = b.dataset.node; S.node = b.dataset.node; S.adjHidden = false; render(); });
+    $$('th.yh[data-year]').forEach(th => th.onclick = () => { const yy = +th.dataset.year; if (S.collapsed.has(yy)) S.collapsed.delete(yy); else S.collapsed.add(yy); render(); });
+    $$('td.in[contenteditable]').forEach(td => {
+      td.onfocus = () => { td.dataset.orig = td.textContent; td.dataset.cancel = ''; };
+      td.onkeydown = e => { if (e.key === 'Enter') { e.preventDefault(); td.blur(); } if (e.key === 'Escape') { td.dataset.cancel = '1'; td.textContent = td.dataset.orig; td.blur(); } };
+      td.onblur = () => {
+        if (td.dataset.cancel || td.textContent.trim() === (td.dataset.orig || '').trim()) { td.textContent = td.dataset.orig || td.textContent; return; }   // nothing typed: no override
+        const mx = MX[td.dataset.m]; const i = +td.dataset.i; let txt = td.textContent.replace(/[$,%\sMk]/g, '');
+        let v = parseFloat(txt); if (isNaN(v)) { td.textContent = td.dataset.orig; return; }
+        if (mx.unit === 'pct') v = v / 100; if (/k$/i.test(td.textContent.trim())) v *= 1e3; if (/M$/.test(td.textContent.trim()) && mx.unit === 'n') v *= 1e6;
+        const now = run(sc)[mx.id][i]; const delta = v - now; if (Math.abs(delta) < 1e-12) { td.textContent = td.dataset.orig; return; }
+        sc.overrides.push({ metric: mx.id, method: 'shift', start: T[i].key, delta }); render();
+      };
+    });
+  }
+
+  // ───────────────────────── ACTUALS tab ─────────────────────────
+  function spark(values, color) {
+    const W = 160, H = 40; const vals = values.filter(v => v != null); if (vals.length < 2) return '';
+    const lo = Math.min(...vals), hi = Math.max(...vals); const toY = v => 4 + (H - 8) * (1 - (v - lo) / ((hi - lo) || 1));
+    let d = ''; values.forEach((v, i) => { if (v == null) return; d += (d ? 'L' : 'M') + (i / (values.length - 1) * W).toFixed(1) + ' ' + toY(v).toFixed(1) + ' '; });
+    return `<svg viewBox="0 0 ${W} ${H}" class="spark"><path d="${d}" style="stroke:${color}"/></svg>`;
+  }
+  function renderActuals() {
+    const last = AEND; const mode = S.actMode; if (!S.actSince || IDX[S.actSince] >= last) S.actSince = key(T[last].y, 1);
+    const i0 = IDX[S.actSince]; const months = last - i0;
+    const MODES = [['mom', 'Month over month'], ['qoq', 'Quarter over quarter'], ['yoy', 'Year over year'], ['since', 'Since a chosen month']];
+    const cards = ['trx', 'nbrx', 'starts', 'book', 'ntb', 'eff_share', 'access_pct', 'net'].map(id => {
+      const mx = MX[id]; const a = ACTUALS[id]; const isSum = agg(id) === 'sum';
+      const win = (from, to) => { let s = 0, n = 0; for (let i = Math.max(0, from); i <= to; i++) if (a[i] != null) { s += a[i]; n++; } return n ? (isSum ? s : s / n) : null; };
+      // what is compared with what, for the chosen growth view
+      let now = a[last], then, what;
+      if (mode === 'mom') { then = a[last - 1]; what = `${esc(T[last].label)} vs ${esc(T[last - 1].label)}`; }
+      else if (mode === 'qoq') { now = win(last - 2, last); then = win(last - 5, last - 3); what = `${esc(T[last - 2].label)}–${esc(T[last].label)} vs ${esc(T[last - 5].label)}–${esc(T[last - 3].label)}${isSum ? ' (totals)' : ' (averages)'}`; }
+      else if (mode === 'yoy') { then = a[last - 12]; what = `${esc(T[last].label)} vs ${esc(T[last - 12].label)}`; }
+      else { then = a[i0]; what = `${esc(T[last].label)} vs ${esc(T[i0].label)}`; }
+      // rates and shares move in points; counts and money in percent
+      let g = '—', cls = '', sub = '';
+      if (now != null && then != null) {
+        if (mx.unit === 'pct') { const x = now - then; cls = x > 0 ? 'up' : x < 0 ? 'dn' : ''; g = fmtDelta(x, 'pct'); if (mode === 'since' && months > 1) sub = `${esc(fmtDelta(x / months, 'pct'))} a month`; }
+        else { const p = pctChange(now, then); cls = p > 0 ? 'up' : p < 0 ? 'dn' : ''; g = fmtPct(p); if (mode === 'since' && months > 1 && then > 0 && now > 0) sub = `${fmtPct(Math.pow(now / then, 1 / months) - 1)} a month`; }
+      }
+      const trend = a.slice(Math.max(0, last - 23), last + 1);
+      return `<div class="kpi"><div class="kh"><b>${esc(mx.name)}</b><span class="nl">${esc(T[last].long)}${mx.source ? ' · ' + esc(mx.source) : ''}</span></div>
+        <div class="kbig">${esc(fmt(a[last], mx.unit, true))}</div>${spark(trend, '#0000C9')}
+        <div class="kg"><span class="gv ${cls}">${esc(g)}</span><span class="gl">${what}<br>${esc(fmt(then, mx.unit, true))} → ${esc(fmt(now, mx.unit, true))}${sub ? ' · ' + sub : ''}</span></div></div>`;
+    }).join('');
+    const sinceOpts = T.slice(0, last).map((t, i) => `<option value="${t.key}"${t.key === S.actSince ? ' selected' : ''}>${t.label}</option>`).join('');
+    $('#view').innerHTML = `<div class="sechead"><span class="pill blue">actuals</span><h2>What has happened so far</h2><p>Actuals through <b>${esc(T[last].label)}</b> · latest month, the last 24 months, and the growth for the view you choose.</p>
+      <div class="ctl"><label>Growth</label><span class="seg">${MODES.map(([m, l]) => `<button class="${mode === m ? 'on' : ''}" data-am="${m}">${l}</button>`).join('')}</span>${mode === 'since' ? `<select id="act-since">${sinceOpts}</select><span class="nl">${months} month${months === 1 ? '' : 's'} to ${esc(T[last].label)}</span>` : ''}</div></div>
+      <div class="kpis">${cards}</div>`;
+    $$('[data-am]').forEach(b => b.onclick = () => { S.actMode = b.dataset.am; render(); });
+    const sel = $('#act-since'); if (sel) sel.onchange = e => { S.actSince = e.target.value; render(); };
+  }
+
+  // ───────────────────────── EVENTS tab ─────────────────────────
+  const SHAPES = { step: 'Step', linear: 'Linear', 's-curve': 'S-curve', front: 'Front-loaded' };   // ramp shapes, shown by name
+  function eventImpactFY(sc, ev, output, y) { const withE = fy(sc, output, y); const without = fy(sc, output, y, { events: sc.events_on.filter(id => id !== ev.id) }); return withE - without; }
+  function renderEvents() {
+    const sc = scById(S.evScenario) || cur(); const out = MX[S.evOutput];
+    const withSeries = run(sc)[S.evOutput], withoutSeries = run(sc, { noEvents: true })[S.evOutput];
+    const total = annual(withSeries, FOCUS, S.evOutput) - annual(withoutSeries, FOCUS, S.evOutput);
+    const ch = chart({ metric: S.evOutput, mode: S.chartMode, height: 150, width: 600, series: [
+      { name: 'Actuals', color: '#0B0F2E', values: ACTUALS[S.evOutput], solidUntil: AEND },
+      { name: REF().name, color: '#8A8FA8', dash: true, values: run(REF())[S.evOutput] },
+      { name: sc.name + ' · without events', color: '#4A5070', values: withoutSeries.map((v, i) => i < AEND ? null : v), full: withoutSeries },
+      { name: sc.name + ' · with events', color: sc.color, values: withSeries.map((v, i) => i < AEND ? null : v), full: withSeries }] });
+    const active = EV.filter(e => sc.events_on.includes(e.id)).map(e => ({ e, d: eventImpactFY(sc, e, S.evOutput, FOCUS) }));
+    const overlap = total - active.reduce((s, x) => s + x.d, 0);                 // events interact: each is read with the others still on
+    const evlist = active.length ? active.map(({ e, d }) => `<li><span class="evn"><b>${esc(e.name)}</b><span class="nl">${esc(T[IDX[e.month]] ? T[IDX[e.month]].long : e.month)} · ${Math.round(e.probability * 100)}% likely · ${esc(e.type)}</span></span><span class="num ${d > 0 ? 'up' : d < 0 ? 'dn' : ''}">${esc(fmtDelta(d, out.unit))}</span></li>`).join('') + (active.length > 1 && Math.abs(overlap) >= 0.05 ? `<li><span class="evn nl">Overlap between events<span class="nl">combined effect minus the sum of each event</span></span><span class="num nl">${esc(fmtDelta(overlap, out.unit))}</span></li>` : '') : `<li class="nl">No events on in ${esc(sc.name)}.</li>`;
+    const rows = EV.map(ev => `<tr><td><b>${esc(ev.name)}</b><br><span class="nl">${esc(ev.type)}</span></td><td>${esc(T[IDX[ev.month]] ? T[IDX[ev.month]].long : ev.month)}</td>
+      <td>${ev.impacts.map(im => `<span class="chip">${esc(MX[im.metric].name)} ${im.how === 'pct' ? fmtPct(im.change) : fmtDelta(im.change, 'pct')}${im.ramp ? ' · over ' + im.ramp + ' months, ' + (SHAPES[im.shape] || im.shape).toLowerCase() : ''}</span>`).join(' ')}</td>
+      <td>${Math.round(ev.probability * 100)}%</td>
+      <td>${S.scenarios.map(s => `<label class="chk sm" style="--c:${s.color}" title="${esc(s.name)}"><input type="checkbox" data-ev="${ev.id}" data-sc="${s.id}"${s.events_on.includes(ev.id) ? ' checked' : ''}${s.locked ? ' disabled' : ''}><i></i>${esc(s.name)}</label>`).join('')}</td>
+      <td class="num">${sc.events_on.includes(ev.id) ? esc(fmtDelta(eventImpactFY(sc, ev, S.evOutput, FOCUS), out.unit)) : '<span class="nl">off</span>'}</td>
+      <td><button class="link" data-edit="${ev.id}">edit</button> <button class="link danger" data-rm="${ev.id}">delete</button></td></tr>`).join('');
+    $('#view').innerHTML = `<div class="sechead"><span class="pill blue">events</span><h2>Event library</h2><p>Dated changes you switch on or off per scenario · effect = the forecast with the event minus the forecast without it.</p></div>
+      <div class="evgrid"><div class="card chartcard"><div class="ch"><div><b>Event impact</b> <span class="nl">${esc(sc.name)} · with events minus without events</span></div>
+        <div class="ctl" style="margin:0"><select id="ev-sc" title="Scenario">${S.scenarios.map(s => `<option value="${s.id}"${s.id === sc.id ? ' selected' : ''}>${esc(s.name)}</option>`).join('')}</select><select id="ev-out" title="Output">${['net', 'trx', 'book', 'starts'].map(id => `<option value="${id}"${id === S.evOutput ? ' selected' : ''}>${esc(MX[id].name)}</option>`).join('')}</select>
+        <span class="seg sm"><button class="${S.chartMode === 'monthly' ? 'on' : ''}" data-cm="monthly">Monthly</button><button class="${S.chartMode === 'annual' ? 'on' : ''}" data-cm="annual">Annual</button></span></div></div>
+        ${ch}</div>
+      <div class="card"><div class="gh"><b>${FOCUS} ${esc(out.name)} · ${esc(sc.name)}</b><span class="nl">Each event: forecast with it minus forecast without it</span></div>
+        <div class="evtot"><span class="nl">${sc.events_on.length} event${sc.events_on.length === 1 ? '' : 's'} on · combined effect</span><b class="${total > 0 ? 'up' : total < 0 ? 'dn' : ''}">${esc(fmtDelta(total, out.unit))}</b></div>
+        <ul class="plain evlist">${evlist}</ul>
+        <label class="chk sm" style="--c:#0000C9;margin-top:8px"><input type="checkbox" id="ev-prob"${S.probWeighted ? ' checked' : ''}><i></i>Weight effects by probability</label></div></div>
+      <div class="card gridcard"><div class="gh"><b>Library · ${EV.length} events</b><button class="primary sm" id="ev-add">Add event</button></div>
+        <div class="gridwrap"><table class="grid evt"><thead><tr><th>Event</th><th>Timing</th><th>Impacted metrics</th><th>Probability</th><th>Active in</th><th>${FOCUS} ${esc(out.name)} · ${esc(sc.name)}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div></div>
+      <div id="ev-form"></div>`;
+    $('#ev-sc').onchange = e => { S.evScenario = e.target.value; render(); }; $('#ev-out').onchange = e => { S.evOutput = e.target.value; render(); };
+    $('#ev-prob').onchange = e => { S.probWeighted = e.target.checked; cache.clear(); render(); };
+    $$('[data-cm]').forEach(b => b.onclick = () => { S.chartMode = b.dataset.cm; render(); });
+    $$('[data-ev]').forEach(c => c.onchange = () => { const s = scById(c.dataset.sc); if (c.checked) { if (!s.events_on.includes(c.dataset.ev)) s.events_on.push(c.dataset.ev); } else s.events_on = s.events_on.filter(x => x !== c.dataset.ev); render(); });
+    $$('[data-rm]').forEach(b => b.onclick = () => { if (!confirm('Delete this event from the library and every scenario?')) return; const id = b.dataset.rm; EV.splice(EV.findIndex(e => e.id === id), 1); S.scenarios.forEach(s => s.events_on = s.events_on.filter(x => x !== id)); cache.clear(); render(); });
+    $$('[data-edit]').forEach(b => b.onclick = () => eventForm(EV.find(e => e.id === b.dataset.edit)));
+    $('#ev-add').onclick = () => eventForm(null);
+  }
+  function eventForm(ev) {
+    const e = ev ? JSON.parse(JSON.stringify(ev)) : { id: 'ev' + Date.now(), name: '', type: 'Market event', month: key(FOCUS, 1), probability: 0.5, impacts: [{ metric: 'share_pre', change: 0.02, how: 'pts', ramp: 3, shape: 'linear' }] };
+    const monthOpts = sel => T.filter(t => IDX[t.key] > AEND).map(t => `<option value="${t.key}"${t.key === sel ? ' selected' : ''}>${t.label}</option>`).join('');
+    const impRow = (im, i) => `<div class="imp" data-i="${i}"><select class="im-metric">${INPUTS.map(id => `<option value="${id}"${id === im.metric ? ' selected' : ''}>${esc(MX[id].name)}</option>`).join('')}</select>
+      <input class="im-change" type="number" step="any" value="${(im.change * 100).toFixed(1)}">${MX[im.metric].unit === 'pct' ? `<select class="im-how"><option value="pts"${im.how === 'pts' ? ' selected' : ''}>points</option><option value="pct"${im.how === 'pct' ? ' selected' : ''}>%</option></select>` : '<span class="nl">%</span>'}
+      <label>Ramp over <input class="im-ramp" type="number" min="0" max="36" value="${im.ramp}"> months</label><select class="im-shape">${Object.keys(SHAPES).map(s => `<option value="${s}"${s === im.shape ? ' selected' : ''}>${SHAPES[s]}</option>`).join('')}</select><button class="link danger im-rm">remove</button></div>`;
+    $('#ev-form').innerHTML = `<div class="card form"><div class="ch"><b>${ev ? 'Edit event' : 'New event'}</b><span class="nl">one event can move several metrics</span></div>
+      <div class="adjrow"><label>Name<input id="ef-name" value="${esc(e.name)}" placeholder="e.g. Part D formulary win"></label>
+      <label>Type<select id="ef-type">${['Access event', 'Market event', 'Pricing event', 'Product event', 'Competitor event', 'Supply event'].map(t => `<option${t === e.type ? ' selected' : ''}>${t}</option>`).join('')}</select></label>
+      <label>Timing<select id="ef-month">${monthOpts(e.month)}</select></label><label>Probability %<input id="ef-prob" type="number" min="0" max="100" value="${Math.round(e.probability * 100)}"></label></div>
+      <div class="imps">${e.impacts.map(impRow).join('')}</div><button class="ghost sm" id="ef-addimp">Add a metric</button>
+      <div class="adjrow"><button class="primary" id="ef-save">Save event</button><button class="ghost" id="ef-cancel">Cancel</button></div></div>`;
+    const wire = () => { $$('#ev-form .im-rm').forEach(b => b.onclick = () => { b.closest('.imp').remove(); });
+      // points only make sense on a rate: when the metric changes, redraw the row so the selector follows it
+      $$('#ev-form .im-metric').forEach(s => s.onchange = () => { const d = s.closest('.imp'); const h = $('.im-how', d); const im = { metric: s.value, change: (+$('.im-change', d).value || 0) / 100, how: MX[s.value].unit === 'pct' ? (h ? h.value : 'pts') : 'pct', ramp: +$('.im-ramp', d).value || 0, shape: $('.im-shape', d).value }; d.outerHTML = impRow(im, +d.dataset.i); wire(); }); };
+    wire();
+    $('#ef-addimp').onclick = () => { $('#ev-form .imps').insertAdjacentHTML('beforeend', impRow({ metric: 'access_pct', change: 0.01, how: 'pts', ramp: 3, shape: 'linear' }, 99)); wire(); };
+    $('#ef-cancel').onclick = () => { $('#ev-form').innerHTML = ''; };
+    $('#ef-save').onclick = () => {
+      e.name = $('#ef-name').value.trim() || 'Untitled event'; e.type = $('#ef-type').value; e.month = $('#ef-month').value; e.probability = Math.max(0, Math.min(1, (+$('#ef-prob').value || 0) / 100));
+      e.impacts = $$('#ev-form .imp').map(d => { const m = $('.im-metric', d).value; const h = $('.im-how', d); return { metric: m, how: MX[m].unit === 'pct' && h ? h.value : 'pct', change: (+$('.im-change', d).value || 0) / 100, ramp: Math.max(0, +$('.im-ramp', d).value || 0), shape: $('.im-shape', d).value }; });
+      if (!e.impacts.length) { alert('Add at least one metric.'); return; }
+      const i = EV.findIndex(x => x.id === e.id); if (i >= 0) EV[i] = e; else { EV.push(e); const sc = scById(S.evScenario) || cur(); if (!sc.locked) sc.events_on.push(e.id); }   // on in the scenario this tab shows
+      cache.clear(); render();
+    };
+    $('#ev-form').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // ───────────────────────── SCENARIO SUMMARY tab ─────────────────────────
+  function renderScenarios() {
+    const y = S.sumYear; const base = scById('base') || S.scenarios[0]; const KEY = ['prev', 'diagnosed', 'treated', 'atx', 'ntb', 'starts', 'book', 'trx', 'gross', 'net'];
+    const vals = Object.fromEntries(S.scenarios.map(s => [s.id, Object.fromEntries(KEY.map(id => [id, fy(s, id, y)]))]));
+    const maxOf = id => Math.max(...S.scenarios.map(s => vals[s.id][id] || 0));
+    const PAT = ['prev', 'diagnosed', 'treated', 'atx', 'ntb', 'starts', 'book'];
+    const lg = v => Math.log10(Math.max(1, v));
+    const allv = S.scenarios.flatMap(s => PAT.map(id => vals[s.id][id] || 1));
+    const LMIN = lg(Math.min(...allv)), LMAX = lg(Math.max(...allv));
+    const widthOf = v => 40 + 60 * ((lg(v) - LMIN) / Math.max(1e-9, LMAX - LMIN));
+    const FL = { prev: 'Prevalent', diagnosed: 'Diagnosed', treated: 'Treated', atx: 'Adv. therapy', ntb: 'New to brand', starts: 'New starts', book: 'On drug' };   // labels sit beside the shape, so nothing is cut off
+    const funnels = S.scenarios.map(s => {
+      const ws = PAT.map(id => widthOf(vals[s.id][id]));
+      const bands = PAT.map((id, i) => { const v = vals[s.id][id]; const d = s.id === base.id ? null : v - vals[base.id][id]; const w1 = ws[i], w2 = i + 1 < ws.length ? ws[i + 1] : ws[i] * 0.92;
+        const clip = `polygon(${50 - w1 / 2}% 0,${50 + w1 / 2}% 0,${50 + w2 / 2}% 100%,${50 - w2 / 2}% 100%)`;
+        return `<div class="frow" title="${esc(MX[id].name)} · ${esc(fmt(v, 'n', true))}${d != null && Math.abs(d) > 1e-9 ? ' · ' + esc(fmtDelta(d, 'n')) + ' vs ' + esc(base.name) : ''}"><span class="fl">${esc(FL[id] || MX[id].short)}</span><div class="band" style="clip-path:${clip};opacity:${(1 - i * 0.06).toFixed(2)}"><span class="bv">${esc(fmt(v, 'n', true))}</span></div></div>`; }).join('');
+      // three aligned rows under the funnel: label · value · gap to base
+      const tile = id => { const v = vals[s.id][id], d = s.id === base.id ? null : v - vals[base.id][id]; const same = d != null && fmt(v, MX[id].unit, true) === fmt(vals[base.id][id], MX[id].unit, true); return `<div class="srow"><span class="sl">${esc(MX[id].short)}</span><b>${esc(fmt(v, MX[id].unit, true))}</b>${d != null && !same && Math.abs(d) > 1e-9 ? `<em class="${d > 0 ? 'up' : 'dn'}">${esc(fmtDelta(d, MX[id].unit))}</em>` : s.id === base.id ? '<em class="nl">base</em>' : '<em class="nl">same</em>'}</div>`; };
+      // one line per change, the full wording in the tooltip, so every card keeps the same rhythm
+      const brief = (o, mx) => { const L = k => T[IDX[k]].label; const u = mx.unit;
+        if (o.method === 'target') return `${esc(mx.short)} → ${esc(fmt(o.target, u, true))} by ${L(o.end)}`;
+        if (o.method === 'window') return `${esc(mx.short)} ${esc(o.how === 'pts' ? fmtDelta(o.step, 'pct') : fmtPct(o.step))} · ${L(o.start)}–${L(o.end)}`;
+        if (o.method === 'shift') return `${esc(mx.short)} ${esc(fmtDelta(o.delta, u))} from ${L(o.start)}`;
+        if (o.method === 'hold') return `${esc(mx.short)} held from ${L(o.start)}`;
+        if (o.method === 'linear') return `${esc(mx.short)} ${esc(fmtDelta(o.delta, u))} a month · ${L(o.start)}–${L(o.end)}`;
+        if (o.method === 'growth') return `${esc(mx.short)} ${fmtPct(o.rate)} a year · ${L(o.start)}–${L(o.end)}`;
+        return esc(mx.short); };
+      const items = [];
+      for (const o of s.overrides) items.push(`<li title="${esc(MX[o.metric].name)}: ${esc(describeOverride(o, MX[o.metric]))}"><span class="chip">override</span><span class="txt">${brief(o, MX[o.metric])}</span></li>`);
+      for (const id of s.events_on) { const ev = EV.find(e => e.id === id); if (!ev) continue; const d = eventImpactFY(s, ev, 'net', y); items.push(`<li title="${esc(ev.name)} · ${esc(T[IDX[ev.month]].label)} · ${Math.round(ev.probability * 100)}% likely · ${y} net revenue ${esc(fmtDelta(d, 'usd_m'))}"><span class="chip">event</span><span class="txt">${esc(ev.name)}</span><span class="num ${d > 0 ? 'up' : d < 0 ? 'dn' : ''}">${esc(fmtDelta(d, 'usd_m'))}</span></li>`); }
+      const chg = `<div class="chg"><div class="chgh">What was changed</div>${items.length ? `<ul>${items.join('')}</ul>` : `<p class="nl">${esc(s.locked ? 'Reference paths · read-only' : 'Nothing · follows the reference paths')}</p>`}</div>`;
+      return `<div class="mini" style="--c:${s.color}"><div class="mh"><i></i><b title="${esc(s.name)}">${esc(s.name)}</b><span class="nl">${s.events_on.length} event${s.events_on.length === 1 ? '' : 's'} · ${s.overrides.length} override${s.overrides.length === 1 ? '' : 's'}</span></div>
+      <div class="funnel">${bands}</div><div class="strip">${tile('trx')}${tile('gross')}${tile('net')}</div>${chg}</div>`; }).join('');
+    const tiny = (d, v) => Math.abs(d) <= 1e-9 * Math.max(1, Math.abs(v));
+    // the comparison table: value, and under it the gap to the base scenario; grouped by stage
+    const cell = (s, id) => { const u = MX[id].unit, v = vals[s.id][id], b0 = vals[base.id][id]; if (s.id === base.id) return `<td class="num"><b>${esc(fmt(v, u, true))}</b></td>`; const d = v - b0; const same = tiny(d, v) || fmt(v, u, true) === fmt(b0, u, true); return `<td class="num">${esc(fmt(v, u, true))}<small class="${same ? 'nl' : d > 0 ? 'up' : 'dn'}">${same ? 'same' : esc(fmtDelta(d, u)) + (b0 && u !== 'pct' ? ' · ' + fmtPct(d / b0) : '')}</small></td>`; };
+    let diffRows = '';
+    for (const st of D.stages) { const ids = KEY.filter(id => MX[id].stage === st.id); if (!ids.length) continue; diffRows += `<tr class="grp"><td colspan="${S.scenarios.length + 1}">${esc(st.name)}</td></tr>`; for (const id of ids) diffRows += `<tr><td class="mname">${esc(MX[id].name)}<small class="nl">${agg(id) === 'sum' ? 'year total' : 'year average'}</small></td>${S.scenarios.map(s => cell(s, id)).join('')}</tr>`; }
+    $('#view').innerHTML = `<div class="sechead"><span class="pill blue">scenario summary</span><h2>All scenarios side by side</h2><p>Each scenario's funnel for one year, what was changed under it, and the differences against <b>${esc(base.name)}</b>.</p>
+      <div class="ctl"><label>Year</label><select id="sum-year">${YEARS.map(v => `<option${v === y ? ' selected' : ''}>${v}</option>`).join('')}</select></div></div>
+      <div class="minis">${funnels}</div>
+      <div class="card"><div class="gh"><b>Differences vs ${esc(base.name)} · ${y}</b><span class="nl">the gap to ${esc(base.name)} sits under each value</span></div>
+        <table class="cmp2"><colgroup><col>${S.scenarios.map(s => `<col${s.id === base.id ? ' class="basecol"' : ''}>`).join('')}</colgroup><thead><tr><th></th>${S.scenarios.map(s => `<th><i style="background:${s.color}"></i>${esc(s.name)}<small>${s.id === base.id ? 'base' : 'vs base'}</small></th>`).join('')}</tr></thead><tbody>${diffRows}</tbody></table></div>`;
+    $('#sum-year').onchange = e => { S.sumYear = +e.target.value; render(); };
+  }
+
+  // ───────────────────────── SENSITIVITY tab ─────────────────────────
+  function applyWindow(id, series, w) { if (!w || w.metric !== id) return series; const out = series.slice(); const s = IDX[w.start], e = IDX[w.end]; for (let i = Math.max(s, AEND + 1); i <= e && i < N; i++) out[i] = w.how === 'pct' ? out[i] * (1 + w.step) : out[i] + w.step; return out; }
+  function runWith(sc, w) { return runWithMany(sc, w ? [w] : []); }
+  function runWithMany(sc, ws) { // the scenario with one or more windowed changes, applied exactly as a kept override is (before events), so the preview equals the kept result
+    return computeFrom(scenarioInputs(sc, { overrides: sc.overrides.concat(ws.map(w => ({ ...w, method: 'window' }))) }));
+  }
+  function winAvg(series, from, to) { let s = 0, n = 0; for (let i = Math.max(IDX[from], AEND + 1); i <= IDX[to] && i < N; i++) if (series[i] != null) { s += series[i]; n++; } return n ? s / n : null; }
+  function renderSensitivity() {
+    const s = S.sens; const sc = scById(s.sc) || cur(); const SY = s.year || FOCUS;
+    if (!s.changes.length) s.changes.push({ metric: 'share_pre', how: 'pts', step: 1, from: key(FOCUS, 1), to: key(FOCUS, 12) });
+    for (const c of s.changes) if (MX[c.metric].unit !== 'pct') c.how = 'pct';            // points only make sense on a rate
+    const toW = (c, sign) => ({ metric: c.metric, method: 'window', how: c.how, step: sign * c.step / 100, start: c.from, end: c.to });
+    const OUT = ['net', 'gross', 'trx', 'book', 'starts'];
+    const base = run(sc); const up = runWithMany(sc, s.changes.map(c => toW(c, 1))); const dn = runWithMany(sc, s.changes.map(c => toW(c, -1)));
+    const yrs = YEARS.filter(y => y >= T[AEND].y);
+    const mOpts = sel => T.filter(t => IDX[t.key] > AEND).map(t => `<option value="${t.key}"${t.key === sel ? ' selected' : ''}>${t.label}</option>`).join('');
+    const sgn = x => x > 1e-9 ? 'up' : x < -1e-9 ? 'dn' : '';
+    const dd = (x, u) => Math.abs(x) <= 1e-9 ? '<span class="nl">no change</span>' : `<span class="${sgn(x)}">${esc(fmtDelta(x, u))}</span>`;
+    const stepTxt = c => (c.step > 0 ? '+' : '') + (+c.step.toFixed(1)) + (c.how === 'pts' ? (Math.abs(c.step) === 1 ? ' pt' : ' pts') : '%');
+    const withC = sc.color.toUpperCase() === '#0000C9' ? '#0B0F2E' : '#0000C9';   // never the scenario's own colour
+    // one row per change: the assumption, the step, the window — and what the assumption itself goes from and to over that window
+    const rows = s.changes.map((c, i) => {
+      const mx = MX[c.metric]; const before = winAvg(base[c.metric], c.from, c.to);
+      const after = before == null ? null : c.how === 'pct' ? before * (1 + c.step / 100) : before + c.step / 100;
+      const howSel = mx.unit === 'pct' ? `<select class="sc-how" data-i="${i}"><option value="pts"${c.how === 'pts' ? ' selected' : ''}>points</option><option value="pct"${c.how === 'pct' ? ' selected' : ''}>%</option></select>` : '<span class="nl">%</span>';
+      return `<div class="chrow"><select class="sc-metric" data-i="${i}">${INPUTS.map(id => `<option value="${id}"${id === c.metric ? ' selected' : ''}>${esc(MX[id].name)}</option>`).join('')}</select>
+        <span>by</span><input class="sc-step" data-i="${i}" type="number" step="any" value="${c.step}">${howSel}
+        <span>from</span><select class="sc-from" data-i="${i}">${mOpts(c.from)}</select><span>to</span><select class="sc-to" data-i="${i}">${mOpts(c.to)}</select>
+        <span class="ba" title="average of ${esc(mx.name)} over the period, before and after the change"><span class="nl">from</span><b>${esc(fmt(before, mx.unit, true))}</b><span class="arr">→</span><b class="${sgn(after - before)}">${esc(fmt(after, mx.unit, true))}</b></span>
+        ${s.changes.length > 1 ? `<button class="link danger sc-rm" data-i="${i}">remove</button>` : ''}</div>`;
+    }).join('');
+    // results for the chosen year
+    const bN = annual(base.net, SY, 'net'), uN = annual(up.net, SY, 'net'), dN = annual(dn.net, SY, 'net');
+    const what = s.changes.length === 1 ? `${MX[s.changes[0].metric].short} ${stepTxt(s.changes[0])}` : `${s.changes.length} changes together`;
+    const ch = chart({ metric: 'net', mode: 'monthly', height: 150, width: 640, series: [
+      { name: 'Actuals', color: '#0B0F2E', values: ACTUALS.net, solidUntil: AEND },
+      { name: sc.name + ' · base', color: sc.color, values: base.net.map((v, i) => i < AEND ? null : v), full: base.net },
+      { name: 'With the change' + (s.changes.length > 1 ? 's' : ''), color: withC, values: up.net.map((v, i) => i < AEND ? null : v), full: up.net },
+      { name: 'Change' + (s.changes.length > 1 ? 's' : '') + ' reversed', color: '#8A8FA8', dash: true, values: dn.net.map((v, i) => i < AEND ? null : v), full: dn.net }] });
+    const rows2 = OUT.map(id => { const b = annual(base[id], SY, id), u = annual(up[id], SY, id), d = annual(dn[id], SY, id); return `<tr><td>${esc(MX[id].name)}</td><td class="num">${esc(fmt(b, MX[id].unit, true))}</td><td class="num"><b>${esc(fmt(u, MX[id].unit, true))}</b></td><td class="num">${dd(u - b, MX[id].unit)}</td><td class="num">${dd(d - b, MX[id].unit)}</td></tr>`; }).join('');
+    // each change on its own (only when there are several), so the reader sees what each one contributes
+    let alone = '';
+    if (s.changes.length > 1) {
+      const parts = s.changes.map(c => ({ c, d: annual(runWithMany(sc, [toW(c, 1)]).net, SY, 'net') - bN }));
+      const sum = parts.reduce((a, p) => a + p.d, 0), inter = (uN - bN) - sum;
+      alone = `<div class="gh" style="margin-top:14px"><b>Each change on its own</b><span class="nl">${SY} net revenue vs base</span></div><table class="rank"><tbody>
+        ${parts.map(p => `<tr><td>${esc(MX[p.c.metric].name)} <span class="nl">${esc(stepTxt(p.c))}</span></td><td class="num">${dd(p.d, 'usd_m')}</td></tr>`).join('')}
+        ${Math.abs(inter) >= 0.05 ? `<tr><td class="nl">Overlap between the changes (together minus each one alone)</td><td class="num">${dd(inter, 'usd_m')}</td></tr>` : ''}
+        <tr><td><b>All together</b></td><td class="num"><b>${dd(uN - bN, 'usd_m')}</b></td></tr></tbody></table>`;
+    }
+    // which assumption matters most: every assumption moved by one point (rates) or one percent (counts, price) over the union of the windows
+    const wFrom = s.changes.reduce((a, c) => IDX[c.from] < IDX[a] ? c.from : a, s.changes[0].from), wTo = s.changes.reduce((a, c) => IDX[c.to] > IDX[a] ? c.to : a, s.changes[0].to);
+    const torn = INPUTS.map(id => { const how = MX[id].unit === 'pct' ? 'pts' : 'pct'; const u = annual(runWith(sc, { metric: id, how, step: 0.01, start: wFrom, end: wTo }).net, SY, 'net'); const d = annual(runWith(sc, { metric: id, how, step: -0.01, start: wFrom, end: wTo }).net, SY, 'net'); return { id, up: u - bN, dn: d - bN, lab: MX[id].unit === 'pct' ? '±1 pt' : '±1%' }; }).sort((a, b) => Math.abs(b.up - b.dn) - Math.abs(a.up - a.dn));
+    const rank = torn.map((t, i) => `<tr><td class="nl">${i + 1}</td><td>${esc(MX[t.id].name)} <span class="nl">${t.lab}</span></td><td class="num">${dd(t.dn, 'usd_m')}</td><td class="num">${dd(t.up, 'usd_m')}</td></tr>`).join('');
+    $('#view').innerHTML = `<div class="sechead"><span class="pill blue">sensitivity</span><h2>What if one or more assumptions were different?</h2></div>
+      <div class="card sent2"><div class="sline">In <select id="se-sc">${S.scenarios.map(x => `<option value="${x.id}"${x.id === sc.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select><span class="nl">what if …</span></div>
+        ${rows}
+        <div class="sline" style="margin-top:8px"><button class="ghost sm" id="se-add">+ Add another change</button><span class="nl" title="points add to a rate (52 % + 2 pts = 54 %); % scales the value (52 % × 1.02 = 53.0 %); the page recalculates when you change a field">Points add to a rate; % scales the value. Each row shows the assumption before → after.</span></div></div>
+      <div class="card sens"><div class="sens2"><div>${ch}</div><div class="sres">
+        <div class="sr"><span class="nl">${SY} net revenue · ${esc(sc.name)} as it is</span><b>${esc(fmt(bN, 'usd_m'))}</b></div>
+        <div class="sr ${sgn(uN - bN)}"><span class="nl">With ${esc(what)}</span><b>${esc(fmt(uN, 'usd_m'))}</b><em>${esc(fmtDelta(uN - bN, 'usd_m'))} · ${fmtPct((uN - bN) / bN)}</em><button class="link" id="se-keep"${sc.locked ? ' disabled' : ''}>keep as override${s.changes.length > 1 ? 's' : ''} in ${esc(sc.name)}</button></div>
+        <div class="sr ${sgn(dN - bN)}"><span class="nl">If the change${s.changes.length > 1 ? 's were' : ' were'} reversed</span><b>${esc(fmt(dN, 'usd_m'))}</b><em>${esc(fmtDelta(dN - bN, 'usd_m'))} · ${fmtPct((dN - bN) / bN)}</em></div></div></div></div>
+      <div class="two"><div class="card"><div class="gh"><b>Key outputs · <select id="se-year" class="inl">${yrs.map(yy => `<option${yy === SY ? ' selected' : ''}>${yy}</option>`).join('')}</select></b></div>
+        <table class="rank"><thead><tr><th>Output</th><th class="num">As it is</th><th class="num">With the change${s.changes.length > 1 ? 's' : ''}</th><th class="num">Difference</th><th class="num">Reversed</th></tr></thead><tbody>${rows2}</tbody></table>${alone}</div>
+      <div class="card"><div class="gh"><b>Which assumption matters most</b><span class="nl">${SY} net revenue · each moved 1 point or 1% between ${esc(T[IDX[wFrom]].long)} and ${esc(T[IDX[wTo]].long)}</span></div>
+        <table class="rank"><thead><tr><th></th><th>Assumption</th><th class="num">Lower</th><th class="num">Higher</th></tr></thead><tbody>${rank}</tbody></table></div></div>`;
+    const read = () => {
+      s.sc = $('#se-sc').value;
+      s.changes.forEach((c, i) => { const m = $(`.sc-metric[data-i="${i}"]`).value; const h = $(`.sc-how[data-i="${i}"]`); c.how = m !== c.metric ? (MX[m].unit === 'pct' ? 'pts' : 'pct') : (h ? h.value : 'pct'); c.metric = m; if (MX[c.metric].unit !== 'pct') c.how = 'pct'; c.step = +$(`.sc-step[data-i="${i}"]`).value || 0; c.from = $(`.sc-from[data-i="${i}"]`).value; c.to = $(`.sc-to[data-i="${i}"]`).value; if (IDX[c.to] < IDX[c.from]) c.to = c.from; });
+    };
+    $$('#se-sc,.sc-metric,.sc-step,.sc-how,.sc-from,.sc-to').forEach(el => el.onchange = () => { read(); render(); });
+    $$('.sc-rm').forEach(b => b.onclick = () => { read(); s.changes.splice(+b.dataset.i, 1); render(); });
+    $('#se-add').onclick = () => { read(); const l = s.changes[s.changes.length - 1]; const nxt = INPUTS.find(id => !s.changes.some(c => c.metric === id)) || l.metric; s.changes.push({ metric: nxt, how: MX[nxt].unit === 'pct' ? 'pts' : 'pct', step: 1, from: l.from, to: l.to }); render(); };
+    $('#se-year').onchange = e => { s.year = +e.target.value; render(); };
+    $('#se-keep').onclick = () => { read(); for (const c of s.changes) sc.overrides.push(toW(c, 1)); S.current = sc.id; S.tab = 'forecast'; S.metric = s.changes[0].metric; S.node = s.changes[0].metric; render(); };
+  }
+  // ───────────────────────── GOAL SEEK tab · several levers, split by movability, with an achievability read ─────────────────────────
+  // Pattern from the team's Velsipity page: when several assumptions are chosen the gap is split in log-space in proportion to each
+  // one's movability ("how readily it moves in the real world"), so together they land exactly on the target; a lever that would
+  // breach its cap is held at the cap and the rest take the remainder. Achievability = 1 − |change| ÷ reach (the largest change seen
+  // as plausible in a year, set per assumption in the data), read as likely · stretch · unlikely · beyond reach. Illustrative.
+  const LEV = id => (MX[id].lever || { movability: 0.05, reach: MX[id].unit === 'pct' ? 0.05 : 0.10 });
+  function achievability(id, before, after) {
+    const mx = MX[id], L = LEV(id); const d = mx.unit === 'pct' ? after - before : (before ? after / before - 1 : 0);
+    const lo = L.min != null ? L.min : (mx.unit === 'pct' ? 0 : 0), hi = L.max != null ? L.max : (mx.unit === 'pct' ? 1 : before * 3);
+    if (after < lo - 1e-9 || after > hi + 1e-9) return { score: 0, label: 'out of reach', cls: 'no', d };
+    const score = Math.max(0, Math.min(1, 1 - Math.abs(d) / L.reach));
+    return { score, d, label: score >= 0.6 ? 'likely' : score >= 0.3 ? 'stretch' : score > 0 ? 'unlikely' : 'out of reach', cls: score >= 0.6 ? 'ok' : score >= 0.3 ? 'mid' : 'no' };
+  }
+  function solveGoal(sc, g) {
+    const base = run(sc); const now = annual(base[g.output], g.year, g.output); const target = g.target;
+    const ws = ids => ids.map(id => ({ metric: id, method: 'window', how: 'pct', step: 0, start: g.from, end: g.to }));
+    const out = w => annual(runWithMany(sc, w)[g.output], g.year, g.output);
+    // direction of each lever on the output (a probe of +1 %); levers with no effect are set aside
+    const levers = [], idle = [];
+    for (const id of g.levers) { const w = ws([id]); w[0].step = 0.01; const d = out(w) - now; const kv = g.known ? g.known[id] : null; const known = kv != null && isFinite(kv) ? (MX[id].unit === 'pct' ? kv / 100 : kv) : null; if (Math.abs(d) < 1e-9) idle.push(id); else levers.push({ id, dir: d > 0 ? 1 : -1, w: LEV(id).movability, before: winAvg(base[id], g.from, g.to), known }); }
+    if (!levers.length) return { ok: false, now, target, idle, text: 'None of the chosen assumptions moves ' + MX[g.output].name + '.' };
+    const fixed = {}, setBy = {};                                             // id → step held at a cap, or set by the user to a known value
+    for (const l of levers) if (l.known != null && l.before) { fixed[l.id] = l.known / l.before - 1; setBy[l.id] = true; }
+    const stepsAt = lam => { const act = levers.filter(l => !fixed[l.id]); const W = act.reduce((a, l) => a + l.w, 0) || 1; return levers.map(l => ({ metric: l.id, method: 'window', how: 'pct', step: fixed[l.id] != null ? fixed[l.id] : Math.exp(l.dir * lam * l.w / W) - 1, start: g.from, end: g.to })); };
+    const f = lam => out(stepsAt(lam));
+    let lam = 0, reached = false;
+    const allSet = levers.every(l => setBy[l.id]);                           // nothing left to solve: just read where the set values land
+    if (allSet) { const got0 = f(0); reached = Math.abs(got0 - target) <= Math.abs(target) * 1e-3; }
+    for (let pass = 0; pass < 6 && !allSet; pass++) {
+      const act = levers.filter(l => !fixed[l.id]); if (!act.length) break;
+      let a = -4, b = 4, fa = f(a) - target, fb = f(b) - target;
+      if (fa * fb > 0) { reached = false; lam = Math.abs(fa) < Math.abs(fb) ? a : b; break; }
+      for (let k = 0; k < 50; k++) { const m = (a + b) / 2, fm = f(m) - target; if (fm * fa <= 0) { b = m; fb = fm; } else { a = m; fa = fm; } }
+      lam = (a + b) / 2; reached = true;
+      // hold any lever that would breach its cap at the cap, then re-solve the rest
+      let capped = false;
+      for (const l of act) { const st = Math.exp(l.dir * lam * l.w / (act.reduce((x, y) => x + y.w, 0) || 1)) - 1; const after = l.before * (1 + st); const L = LEV(l.id), mx = MX[l.id];
+        const lo = L.min != null ? L.min : (mx.unit === 'pct' ? 0 : -Infinity), hi = L.max != null ? L.max : (mx.unit === 'pct' ? 1 : l.before * 3);
+        if (after > hi) { fixed[l.id] = hi / l.before - 1; capped = true; } else if (after < lo) { fixed[l.id] = lo / l.before - 1; capped = true; } }
+      if (!capped) break;
+    }
+    const steps = stepsAt(lam); const got = out(steps);
+    const rows = levers.map((l, i) => { const st = steps[i].step; const after = l.before * (1 + st); const a = achievability(l.id, l.before, after); return { id: l.id, before: l.before, after, step: st, set: !!setBy[l.id], capped: fixed[l.id] != null && !setBy[l.id], share: Math.log(1 + st) * l.dir, ach: a }; });
+    const tot = rows.reduce((s, r) => s + Math.abs(r.share), 0) || 1; rows.forEach(r => r.share = Math.abs(r.share) / tot);
+    const overall = rows.reduce((s, r) => s * r.ach.score, 1);
+    const nSet = rows.filter(r => r.set).length; const u = MX[g.output].unit;
+    const text = reached ? '' : allSet
+      ? 'With the value' + (nSet > 1 ? 's' : '') + ' you set, ' + MX[g.output].name + ' comes to ' + fmt(got, u) + ', not ' + fmt(target, u) + '. Add another assumption to move, or adjust the value' + (nSet > 1 ? 's' : '') + '.'
+      : 'No sensible change of the chosen assumption' + (levers.length > 1 ? 's' : '') + ' reaches that target in that period; it gets to ' + fmt(got, u) + '. Try a longer period, another assumption, or a nearer target.';
+    return { ok: reached && Math.abs(got - target) <= Math.abs(target) * (allSet ? 1e-3 : 1e-4), now, target, got, rows, idle, steps, overall, nSet, text };
+  }
+  function renderGoal() {
+    const g = S.goal; const sc = scById(g.sc) || cur(); const out = MX[g.output];
+    if (!g.levers.length) g.levers = ['share_pre'];
+    const now = fy(sc, g.output, g.year); if (g.target == null) g.target = Math.round(now * 1.1 * 100) / 100;
+    const mOpts = sel => T.filter(t => IDX[t.key] > AEND).map(t => `<option value="${t.key}"${t.key === sel ? ' selected' : ''}>${t.label}</option>`).join('');
+    const base = run(sc);
+    const leverRows = g.levers.map((id, i) => { const L = LEV(id); const nowv = winAvg(base[id], g.from, g.to); return `<div class="chrow"><select class="gs-lever" data-i="${i}">${INPUTS.map(m => `<option value="${m}"${m === id ? ' selected' : ''}${g.levers.includes(m) && m !== id ? ' disabled' : ''}>${esc(MX[m].name)}</option>`).join('')}</select>
+      <span class="ba"><span class="nl">now</span><b>${esc(fmt(nowv, MX[id].unit, true))}</b><span class="nl">average over the period</span></span>
+      <span class="mov" title="${esc(L.why || '')} · movability ${Math.round(L.movability * 100)} of 100 sets its share of the gap when several assumptions are chosen">can plausibly move up to ${MX[id].unit === 'pct' ? (+(L.reach * 100).toFixed(1)) + ' pts' : Math.round(L.reach * 100) + '%'} in a year</span>
+      <span class="known" title="If you already know what this assumption will be, type it here (average over the period); the other assumptions then share the rest of the gap"><span class="nl">or set it to</span><input class="gs-known" data-i="${i}" type="number" step="any" placeholder="${MX[id].unit === 'pct' ? '%' : MX[id].unit === 'usd' ? '$' : MX[id].unit === 'days' ? 'days' : 'value'}" value="${g.known && g.known[id] != null ? g.known[id] : ''}"></span>
+      ${g.levers.length > 1 ? `<button class="link danger gs-rm" data-i="${i}">remove</button>` : ''}</div>`; }).join('');
+    let res = '';
+    if (g.result) {
+      const r = g.result; const pill = a => `<span class="ach ${a.cls}">${esc(a.label)} · ${Math.round(a.score * 100)}%</span>`;
+      const rows = (r.rows || []).map(x => { const mx = MX[x.id]; return `<tr><td><b>${esc(mx.name)}</b>${x.set ? ' <span class="chip">set by you</span>' : x.capped ? ' <span class="nl">held at its cap</span>' : ''}</td><td class="num">${esc(fmt(x.before, mx.unit, true))}</td><td class="num"><b>${esc(fmt(x.after, mx.unit, true))}</b></td><td class="num ${x.ach.d > 0 ? 'up' : x.ach.d < 0 ? 'dn' : ''}">${esc(mx.unit === 'pct' ? fmtDelta(x.ach.d, 'pct') : fmtPct(x.ach.d))}</td><td class="num">${x.set ? '<span class="nl">given</span>' : r.rows.length > 1 ? Math.round(x.share * 100) + '%' : '<span class="nl">all</span>'}</td><td>${pill(x.ach)}</td></tr>`; }).join('');
+      const idle = (r.idle || []).map(id => `<p class="nl">${esc(MX[id].name)} does not move ${esc(out.name)} and was left out.</p>`).join('');
+      const ov = r.rows ? { score: r.overall, label: r.overall >= 0.6 ? 'likely' : r.overall >= 0.3 ? 'stretch' : r.overall > 0 ? 'unlikely' : 'out of reach', cls: r.overall >= 0.6 ? 'ok' : r.overall >= 0.3 ? 'mid' : 'no' } : null;
+      res = `<div class="card result"><div class="gh"><b>${r.ok ? (r.overall > 0 ? 'What it takes' : 'Possible on paper, not in practice') : 'Not reached'}</b><span class="nl">${esc(out.name)} ${g.year} in ${esc(sc.name)}</span>${ov ? `<span class="nl" style="margin-left:auto">how achievable${r.rows.length > 1 ? ', all together' : ''}</span>${pill(ov)}` : ''}</div>
+        <div class="gsline"><b>${esc(fmt(r.now, out.unit))}</b><span class="arr">→</span><b class="tgt">${esc(fmt(r.target, out.unit))}</b><span class="${r.target - r.now > 0 ? 'up' : 'dn'}">${esc(fmtDelta(r.target - r.now, out.unit))} · ${fmtPct((r.target - r.now) / r.now)}</span>${r.ok ? '' : `<span class="nl">${esc(r.text)}</span>`}</div>
+        ${rows ? `<table class="rank"><thead><tr><th>Assumption</th><th class="num">Now (period average)</th><th class="num">Needed</th><th class="num">Change</th><th class="num">Share of the gap</th><th>How achievable</th></tr></thead><tbody>${rows}</tbody></table>` : ''}${idle}
+        <p class="nl" title="Achievability = 1 − change ÷ reach, where reach is the largest change seen as plausible within a year for that assumption; the overall figure multiplies the levers. Movability sets each lever's share of the gap when several are chosen.">${r.nSet ? 'The value' + (r.nSet > 1 ? 's' : '') + ' you set ' + (r.nSet > 1 ? 'are' : 'is') + ' applied first; the other assumptions share what is left of the gap. ' : r.rows && r.rows.length > 1 ? 'The gap is split by how readily each assumption moves; together the changes land on the target. ' : ''}Achievability compares each change with what is plausible in a year · illustrative, not a statistical probability.</p>
+        <div class="adjrow">${r.ok ? `<button class="primary" id="gs-apply"${sc.locked ? ' disabled' : ''}>Apply to ${esc(sc.name)} as override${r.rows.length > 1 ? 's' : ''}</button>` : ''}<button class="ghost" id="gs-clear">Clear</button></div></div>`;
+    }
+    $('#view').innerHTML = `<div class="sechead"><span class="pill blue">goal seek</span><h2>Enter the outcome you want; see the changes needed</h2><p>Pick an output, a year, a target and the assumptions that may move · nothing changes until you apply the result.</p></div>
+      <div class="card"><div class="adjrow">
+        <label>Scenario<select id="gs-sc">${S.scenarios.map(x => `<option value="${x.id}"${x.id === sc.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></label>
+        <label>Output<select id="gs-out">${['net', 'gross', 'trx', 'book', 'starts'].map(id => `<option value="${id}"${id === g.output ? ' selected' : ''}>${esc(MX[id].name)}</option>`).join('')}</select></label>
+        <label>Year<select id="gs-year">${YEARS.filter(y => y >= T[AEND].y).map(y => `<option${y === g.year ? ' selected' : ''}>${y}</option>`).join('')}</select></label>
+        <label>Target ${out.unit === 'usd_m' ? '($M)' : ''}<input id="gs-target" type="number" step="any" value="${g.target}"></label>
+        <label>From<select id="gs-from">${mOpts(g.from)}</select></label><label>To<select id="gs-to">${mOpts(g.to)}</select></label></div>
+        <div class="gh" style="margin:10px 0 0"><b>Assumptions that may move</b><span class="nl">one or more · the current value is the average over the period · if you already know where one will land, set it and the others take the rest</span></div>${leverRows}
+        <div class="sline" style="margin-top:8px"><button class="ghost sm" id="gs-add">+ Add an assumption</button><button class="primary sm" id="gs-run">Run goal seek</button><span class="nl">Current ${esc(sc.name)} ${g.year} ${esc(out.name)}: <b>${esc(fmt(now, out.unit))}</b> · ${esc(REF().name)} ${esc(fmt(fy(REF(), g.output, g.year), out.unit))}</span></div></div>${res}`;
+    const read = () => { g.sc = $('#gs-sc').value; g.output = $('#gs-out').value; g.year = +$('#gs-year').value; g.target = parseFloat($('#gs-target').value); g.from = $('#gs-from').value; g.to = $('#gs-to').value; if (IDX[g.to] < IDX[g.from]) g.to = g.from; g.levers = $$('.gs-lever').map(s => s.value);
+      g.known = {}; $$('.gs-known').forEach(inp => { const id = g.levers[+inp.dataset.i]; const v = parseFloat(inp.value); if (id && !isNaN(v)) g.known[id] = v; }); };
+    $$('#gs-sc,#gs-out,#gs-year').forEach(el => el.onchange = () => { read(); g.result = null; g.target = null; render(); });
+    $$('#gs-from,#gs-to,.gs-lever,.gs-known').forEach(el => el.onchange = () => { read(); g.result = null; render(); });
+    $$('.gs-rm').forEach(b => b.onclick = () => { read(); g.levers.splice(+b.dataset.i, 1); g.result = null; render(); });
+    $('#gs-add').onclick = () => { read(); const nxt = INPUTS.find(id => !g.levers.includes(id)); if (nxt) g.levers.push(nxt); g.result = null; render(); };
+    $('#gs-run').onclick = () => { read(); if (isNaN(g.target)) { alert('Enter a target.'); return; } g.result = solveGoal(sc, g); render(); };
+    if (g.result) { $('#gs-clear').onclick = () => { g.result = null; render(); }; const ap = $('#gs-apply'); if (ap) ap.onclick = () => { for (const st of g.result.steps) sc.overrides.push(st); g.result = null; S.current = sc.id; S.tab = 'forecast'; S.metric = g.levers[0]; S.node = g.levers[0]; render(); }; }
+  }
+  // 'window' overrides (from goal seek) are applied like a windowed shock
+  const _applyOverrides = applyOverrides;
+  applyOverrides = function (id, series, overrides, actuals) { let s = _applyOverrides(id, series, overrides.filter(o => o.method !== 'window'), actuals); for (const o of overrides.filter(o => o.method === 'window' && o.metric === id)) s = applyWindow(id, s, o); return s; };
+  const _describe = describeOverride;
+  describeOverride = function (o, mx) { if (o.method === 'window') return `${o.how === 'pts' ? fmtDelta(o.step, 'pct') : fmtPct(o.step) + (mx.unit === 'pct' ? ' of its value' : '')} from ${T[IDX[o.start]].long} to ${T[IDX[o.end]].long}`; return _describe(o, mx); };
+
+  // ───────────────────────── REVIEW tab ─────────────────────────
+  function renderReview() {
+    const sc = cur(); const y = FOCUS; const ref = fy(REF(), 'net', y); const noEv = fy(sc, 'net', y, { noEvents: true }); const withEv = fy(sc, 'net', y);
+    const evs = EV.filter(e => sc.events_on.includes(e.id)).map(e => `<li><b>${esc(e.name)}</b> <span class="nl">${esc(e.type)} · ${esc(T[IDX[e.month]].long)} · ${Math.round(e.probability * 100)}% likely</span><span class="num">${esc(fmtDelta(eventImpactFY(sc, e, 'net', y), 'usd_m'))}</span></li>`).join('');
+    const ovs = sc.overrides.map(o => `<li><b>${esc(MX[o.metric].name)}</b> <span class="nl">${esc(describeOverride(o, MX[o.metric]))}</span></li>`).join('');
+    $('#view').innerHTML = `<div class="sechead"><span class="pill blue">review</span><h2>Why ${esc(sc.name)} differs from the ${esc(REF().name.toLowerCase())}</h2><p>${y} net revenue from the ${esc(REF().name.toLowerCase())} to the scenario: the overrides first, then the events.</p>
+      <div class="ctl"><label>Scenario</label><select id="rv-sc">${S.scenarios.map(x => `<option value="${x.id}"${x.id === sc.id ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div></div>
+      <div class="kpis four"><div class="kpi"><div class="kh"><b>${esc(REF().name)}</b><span class="nl">${esc(D.forecast.reference_source)} · read-only</span></div><div class="kbig">${esc(fmt(ref, 'usd_m'))}</div></div>
+      <div class="kpi"><div class="kh"><b>Assumption overrides</b><span class="nl">${sc.overrides.length} in ${esc(sc.name)}</span></div><div class="kbig">${esc(fmtDelta(noEv - ref, 'usd_m'))}</div></div>
+      <div class="kpi"><div class="kh"><b>Events</b><span class="nl">${sc.events_on.length} on</span></div><div class="kbig">${esc(fmtDelta(withEv - noEv, 'usd_m'))}</div></div>
+      <div class="kpi out"><div class="kh"><b>${esc(sc.name)} outcome</b><span class="nl">${esc(fmtDelta(withEv - ref, 'usd_m'))} vs ${esc(REF().name.toLowerCase())}</span></div><div class="kbig">${esc(fmt(withEv, 'usd_m'))}</div></div></div>
+      <div class="evgrid"><div class="card chartcard"><div class="ch"><div><b>Net revenue</b> <span class="nl">actuals · reference · ${esc(sc.name)}</span></div><span class="seg sm"><button class="${S.chartMode === 'monthly' ? 'on' : ''}" data-cm="monthly">Monthly</button><button class="${S.chartMode === 'annual' ? 'on' : ''}" data-cm="annual">Annual</button></span></div>${chart({ metric: 'net', mode: S.chartMode, height: 150, width: 600, series: scenarioSeries('net', [sc.id]) })}</div>
+      <div><div class="card"><div class="gh"><b>Events on · ${y} effect</b></div>${evs ? `<ul class="plain">${evs}</ul>` : '<p class="nl">No events on.</p>'}</div><div class="card"><div class="gh"><b>Assumption overrides</b></div>${ovs ? `<ul class="plain">${ovs}</ul>` : `<p class="nl">None — the scenario follows the ${esc(REF().name.toLowerCase())}.</p>`}</div></div></div>`;
+    $$('[data-cm]').forEach(b => b.onclick = () => { S.chartMode = b.dataset.cm; render(); });
+    $('#rv-sc').onchange = e => { S.current = e.target.value; render(); };
+  }
+
+  // ───────────────────────── INSIGHTS tab (add-in, concept) ─────────────────────────
+  function renderInsights() {
+    const items = S.insights.map((n, i) => `<div class="card ins"><div class="ch"><div><span class="pill ${n.type === 'scenario' ? 'blue' : n.type === 'view' ? 'green' : 'grey'}">${esc(n.type)}</span> <span class="nl">${esc(n.when)} · ${esc(n.who)}</span></div><button class="link danger" data-rmn="${i}">remove</button></div>
+      <b>${esc(n.title)}</b><p>${esc(n.body)}</p></div>`).join('');
+    $('#view').innerHTML = `<div class="sechead"><span class="pill grey">insights · concept</span><h2>Saved views, scenarios and notes</h2><p>What the team noticed, kept with the forecast · charts save here from the Forecast page · concept in this prototype.</p>
+      <div class="ctl"><button class="primary sm" id="ins-add">Add note</button></div></div><div class="inss">${items}</div>`;
+    $('#ins-add').onclick = () => { const t = prompt('Note title'); if (!t) return; const b = prompt('Note (optional)') || ''; S.insights.unshift({ type: 'note', when: 'Just now', who: D.forecast.owner, title: t, body: b }); render(); };
+    $$('[data-rmn]').forEach(b => b.onclick = () => { S.insights.splice(+b.dataset.rmn, 1); render(); });
+  }
+
+  // ───────────────────────── render ─────────────────────────
+  function render() {
+    // a deleted scenario must not linger anywhere
+    const ids = new Set(S.scenarios.map(s => s.id));
+    if (!ids.has(S.current)) S.current = S.scenarios[0].id;
+    for (const k of ['evScenario']) if (!ids.has(S[k])) S[k] = S.current;
+    if (!ids.has(S.sens.sc)) S.sens.sc = S.current; if (!ids.has(S.goal.sc)) S.goal.sc = S.current;
+    for (const id of [...S.shown]) if (!ids.has(id)) S.shown.delete(id);
+    renderTabs();
+    const sc = cur(); $('#hdr-sc').textContent = sc.name; $('#hdr-net').textContent = fmt(fy(sc, 'net', FOCUS), 'usd_m');
+    ({ forecast: renderForecast, actuals: renderActuals, events: renderEvents, scenarios: renderScenarios, sensitivity: renderSensitivity, goalseek: renderGoal, review: renderReview, insights: renderInsights })[S.tab]();
+  }
+  document.addEventListener('DOMContentLoaded', () => {
+    $('#f-title').textContent = new URLSearchParams(location.search).get('brand') || D.forecast.title; $('#f-cycle').textContent = D.forecast.cycle + ' · ' + D.forecast.scope;
+    $('#f-arch').textContent = D.forecast.indication; $('#f-arch').title = D.forecast.archetype; render();
+    window.NG = { S, D, run, fy, T, ACTUALS, EV };
+  });
+})();
+
+</script>
+</body>
+</html>

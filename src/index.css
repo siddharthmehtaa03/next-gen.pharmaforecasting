@@ -1,0 +1,147 @@
+@import 'tailwindcss';
+
+/* Pfizer brand typefaces (Meraki / Brand Identity 2.0). Diatype ships 300/400/500/700; 600 resolves to 700. */
+@font-face { font-family: 'Pfizer Diatype'; font-weight: 300; font-style: normal; font-display: swap; src: url('/fonts/PfizerDiatype-Light.woff2') format('woff2'); }
+@font-face { font-family: 'Pfizer Diatype'; font-weight: 400; font-style: normal; font-display: swap; src: url('/fonts/PfizerDiatype-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Pfizer Diatype'; font-weight: 500; font-style: normal; font-display: swap; src: url('/fonts/PfizerDiatype-Medium.woff2') format('woff2'); }
+@font-face { font-family: 'Pfizer Diatype'; font-weight: 600 700; font-style: normal; font-display: swap; src: url('/fonts/PfizerDiatype-Bold.woff2') format('woff2'); }
+@font-face { font-family: 'Pfizer Tomorrow'; font-weight: 400 500; font-style: normal; font-display: swap; src: url('/fonts/PfizerTomorrow-Regular.woff2') format('woff2'); }
+@font-face { font-family: 'Pfizer Tomorrow'; font-weight: 600 800; font-style: normal; font-display: swap; src: url('/fonts/PfizerTomorrow-Bold.woff2') format('woff2'); }
+
+@theme inline {
+  /* Surfaces: white cards on a pale-blue canvas (Blue 05 / Blue 10) */
+  --color-background: #f3f8fd;
+  --color-surface: #ffffff;
+  --color-surface-2: #eef5fb;
+  --color-border: #dbe8f6;
+  --color-border-strong: #a9c4e4;
+  /* Text: Blue 90 for primary, softened navy-greys for secondary / captions (AA on white) */
+  --color-text: #000067;
+  --color-text-2: #3d4580;
+  --color-text-3: #6b7299;
+  /* Brand: Blue 70 primary, Blue 10 soft */
+  --color-brand: #0000c9;
+  --color-brand-dark: #0000a3;
+  --color-brand-soft: #e8f2ff;
+  --color-navy: #000067;
+  --color-cyan: #0095ff;
+  --color-teal: #00b7a5;
+  /* Status colours stay semantic and AA-legible */
+  --color-ok: #007a6c;
+  --color-ok-soft: #e0f6f3;
+  --color-warn: #8f5a00;
+  --color-warn-soft: #fff3d9;
+  --color-err: #c4122f;
+  --color-err-soft: #fde8ec;
+
+  --font-sans: 'Pfizer Diatype', 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: 'Pfizer Diatype', 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Pfizer Tomorrow', 'Franklin Gothic Medium', Arial, sans-serif;
+
+  /* Meraki-style generous corner radii */
+  --radius-xs: 6px;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-2xl: 24px;
+
+  --shadow-card: 0 1px 2px rgb(0 0 103 / 0.04), 0 10px 28px -14px rgb(0 0 103 / 0.16);
+  --shadow-sm: 0 1px 2px rgb(0 0 103 / 0.06);
+  --shadow: 0 1px 3px rgb(0 0 103 / 0.08), 0 4px 12px -4px rgb(0 0 103 / 0.1);
+  --shadow-md: 0 2px 6px rgb(0 0 103 / 0.06), 0 10px 24px -8px rgb(0 0 103 / 0.16);
+  --shadow-lg: 0 4px 12px rgb(0 0 103 / 0.06), 0 22px 44px -14px rgb(0 0 103 / 0.22);
+  --shadow-xl: 0 8px 20px rgb(0 0 103 / 0.08), 0 32px 64px -18px rgb(0 0 103 / 0.28);
+  --breakpoint-wide: 87.5rem;
+}
+
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  background: var(--color-background);
+  color: var(--color-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+h1, h2, h3, h4, .font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
+h1, h2 { line-height: 1.15; }
+.font-mono, .tabular-nums, input[type='number'] { font-variant-numeric: tabular-nums; }
+
+::selection { background: #0000c9; color: #fff; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: transparent; border-radius: 8px; }
+*:hover::-webkit-scrollbar-thumb { background: var(--color-border-strong); }
+
+/* ---------- Interaction layer ---------- */
+:focus-visible { outline: 2px solid var(--color-brand); outline-offset: 2px; border-radius: 6px; }
+button, [role='button'], a, summary, label[for], select { transition: background-color .16s ease, border-color .16s ease, color .16s ease, box-shadow .2s ease, transform .16s ease, opacity .16s ease; }
+button:not(:disabled), [role='button'], select { cursor: pointer; }
+button:not(:disabled):active { transform: translateY(0.5px) scale(0.985); }
+
+/* Brand buttons are fully rounded pills (Meraki / Brand Identity 2.0). Selectors target the existing
+   primary-fill, outlined and ghost patterns used across the prototype so behaviour is untouched. */
+button.bg-brand, a.bg-brand, button.bg-text, a.bg-text { border-radius: 9999px; font-weight: 600; }
+button.bg-brand:not(:disabled):hover, a.bg-brand:hover { box-shadow: 0 8px 18px -8px rgb(0 0 201 / .55); transform: translateY(-1px); }
+button.bg-brand:not(:disabled):active { box-shadow: none; transform: none; }
+button.border.bg-surface:not([role='radio']):not([role='tab']), button.border-border-strong:not([role='radio']):not([role='tab']) { border-radius: 9999px; }
+button.border.bg-surface:not(:disabled):hover { border-color: var(--color-brand); color: var(--color-brand); background: var(--color-brand-soft); }
+button.hover\:bg-surface-2:hover { background: var(--color-brand-soft); color: var(--color-brand); }
+button[role='radio'], [role='radiogroup'] { border-radius: 9999px; }
+[role='switch'] { box-shadow: inset 0 0 0 1px rgb(0 0 103 / .08); }
+
+/* Inputs */
+input:not([type='checkbox']):not([type='radio']):not([type='range']), select, textarea { transition: border-color .16s, box-shadow .16s, background-color .16s; }
+input:not([type='checkbox']):not([type='radio']):not([type='range']):hover:not(:disabled), select:hover:not(:disabled), textarea:hover:not(:disabled) { border-color: var(--color-brand); }
+input:not([type='checkbox']):not([type='radio']):not([type='range']):focus, select:focus, textarea:focus { outline: none; border-color: var(--color-brand); box-shadow: 0 0 0 4px rgb(0 0 201 / .12); }
+input[type='checkbox'], input[type='radio'], input[type='range'] { accent-color: #0000c9; }
+
+/* Cards that are clickable lift gently */
+a.border, button.border.text-left, button.rounded-lg.border, button.rounded-xl.border, a.rounded-lg, a.rounded-xl { transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+a.border:hover, button.border.text-left:not(:disabled):hover, button.rounded-lg.border.bg-surface:not(:disabled):hover, button.rounded-xl.border.bg-surface:not(:disabled):hover { transform: translateY(-2px); box-shadow: var(--shadow-md); border-color: #7da6dc; }
+section.border, article.border, div.border.bg-surface { box-shadow: var(--shadow-sm); }
+
+/* Tables: quiet header, row highlight */
+table thead th { font-weight: 600; }
+tbody tr { transition: background-color .12s ease; }
+tbody tr:hover { background: rgb(232 242 255 / .55); }
+
+/* Subtle page-load motion */
+@keyframes rise { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+@keyframes drawer-in { from { transform: translateX(32px); opacity: 0; } to { transform: none; opacity: 1; } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+.drawer-in { animation: drawer-in 260ms cubic-bezier(0.2, 0.7, 0.2, 1); }
+.rise { animation: rise .35s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+main { animation: fade-in .3s ease both; }
+
+/* Charles agent: animated gradient. Moved from green to the Pfizer blue / cyan / teal family. */
+:root { --agent-grad: linear-gradient(90deg, #000067, #0000c9, #0095ff, #68d1ff, #00b7a5, #0095ff, #000067); --agent: #0095ff; --agent-deep: #0000c9; }
+@keyframes agent-flow { from { background-position: 0% 50%; } to { background-position: 300% 50%; } }
+@keyframes agent-sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
+.agent-bg { background: var(--agent-grad); background-size: 300% 100%; animation: agent-flow 4s linear infinite; }
+.agent-section { position: relative; border-radius: 18px; padding: 2px; background: var(--agent-grad); background-size: 300% 100%; animation: agent-flow 2.5s linear infinite; box-shadow: 0 18px 50px -18px rgba(0, 149, 255, .55); }
+.agent-section::after { content: ''; pointer-events: none; position: absolute; inset: 2px; border-radius: 16px; overflow: hidden; background: linear-gradient(100deg, transparent 30%, rgba(0, 149, 255, .08) 50%, transparent 70%); animation: agent-sweep 1.8s ease-in-out infinite; }
+.agent-field :is(input, select) { border-color: transparent !important; background: linear-gradient(var(--color-surface), var(--color-surface)) padding-box, var(--agent-grad) border-box; background-size: 100% 100%, 300% 100%; animation: agent-flow 1.6s linear infinite; box-shadow: 0 0 0 4px rgba(0, 149, 255, .16); }
+.agent-row > * { background-color: rgb(0 149 255 / 0.09) !important; transition: background-color .3s; }
+.agent-row > :first-child { box-shadow: inset 3px 0 0 #0095ff; }
+.agent-ring { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #0095ff, 0 10px 24px -10px rgba(0, 149, 255, .6) !important; }
+.agent-caret::after { content: ''; display: inline-block; width: 2px; height: 1em; margin-left: 2px; vertical-align: -2px; background: #0095ff; animation: rise .5s steps(2) infinite alternate; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } .agent-bg, .agent-section, .agent-field :is(input, select) { animation: none; } .agent-section::after { display: none; } .rise, main, .drawer-in { animation: none; } * { transition-duration: .01ms !important; } }
+@keyframes wave { 0%, 100% { transform: scaleY(0.2); } 50% { transform: scaleY(1); } }
+.wave-bar { transform-origin: center; animation: wave 900ms ease-in-out infinite; }
+@keyframes mic-ring { 0% { box-shadow: 0 0 0 0 rgb(0 0 201 / 0.35); } 100% { box-shadow: 0 0 0 10px rgb(0 0 201 / 0); } }
+.mic-live { animation: mic-ring 1.2s ease-out infinite; }
+@keyframes orb-drift { 0% { background-position: 0% 0%, 100% 100%, 50% 0%, 0% 100%; } 50% { background-position: 100% 60%, 0% 30%, 20% 100%, 80% 0%; } 100% { background-position: 0% 0%, 100% 100%, 50% 0%, 0% 100%; } }
+.ai-orb { background-color: #0000c9; background-image: radial-gradient(circle at center, #aee3ff 0%, transparent 55%), radial-gradient(circle at center, #ffffff 0%, transparent 50%), radial-gradient(circle at center, #0095ff 0%, transparent 60%), radial-gradient(circle at center, #000067 0%, transparent 60%); background-size: 170% 170%; background-repeat: no-repeat; animation: orb-drift 12s ease-in-out infinite; }
+.ai-orb-busy { animation-duration: 3.5s; box-shadow: 0 0 0 3px rgb(0 149 255 / 0.2), 0 0 14px rgb(0 149 255 / 0.4); }
+@keyframes frame-flow { 0% { background-position: 0% 50%; } 100% { background-position: 300% 50%; } }
+.ai-frame { position: relative; isolation: isolate; border-radius: 20px; padding: 1.5px; background: linear-gradient(110deg, #000067, #68d1ff, #ffffff, #0095ff, #000067, #aee3ff, #ffffff, #000067); background-size: 300% 100%; animation: frame-flow 14s linear infinite; }
+.ai-frame::before { content: ''; position: absolute; inset: 0; z-index: -1; border-radius: inherit; background: inherit; background-size: inherit; filter: blur(16px); opacity: 0.4; animation: frame-flow 14s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .ai-orb, .ai-orb-busy { animation: none; } }
+
+/* Top-bar AI button: solid brand blue pill. The animated treatment is kept for the chat itself. */
+.ai-btn { background: #0000c9; border-radius: 9999px; box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12) inset; }
+.ai-btn:hover { background: #0000a3; box-shadow: 0 8px 18px -8px rgb(0 0 201 / .6); }
+.ai-btn[aria-pressed="true"] { background: #000067; }
