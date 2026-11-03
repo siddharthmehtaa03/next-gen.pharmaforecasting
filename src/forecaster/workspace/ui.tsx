@@ -7,7 +7,7 @@ import { useInsights } from './insightsCtx'
 import { ACT, N, START_YEAR, mLabel, mLong } from './engine'
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
-export const COLOR = { actual: '#000067', unbiased: '#767676', ci: '#767676', working: '#0000c9', scenario: '#0095ff', preview: '#a68aff', grid: '#e3e5ea', alt: ['#0095ff', '#007a6c', '#c4122f', '#8f5a00', '#a68aff', '#0000c9'] }
+export const COLOR = { actual: '#000067', unbiased: '#767676', ci: '#767676', working: '#0000c9', scenario: '#0095ff', preview: '#a68aff', grid: '#e6e4dc', alt: ['#0095ff', '#007a6c', '#c4122f', '#8f5a00', '#a68aff', '#0000c9'] }
 export const field = 'h-10 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm outline-none transition-colors focus:border-brand disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-text-3'
 
 export function Btn({ children, variant = 'primary', onClick, icon, disabled, size = 'md', title, className }: { children?: ReactNode; variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; onClick?: () => void; icon?: ReactNode; disabled?: boolean; size?: 'sm' | 'md'; title?: string; className?: string }) {

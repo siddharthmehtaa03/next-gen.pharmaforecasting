@@ -10,19 +10,20 @@
 
 @theme inline {
   /* Surfaces: white cards on a pale-blue canvas (Blue 05 / Blue 10) */
-  --color-background: #f3f7fd;
+  --color-background: #fbfaf7;
+  --color-rail: #efeee9;
   --color-surface: #ffffff;
-  --color-surface-2: #e9f1fc;
-  --color-border: #c9d6ea;
-  --color-border-strong: #7f8fb3;
+  --color-surface-2: #f3f2ed;
+  --color-border: #e2e0d8;
+  --color-border-strong: #8f8d82;
   /* Text: Blue 90 for primary, softened navy-greys for secondary / captions (AA on white) */
-  --color-text: #0a0c3a;
-  --color-text-2: #2b3466;
-  --color-text-3: #47507f;
+  --color-text: #101433;
+  --color-text-2: #464a63;
+  --color-text-3: #656980;
   /* Brand: Blue 70 primary, Blue 10 soft */
   --color-brand: #0000c9;
   --color-brand-dark: #0000a3;
-  --color-brand-soft: #e8f2ff;
+  --color-brand-soft: #eaeffb;
   --color-navy: #000067;
   --color-cyan: #0095ff;
   --color-teal: #00b7a5;
@@ -187,3 +188,12 @@ tbody td, tbody th { border-color: var(--color-border); }
 select, input:not([type='checkbox']):not([type='radio']):not([type='range']), textarea { background-color: #fff; border-color: var(--color-border-strong); }
 section.border, article.border, div.border.bg-surface { box-shadow: var(--shadow-card); }
 .bg-surface-2.border { background: var(--color-surface-2); }
+/* Reference balance: warm off-white canvas, a barely darker rail and wells, hairline borders, quiet shadows. Pfizer blue stays on primary actions. */
+:root { --shadow-card: 0 1px 2px rgb(16 20 51 / 0.05); }
+.shadow-card { box-shadow: 0 1px 2px rgb(16 20 51 / 0.05); }
+section.shadow-card:hover, div.shadow-card:hover { box-shadow: 0 1px 2px rgb(16 20 51 / 0.06), 0 8px 20px -12px rgb(16 20 51 / 0.16); }
+.sticky.top-0.border-b { box-shadow: none; background: var(--color-background); }
+.sticky.bottom-0.border-t { box-shadow: none; }
+tbody tr:hover { background: var(--color-surface-2); }
+a.border:hover, button.border.text-left:not(:disabled):hover, button.rounded-lg.border.bg-surface:not(:disabled):hover, button.rounded-xl.border.bg-surface:not(:disabled):hover { box-shadow: 0 6px 16px -10px rgb(16 20 51 / 0.2); }
+select, input:not([type='checkbox']):not([type='radio']):not([type='range']), textarea { background-color: var(--color-surface); }
