@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ComponentType } from 'react'
 import { scrollFrameTop } from '../../frame'
-import { ArrowLeft, ArrowRight, Check, Lock, Maximize2, Minimize2, Save } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Lock, Maximize2, Minimize2, Save } from 'lucide-react'
 import { CountryCompare, FunnelTable } from './Extras'
 import { ACT, ACTUALS, DEFAULT_MODEL, DRIVERS, DRV, FY, GTN, N, OUTPUTS, SEED_EVENTS, SEED_SCENARIOS, UNBIASED, defaultEdit, fmtV, fyAvg, fySum, measure, mLong, revenue, scenarioLayer, workingLayer } from './engine'
 import type { DriverId, EventDef, Layer, ModelCfg, OutputId, Override, Scenario } from './engine'
@@ -46,6 +46,9 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
   onPublished?: (brandId: string, scenario: string) => void }) {
   const [view, setView] = useState<View>('Overview')
   const [an, setAn] = useState<string | null>(null)
+  const [anOpen, setAnOpen] = useState(false)
+  const anRef = useRef<HTMLDivElement>(null)
+  useEffect(() => { if (!anOpen) return; const h = (e: MouseEvent) => { if (!anRef.current?.contains(e.target as Node)) setAnOpen(false) }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h) }, [anOpen])
   const [ue, setUe] = useState(ueDefault)
   const [woh, setWoh] = useState(WOH_DEFAULT)
   const [gp, setGp] = useState<GpState>(gpDefault)
@@ -227,31 +230,31 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
       </>,
       document.getElementById('topbar-ws')!
     )}
-    <div className="min-h-full bg-bg">
+    <div className="min-h-full bg-background">
       {!presenting && (
         <div className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur">
-          <nav data-tour="tabs" aria-label="Forecast sections" className="mx-auto max-w-[1240px] overflow-x-auto px-6">
-            <div role="tablist" className="flex min-w-max items-end gap-1">
+          <nav data-tour="tabs" aria-label="Forecast sections" className="mx-auto max-w-[1240px] px-6">
+            <div role="tablist" className="flex flex-nowrap items-end gap-0.5">
               {STEPS.map(v => {
                 const badge = v === 'Assumptions' ? modified : v === 'Summary' ? scenarios.length : v === 'Events' ? events.length : 0
                 return (
-                  <button key={v} type="button" role="tab" aria-selected={v === view} onClick={() => go(v)}
-                    className={cx('-mb-px inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3.5 py-2.5 text-[13.5px] font-semibold transition-colors', v === view ? 'border-brand text-brand' : 'border-transparent text-text-2 hover:text-text')}>
-                    {LABEL[v]}{badge > 0 &&<span className={cx('rounded-full px-1.5 text-[11px] font-semibold', v === view ? 'bg-brand-soft text-brand' : 'bg-surface-2 text-text-2')}>{badge}</span>}
+                  <button key={v} type="button" role="tab" aria-selected={!an && v === view} onClick={() => go(v)}
+                    className={cx('-mb-px inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-3 text-[13px] font-semibold transition-colors', !an && v === view ? 'border-text text-text' : 'border-transparent text-text-2 hover:text-text')}>
+                    {LABEL[v]}{badge > 0 && <span className={cx('rounded-full px-1.5 text-[11px] font-semibold', !an && v === view ? 'bg-text text-white' : 'bg-surface-2 text-text-2')}>{badge}</span>}
                   </button>)
               })}
-              <button type="button" onClick={toggleFull} title={full ? 'Exit full screen' : 'Full screen'} aria-label={full ? 'Exit full screen' : 'Full screen'} className="mb-1 ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-full text-text-2 hover:bg-surface-2 hover:text-text">{full ? <Minimize2 size={15} /> : <Maximize2 size={15} />}</button>
+              <div ref={anRef} data-tour="analytics" className="relative -mb-px ml-1">
+                <button type="button" aria-haspopup="menu" aria-expanded={anOpen} onClick={() => setAnOpen(o => !o)}
+                  className={cx('inline-flex items-center gap-1 whitespace-nowrap border-b-2 px-3 py-3 text-[13px] font-semibold transition-colors', an ? 'border-text text-text' : 'border-transparent text-text-2 hover:text-text')}>{an ?? 'Analytics'}<ChevronDown size={14} /></button>
+                {anOpen && <ul role="menu" className="rise absolute left-0 top-full z-40 mt-1 w-56 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-xl">
+                  {ANALYTICS.map(a => LIVE.includes(a)
+                    ? <li key={a}><button type="button" role="menuitem" onClick={() => { setAnOpen(false); if (leaveOk()) { setAn(a); scrollFrameTop() } }} className={cx('w-full px-4 py-2 text-left text-[13px] font-medium hover:bg-surface-2', an === a && 'bg-surface-2 font-semibold')}>{a}</button></li>
+                    : <li key={a}><span role="menuitem" aria-disabled="true" title="Content comes in a later release" className="flex w-full cursor-not-allowed items-center justify-between px-4 py-2 text-[13px] text-text-3">{a}<Lock size={11} /></span></li>)}
+                </ul>}
+              </div>
+              <button type="button" onClick={toggleFull} title={full ? 'Exit full screen' : 'Full screen'} aria-label={full ? 'Exit full screen' : 'Full screen'} className="mb-1.5 ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-full text-text-2 hover:bg-surface-2 hover:text-text">{full ? <Minimize2 size={15} /> : <Maximize2 size={15} />}</button>
             </div>
           </nav>
-          <div data-tour="analytics" className="border-t border-border bg-background">
-            <div role="tablist" aria-label="Analytics, available in a later release" className="mx-auto flex max-w-[1240px] items-center gap-1 overflow-x-auto px-6 py-1.5">
-              <span className="mr-1 shrink-0 text-[10.5px] font-semibold uppercase tracking-wider text-text-3/80">Analytics</span>
-              {ANALYTICS.map(a => LIVE.includes(a)
-                ? <button key={a} type="button" role="tab" aria-selected={an === a} onClick={() => leaveOk() && (setAn(a), scrollFrameTop())} className={cx('shrink-0 rounded-md px-2.5 py-1 text-[12.5px] font-medium', an === a ? 'bg-surface text-text ring-1 ring-border' : 'text-text-2 hover:bg-surface')}>{a}</button>
-                : <button key={a} type="button" role="tab" disabled aria-disabled="true" title="Content comes in a later release" className="shrink-0 cursor-not-allowed rounded-md px-2.5 py-1 text-[12.5px] font-medium text-text-3/70">{a}</button>)}
-              <span className="ml-auto hidden shrink-0 items-center gap-1 pl-3 text-[11px] text-text-3/80 lg:inline-flex"><Lock size={10} />Content comes in a later change request</span>
-            </div>
-          </div>
           {st && (
             <div className="mx-auto max-w-[1240px] px-6 pb-3 pt-3">
               <AgentBanner assistant={assistant} running={st.running} step={st.step} progress={st.progress} title={st.title} onStop={agent.stop} onDismiss={() => agent.setStatus(null)}
@@ -270,8 +273,8 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
         {view === 'Assumptions' && (
           <div className="space-y-6">
             <ScenarioBar scenarios={scenarios} setScenarios={setScenarios} scope={scenario ? scenario.id : FORECAST} setScope={setScope} year={year} setYear={setYear} calc={calc} notify={notify} />
-            <div className={cx('grid gap-6', !presenting && 'lg:grid-cols-[320px_minmax(0,1fr)]')}>
-              <aside className="lg:sticky lg:top-[112px] lg:self-start">
+            <div className={cx('grid gap-6', !presenting && 'lg:grid-cols-[minmax(0,1fr)_320px]')}>
+              <aside className="lg:sticky lg:top-[112px] lg:order-last lg:self-start">
                 <ForecastMap sel={sel} metric={metric} onSel={pick} mod={mod} onMod={m => { if (m !== mod && leaveOk()) setMod(m) }} onOutcome={m => { if (leaveOk()) { setMod(null); setSel('rev'); setMetric(m) } }}
                   edits={edits} reference={work.layer} layer={scopeCalc.layer} scenario={scenario} events={events} model={model} ue={ue} woh={woh} year={year} />
               </aside>

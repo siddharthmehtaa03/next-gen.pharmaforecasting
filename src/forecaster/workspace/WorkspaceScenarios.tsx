@@ -39,20 +39,26 @@ export function ScenarioBar({ scenarios, setScenarios, scope, setScope, year, se
     setScenarios(ss => ss.filter(s => s.id !== sc.id)); setScope(FORECAST); notify({ tone: 'info', text: `${sc.name} deleted.` })
   }
   const nAdj = sc ? Object.values(sc.adj).filter(Boolean).length + (sc.ovr?.length ?? 0) : 0
+  const ib = 'grid h-9 w-9 place-items-center rounded-full text-text-2 transition-colors hover:bg-surface-2 hover:text-text disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent'
   return (
-    <div data-tour="scenario-bar" className="space-y-2">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-lg border border-border bg-surface px-4 py-3">
-        <label className="flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-text-3">Working on
-          <select aria-label="Working on" value={scope} onChange={e => { setScope(e.target.value); setForm(null) }} className={cx(field, 'w-60 text-[13px] font-semibold normal-case tracking-normal text-text')}>
-            <optgroup label="Starting point"><option value={FORECAST}>Active forecast · every scenario starts here</option></optgroup>
-            <optgroup label="Scenarios">{scenarios.map(s => <option key={s.id} value={s.id}>{s.name}{s.locked ? ' · Final' : ''} · FY{year} {fmtRev(fySum(calc[s.id]!.rev, year))}</option>)}</optgroup>
-          </select></label>
+    <div data-tour="scenario-bar" className="space-y-3">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-border bg-surface px-5 py-3.5 shadow-card">
+        <div className="flex items-center gap-2.5">
+          <span className="text-[11px] font-semibold uppercase tracking-wider text-text-3">Working on</span>
+          <select aria-label="Working on" value={scope} onChange={e => { setScope(e.target.value); setForm(null) }} className={cx(field, 'h-10 w-56 font-semibold text-text')}>
+            <option value={FORECAST}>Active forecast</option>
+            {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}{s.locked ? ' · Final' : ''}</option>)}
+          </select>
+          <div className="flex items-center rounded-full border border-border bg-surface-2 p-0.5" role="group" aria-label="Scenario actions">
+            <button type="button" className={ib} title="Duplicate" aria-label="Duplicate scenario" disabled={!sc} onClick={dup}><Copy size={15} /></button>
+            <button type="button" className={ib} title="Rename" aria-label="Rename scenario" disabled={!sc || lock} onClick={() => sc && setForm({ mode: 'rename', name: sc.name, from: FORECAST })}><Pencil size={15} /></button>
+            <button type="button" className={cx(ib, 'hover:!bg-err-soft hover:!text-err')} title="Delete" aria-label="Delete scenario" disabled={!sc || lock || scenarios.length < 2} onClick={del}><Trash2 size={15} /></button>
+          </div>
+          <Tag tone={sc ? 'brand' : 'neutral'}>{sc ? (nAdj ? `${nAdj} change${nAdj === 1 ? '' : 's'}` : 'No changes yet') : 'Baseline for every scenario'}</Tag>
+        </div>
         <Btn size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => setForm({ mode: 'new', name: `Scenario ${scenarios.length + 1}`, from: FORECAST })}>New scenario</Btn>
-        <Btn size="sm" variant="ghost" icon={<Copy size={13} />} disabled={!sc} onClick={dup}>Duplicate</Btn>
-        <Btn size="sm" variant="ghost" icon={<Pencil size={13} />} disabled={!sc || lock} onClick={() => sc && setForm({ mode: 'rename', name: sc.name, from: FORECAST })}>Rename</Btn>
-        <Btn size="sm" variant="danger" icon={<Trash2 size={13} />} disabled={!sc || lock || scenarios.length < 2} onClick={del}>Delete</Btn>
-        <label className="ml-auto flex items-center gap-2 text-[12px] font-semibold uppercase tracking-wide text-text-3">Values for
-          <Seg label="Year" value={String(year)} onChange={v => setYear(+v)} options={FC_YEARS.map(y => ({ id: String(y), label: `FY${y}` }))} /></label>
+        <div className="ml-auto flex items-center gap-2.5"><span className="text-[11px] font-semibold uppercase tracking-wider text-text-3">Values for</span>
+          <Seg label="Year" value={String(year)} onChange={v => setYear(+v)} options={FC_YEARS.map(y => ({ id: String(y), label: `FY${y}` }))} /></div>
       </div>
       {form && (
         <form className="flex flex-wrap items-end gap-3 rounded-lg border border-brand/30 bg-brand-soft/30 px-4 py-3" onSubmit={e => { e.preventDefault(); form.mode === 'new' ? create() : rename() }}>
@@ -67,11 +73,7 @@ export function ScenarioBar({ scenarios, setScenarios, scope, setScope, year, se
           <Btn variant="ghost" onClick={() => setForm(null)}>Cancel</Btn>
         </form>
       )}
-      <p className="px-1 text-[12.5px] text-text-2">
-        {sc
-          ? <><b className="font-semibold text-text">{sc.name}</b> replicates the active forecast assumptions. {nAdj ? <>{nAdj} change{nAdj === 1 ? '' : 's'} of its own · </> : 'Nothing changed in it yet · '}{sc.active.length} event{sc.active.length === 1 ? '' : 's'} on. Changes you make here belong to {sc.name} alone.{lock && ' It is final: reopen it in the Scenario summary to edit.'}</>
-          : <>You are editing the <b className="font-semibold text-text">active forecast</b>: the baseline every scenario starts from. Switch to a scenario to change only that scenario.</>}
-      </p>
+
     </div>
   )
 }

@@ -85,7 +85,7 @@ export default function InsightsBoard({ insights, setInsights, brandId, embedded
       </div>
     </>
   )
-  return embedded ? <div>{body}</div> : <div className="min-h-full bg-bg"><main className="mx-auto max-w-[1240px] px-6 py-8">{body}</main></div>
+  return embedded ? <div>{body}</div> : <div className="min-h-full bg-background"><main className="mx-auto max-w-[1240px] px-6 py-8">{body}</main></div>
 }
 
 function InsightCard({ i, active, showBrand, onOpen }: { i: Insight; active: boolean; showBrand: boolean; onOpen: () => void }) {

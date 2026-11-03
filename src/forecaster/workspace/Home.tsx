@@ -261,7 +261,7 @@ export default function ForecasterHome({ onOpen, notify }: { onOpen: (b: BrandRo
   )
 
   return (
-    <div className="min-h-full bg-bg">
+    <div className="min-h-full bg-background">
       <main className="mx-auto max-w-[1240px] px-6 py-8">
         <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Forecaster</p>
         <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
@@ -271,7 +271,6 @@ export default function ForecasterHome({ onOpen, notify }: { onOpen: (b: BrandRo
             <Seg label="UX" value={ux} onChange={setUx} options={[{ id: 'fractal', label: 'A' }, { id: 'syeda', label: 'B' }]} />
           </div>
         </div>
-        <p className="mt-1 max-w-2xl text-sm text-text-2">Open a forecast to review the reference baseline, adjust assumptions, add events, build scenarios and run simulations.</p>
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-[15px] font-semibold">Forecasts · {rows.length}</h2>
@@ -287,7 +286,6 @@ export default function ForecasterHome({ onOpen, notify }: { onOpen: (b: BrandRo
                   return (
                     <th key={k} className={cx('px-3 py-2.5 font-semibold', w)} aria-sort={on ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
                       <button type="button" onClick={() => toggleSort(k)} className={cx('inline-flex items-center gap-1 uppercase tracking-wide outline-none hover:text-text focus-visible:text-brand', on && 'text-text')}>
-                        {k === 'updated' && <Clock size={11} className="mr-0.5 shrink-0 text-text-3" />}
                         {h}<Icon size={12} className={on ? 'text-brand' : 'opacity-60'} />
                       </button>
                     </th>
@@ -306,7 +304,6 @@ export default function ForecasterHome({ onOpen, notify }: { onOpen: (b: BrandRo
                   <td className="px-3 py-2.5 whitespace-nowrap"><Tag tone={TONE[b.status]}>{b.status}</Tag></td>
                   <td className="px-3 py-2.5 text-xs text-text-2 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
-                      <Clock size={11} className="shrink-0 text-text-3" />
                       <span>{b.updated || 'Recent'}</span>
                     </span>
                   </td>
