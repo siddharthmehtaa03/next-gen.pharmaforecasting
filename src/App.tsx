@@ -5,9 +5,6 @@ import ChatShell from './chat/ChatShell'
 import { forecastAnswer } from './forecaster/ForecasterChat'
 import type { Mode, Persona, PromptCard, Source } from './chat/ChatShell'
 import { BRANDS as FC_BRANDS } from './forecaster/workspace/Home'
-import { Tour } from './forecaster/workspace/Tour'
-import type { TourStep } from './forecaster/workspace/Tour'
-import { TOUR_FLAG } from './forecaster/workspace/WhatsNew'
 import Forecaster from './forecaster/Forecaster'
 import type { FcSection } from './forecaster/Forecaster'
 import type { FThread } from './forecaster/ForecasterChat'
@@ -20,6 +17,9 @@ import { AgentBanner, AgentButton, AgentDemoCard } from './chat/Agent'
 import type { CopilotProps } from './forecaster/workspace/agent'
 import { FRAME_ID, scrollFrameTop } from './frame'
 import { ChartActions } from './chart/ChartActions'
+import { FLOW_INPUTS, mapOf } from './configCatalog'
+import { FlowSteps, InputMapBoard, SnowflakeSources } from './ConfigInputs'
+import type { LaneView, StepView, StreamFlow } from './ConfigInputs'
 import pfizerMark from './assets/pfizer-mark-color.png'
 import pfizerLogo from './assets/pfizer-logo-color.png'
 import pfizerLogoWhite from './assets/pfizer-logo.png'
@@ -622,7 +622,8 @@ type Perm = { open: boolean; min: number; max: number; owner: string; source: st
 type BaseRow = { id: string; name: string; eng: string; v: number[] }
 type Baseline = { n: number; at: string; sig: string; rows: BaseRow[] }
 type Level = { id: string; kind: string; items: string[] }
-type Ind = { stype?: string; levels?: Level[]; auto?: boolean; sep?: string; snap?: string[][]; id: string; name: string; desc?: string; dim?: string; dimOther?: string; parent?: string; arch: ArchId | null; engine: string; sliceArch: Record<string, string>; modes: Record<string, string>; modules: string[]; perms: Record<string, Perm> }
+/** `inputMap`: which group class each patient-flow input is mapped to (module map); an empty string is unmapped. Defaults come from configCatalog. */
+type Ind = { inputMap?: Record<string, string>; stype?: string; levels?: Level[]; auto?: boolean; sep?: string; snap?: string[][]; id: string; name: string; desc?: string; dim?: string; dimOther?: string; parent?: string; arch: ArchId | null; engine: string; sliceArch: Record<string, string>; modes: Record<string, string>; modules: string[]; perms: Record<string, Perm> }
 type Config = {
   brand: string; asset: string; subjectType: string; therapyArea: string; lifecycle: string; subnational: boolean; context: string; competing: boolean; market: string; cycle: string; start: string; end: string; granularity: string; grade: string; slices: Slice[]
   shared: { price: boolean; g2n: boolean }; inds: Ind[]; active: string; bindings: Record<string, Binding>
@@ -794,6 +795,7 @@ function warningsFor(c: Config): { msg: string; stage: number }[] {
   const out: { msg: string; stage: number }[] = []
   const open = inputsFor(c).filter(b => !dataReady(c.bindings[b.key]))
   if (open.length) out.push({ stage: 5, msg: `${open.length} input${open.length > 1 ? 's are' : ' is'} not configured yet. They will reach the Forecaster without a data source.` })
+  c.inds.forEach(i => { const n = i.arch ? FLOW_INPUTS.filter(x => !mapOf(i.inputMap)[x.id]).length : 0; if (n) out.push({ stage: 4, msg: `${indLabel(c, i)}${n} patient-flow input${n > 1 ? 's are' : ' is'} not mapped to a group class.` }) })
   if (c.inds.length && c.inds.every(i => i.arch === 'D-06')) out.push({ stage: 2, msg: 'Every indication uses Trend / Extrapolation — a component method is standing in for the whole brand forecast.' })
   if (c.inds.some(i => i.arch === 'D-06' && i.modes.role === 'Blend') && c.inds.every(i => i.arch === 'D-06')) out.push({ stage: 3, msg: 'Trend role is “Blend” but there is no structural archetype to blend into.' })
   c.inds.forEach(i => {
@@ -927,13 +929,6 @@ export default function App() {
   // Assistant hidden for now: no top-bar button or Ctrl/⌘ + / shortcut, so `ai` stays false
 
   const open = (s: Seed) => { setSeed(s); setRun(r => r + 1); setView('config'); toTop() }
-  // Onboarding from the profile menu. CoE: spotlight tour on the configurator. Forecaster: opens the first brand and its workspace tour.
-  const [coeTour, setCoeTour] = useState<number | null>(null)
-  const startTour = (flow: 'coe' | 'fc') => {
-    if (flow === 'coe') { open({}); setCoeTour(0); return }
-    try { sessionStorage.setItem(TOUR_FLAG, '1') } catch { /* tour just won't auto-start */ }
-    setFcKey(k => k + 1); setFcSection('forecasts'); setView('forecast'); toTop()
-  }
   const resume = (m: ModelRow) => open(m.id === 'a' ? {} : { from: m })
 
   /** A finalised model gets a workspace row straight away; making it available only flips its status. */
@@ -949,7 +944,7 @@ export default function App() {
   return (
     view === 'landing' ? <><Landing onCoE={() => setView('models')} onForecast={() => { setView('forecast'); setFcSection('forecasts'); toTop() }} /></> :
     <AppFrame dock="split" collab={collab && (view === 'config' || (view === 'forecast' && fcSection === 'forecasts' && fcWs))} onCollab={setCollab}
-      footer={<ProfileMenu placement="rail" onTour={startTour} onAdmin={() => { setView('admin'); toTop() }} onLogout={() => { setView('landing'); setToast({ tone: 'info', text: 'You’ve been logged out.' }) }} />} onHome={() => setView('landing')}
+      footer={<ProfileMenu placement="rail" onAdmin={() => { setView('admin'); toTop() }} onLogout={() => { setView('landing'); setToast({ tone: 'info', text: 'You’ve been logged out.' }) }} />} onHome={() => setView('landing')}
       items={view === 'forecast'
         ? [{ id: 'home', label: 'Home', icon: House, go: () => setView('landing') },
            { id: 'forecasts', label: 'My forecasts', icon: LineChart, go: () => { setFcSection('forecasts'); setFcKey(k => k + 1); toTop() } },
@@ -966,7 +961,6 @@ export default function App() {
       active={view === 'config' ? 'models' : view === 'forecast' ? ({ forecasts: 'forecasts', chat: 'fchat' } as const)[fcSection] : view}
       flow={view === 'forecast' ? 'Forecaster' : 'Forecasting CoE'}
       header={<TopBar collab={view === 'config' || (view === 'forecast' && fcSection === 'forecasts' && fcWs) ? { on: collab, toggle: () => setCollab(v => !v), label: view === 'forecast' ? 'Forecast AI' : 'COE AI' } : undefined} crumbs={view === 'forecast' && fcSection === 'forecasts' ? [] : [view === 'forecast' ? 'Forecaster' : 'Forecasting CoE', ({ models: 'Model workspace', config: 'Configure model', admin: 'Admin portal', forecast: ({ forecasts: 'My forecasts', chat: AI_EXP.ask.label } as const)[fcSection], chat: AI_EXP.build.label, landing: '' } as const)[view]]} onHome={() => setView('landing')} onAdmin={() => { setView('admin'); toTop() }} onLogout={() => { setView('landing'); setToast({ tone: 'info', text: 'You’ve been logged out.' }) }} models={models} onResume={resume} ai={ai} onAI={() => setAi(v => !v)} notify={setToast} fixtures={fixtures} onFixtures={toggleFixtures} />}>
-      {coeTour !== null && view === 'config' && <Tour steps={COE_TOUR} step={coeTour} onStep={setCoeTour} onClose={() => setCoeTour(null)} />}
       {view === 'forecast' && fcSection === 'forecasts' && !fcWs && <Charles persona="ask" busy={false} greeting={`Hi ${ME.split(' ')[0]}, ask about any submitted forecast. I show sources and don’t change anything.`} context={['Forecaster', 'My forecasts']}
         chips={['What are the key risks?', 'Explain what moved Nurtec', 'Compare Optimistic and Pessimistic']}
         respond={q => { const named = FC_BRANDS.find(x => q.toLowerCase().includes(x.brand.toLowerCase())); const r = forecastAnswer(q, named?.id ?? fcChatBrand, fcInsights, { blocked: fcBlocked, published: fcPublished }); const o = r.out.map(x => x.text ?? '').filter(Boolean).join('\n\n').replace(/^## (.*)$/gm, '**$1**'); return { kind: 'text', title: r.title ?? 'Forecast AI', cites: r.out.flatMap(x => x.sources ?? []).map(s => s.name), body: <div className="space-y-2 whitespace-pre-line">{o.split('\n\n').map((p, i) => <p key={i}><Md text={p} /></p>)}</div> } }} />}
@@ -994,15 +988,6 @@ const CollabCtx = createContext<CollabState>({ open: false, slot: null, close: (
 
 /* ───────────────────────── App frame: side rail + rounded content panel ───────────────────────── */
 
-/* CoE onboarding: spotlights what changed in the configurator. */
-const COE_TOUR: TourStep[] = [
-  { target: 'coe-steps', title: 'Five stages, one model', body: 'Stream, archetype, modes, modules and data configuration, then Review. Each stage unlocks as the one before it is complete.' },
-  { target: 'flow-panel', title: 'Live forecast flow', body: 'The flow rebuilds as you configure. It folds to a strip while COE AI is open, so the two never fight for space.' },
-  { target: 'coe-review', title: 'Review shows only what the CoE can see', body: 'Prevalent, diagnosed and treated patients show as “filled by the forecaster”. Compliant patients equal patients on brand until the forecaster sets compliance; scripts, gross and net follow.' },
-  { target: 'ai-btn', title: 'COE AI opens beside your work', body: 'COE AI now opens as a resizable split screen, like Forecast AI. Drag the divider to resize; double-click to reset.' },
-  { target: 'rail-toggle', title: 'Collapse or expand the side nav', body: 'The side nav no longer expands on hover. Use this control to open or close it.' },
-  { target: 'profile', title: 'Onboarding lives here', body: 'Reopen this tour, or the Forecaster tour, any time from your profile menu, under Start onboarding.' },
-]
 
 type NavItem = { id: string; label: string; icon: typeof House; go: () => void; sub?: { onNew: () => void; items: { id: number; label: string; active: boolean; go: () => void; dup: () => void; del: () => void }[] } }
 /** Shared shell for every flow: a light gray rail that keeps the page breathable. Collapsed shows the Pfizer motif and icons; expanded shows the full logo and labels. */
@@ -3337,7 +3322,7 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
             <span className={cx('absolute inset-y-0 left-1.5 w-px transition-colors group-hover:bg-brand/60 group-focus-visible:bg-brand', flowDrag && 'bg-brand')} />
             <span className="absolute left-0.5 top-1/2 h-8 w-1 -translate-y-1/2 rounded-full bg-border-strong opacity-0 transition-opacity group-hover:opacity-100" />
           </div>}
-          <ForecastFlowPanel c={c} stage={stage} go={go} canGo={canGo} onPick={id => update({ active: id })} open={flowOpen} aiOpen={collab.open}
+          <ForecastFlowPanel c={c} stage={stage} reached={Math.max(stage, ...Array.from(visited))} go={go} canGo={canGo} onPick={id => update({ active: id })} open={flowOpen} aiOpen={collab.open}
             onOpen={() => { if (collab.open) collab.close(); setFlowPref(true) }} onClose={() => setFlowPref(false)} />
         </aside>
         {sharing && <ShareDialog c={c} update={update} notify={notify} onClose={() => setSharing(false)} />}
@@ -4389,6 +4374,16 @@ function StageModules({ c, ind, update, updInd, go, errs, fix }: Ctx & { errs?: 
   const onCount = valid.filter(isOn).length
 
   if (!arch) return <div className="space-y-4"><StreamArchSummary c={c} ind={ind} update={update} go={go} /><EmptyState icon={<Layers size={18} />} title={`No archetype for ${ind.name || 'this stream'}`} action={<Btn size="sm" onClick={() => go(2)}>Choose an archetype</Btn>}>Stages and modules come from the archetype.</EmptyState></div>
+  // Group classes in calculation order. Modules sit in their class; the patient-flow inputs are mapped onto the same classes.
+  const seqNow = Array.from(new Set([...ind.modules, ...req]))
+  const insp = MODULES.find(m => m.id === inspect)
+  const lanes: LaneView[] = LANE_ORDER.map(cat => cat === '__engine'
+    ? { name: `Archetype engine · ${archName(arch)}`, mods: [], addable: [], engine: true }
+    : {
+      name: cat,
+      mods: seqNow.map(id => MODULES.find(m => m.id === id)).filter((m): m is Mod => !!m && m.cat === cat).map(m => { const st = modState(m, ind, seqNow); return { id: m.id, name: m.name, desc: m.desc, required: req.includes(m.id), dot: st === 'ok' ? undefined : STATE_UI[st].dot } }),
+      addable: valid.filter(m => m.cat === cat && !isOn(m)).map(m => ({ id: m.id, name: m.name })),
+    })
   return (
     <div className="@container space-y-4">
       <StreamArchSummary c={c} ind={ind} update={update} go={go} />
@@ -4400,54 +4395,19 @@ function StageModules({ c, ind, update, updInd, go, errs, fix }: Ctx & { errs?: 
         </Banner>
       )}
 
-      <div className="grid items-start gap-4 @3xl:grid-cols-[minmax(0,1fr)_330px]">
-        <section className="min-w-0 rounded-2xl border border-border bg-surface shadow-card p-4" aria-label="Model canvas">
-          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <div><h3 className="flex items-center gap-2 text-sm font-semibold"><Workflow size={15} className="text-brand" />Canvas · {ind.name || 'Stream'}</h3><p className="text-xs text-text-2">{archName(arch)} <span className="text-text-3">({ind.engine})</span> · {onCount} modules</p></div>
-            <span className="text-[11px] text-text-3">Click a card to inspect · drag to the library to remove</span>
+      <InputMapBoard streamName={ind.name} engine={`${archName(arch)} (${ind.engine})`} lanes={lanes} map={ind.inputMap} setMap={m => updInd(ind.id, { inputMap: m })}
+        onAddModule={id => { const m = MODULES.find(x => x.id === id); if (m) add(m) }} onRemoveModule={remove} onInspect={id => setInspect(inspect === id ? null : id)} />
+      {insp && (() => {
+        const st = modState(insp, ind, seqNow), isReq = req.includes(insp.id)
+        return (
+          <div className="rounded-2xl border border-border bg-surface shadow-card p-4">
+            <div className="flex items-start justify-between gap-2"><div><p className="text-[11px] text-text-3">{insp.cat}</p><p className="font-semibold">{insp.name}</p></div><button type="button" onClick={() => setInspect(null)} aria-label="Close details" className="text-text-3 hover:text-text"><X size={15} /></button></div>
+            <div className="mt-2 flex flex-wrap gap-1"><Badge tone={STATE_UI[st].tone}>{STATE_UI[st].label}</Badge>{isReq ? <Badge>Core · required</Badge> : <Badge>Optional</Badge>}</div>
+            <p className="mt-2 text-[12.5px] text-text-2">{insp.desc}</p>
+            <p className="mt-2 text-[12px] text-text-3">Runs at position {seqNow.indexOf(insp.id) + 1} of {seqNow.length} · Depends on {insp.needs ?? 'nothing'}</p>
           </div>
-          <ModuleLanes c={c} ind={ind} updInd={updInd} dragging={dragging} inspect={inspect} onInspect={setInspect} />
-        </section>
-
-        <aside aria-label="Module library"
-          onDragOver={e => { if (e.dataTransfer.types.includes(DRAG_ON)) { e.preventDefault(); setBinOver(true) } }} onDragLeave={() => setBinOver(false)}
-          onDrop={e => { e.preventDefault(); setBinOver(false); const id = e.dataTransfer.getData(DRAG_ON); if (id) remove(id) }}
-          className={cx('relative flex max-h-[calc(100dvh-140px)] min-w-0 flex-col overflow-hidden rounded-lg border bg-surface @3xl:sticky @3xl:top-4', binOver ? 'border-2 border-dashed border-err' : 'border-border')}>
-          {binOver && <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-err-soft/85 text-sm font-semibold text-err"><span className="flex items-center gap-2"><X size={16} />Drop to remove from canvas</span></div>}
-          <div className="border-b border-border p-3">
-            <div className="flex items-center justify-between"><h3 className="text-sm font-semibold">Module library</h3><span className="font-mono text-[11px] text-text-3">{valid.length} compatible</span></div>
-            <div className="relative mt-2">
-              <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-3" />
-              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search modules" aria-label="Search modules" className={cx(inputCls(), 'h-8! pl-8 text-[13px]')} />
-            </div>
-            <div className="mt-2 flex gap-1" role="radiogroup" aria-label="Show">
-              {(['All', 'Available', 'On canvas'] as ModFilter[]).map(f => <button key={f} type="button" role="radio" aria-checked={filter === f} onClick={() => setFilter(f)} className={cx('flex-1 rounded px-2 py-1 text-[12px] font-medium', filter === f ? 'bg-text text-white' : 'bg-surface-2 text-text-2 hover:text-text')}>{f}</button>)}
-            </div>
-          </div>
-          <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
-            {LANE_ORDER.filter(l => l !== '__engine').map(fam => {
-              const list = valid.filter(m => m.cat === fam && shown(m))
-              if (!list.length) return null
-              const open = !!term || openB.has(fam)
-              return (
-                <section key={fam}>
-                  <button type="button" aria-expanded={open} onClick={() => setOpenB(p => { const n = new Set(p); n.has(fam) ? n.delete(fam) : n.add(fam); return n })}
-                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[11px] font-bold uppercase tracking-wider text-text-2 hover:bg-surface-2">
-                    <ChevronDown size={13} className={cx('shrink-0 transition-transform', !open && '-rotate-90')} /><span className="min-w-0 flex-1 truncate">{fam}</span><span className="font-mono font-normal">{list.filter(isOn).length}/{list.length}</span>
-                  </button>
-                  {open && <ul className="space-y-1.5 px-1 pb-2 pt-1">
-                    {list.map(m => <LibraryCard key={m.id} m={m} on={isOn(m)} core={req.includes(m.id)} govd={GOVERNED.has(m.name)} shared={shared(m)}
-                      missing={!!m.needs && isOn(m) && !isOn(byName(m.needs))} onAdd={() => add(m)} onDrag={setDragging} onLock={() => setLockInfo(m)} onPick={() => setInspect(m.id)} />)}
-                  </ul>}
-                </section>
-              )
-            })}
-            {!valid.some(shown) && <p className="p-4 text-center text-[13px] text-text-3">No modules match. <button type="button" className="font-semibold text-brand hover:underline" onClick={() => { setQ(''); setFilter('All') }}>Clear</button></p>}
-          </div>
-          <p className="border-t border-border px-3 py-2 text-[11px] text-text-3">{hidden} modules not compatible with {archName(arch)} are hidden. New modules are version requests to the platform team.</p>
-        </aside>
-      </div>
-
+        )
+      })()}
       {lockInfo && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-brand-dark/50 p-4" role="dialog" aria-modal="true" aria-labelledby="lock-title" onClick={() => setLockInfo(null)}>
           <div className="rise w-full max-w-md rounded-lg bg-surface p-6 shadow-xl" onClick={e => e.stopPropagation()}>
@@ -4476,98 +4436,16 @@ const EXPOSURE: { id: Exposure; label: string }[] = [{ id: 'Editable', label: 'F
 const pathOf = (b?: Binding): Pathway => b?.path ?? 'Connected'
 const exposeOf = (b?: Binding): Exposure => b?.expose ?? (pathOf(b) === 'Manual' ? 'Editable' : 'Visible')
 
-function StageData({ c, ind, update, updInd, go }: Ctx) {
-  const live = useContext(AgentCtx).field
-  const ins = inputsFor(c)
-  if (!ins.length) return <EmptyState icon={<Database size={18} />} title="No inputs to configure yet" action={<Btn size="sm" onClick={() => go(2)}>Choose archetypes</Btn>}>Inputs appear once each revenue stream has an archetype and modules.</EmptyState>
-  const groups = Array.from(new Set(ins.map(b => b.scope))).map(scope => ({
-    scope, label: scope === 'brand' ? 'Shared across all streams' : c.inds.find(i => i.id === scope)?.name || 'Untitled stream',
-    rows: ins.filter(b => b.scope === scope),
-  }))
-  const setB = (key: string, p: Partial<Binding>) => update({ bindings: { ...c.bindings, [key]: { ...c.bindings[key]!, ...p } } })
-  const n = (pw: Pathway) => ins.filter(b => pathOf(c.bindings[b.key]) === pw).length
-  const perms = ind.arch ? assumptionsFor(ind.arch).filter(a => ind.perms[a.id]) : []
-  const setP = (id: string, p: Partial<Perm>) => updInd(ind.id, { perms: { ...ind.perms, [id]: { ...ind.perms[id], ...p } } })
-  const exposed = perms.filter(a => ind.perms[a.id].open).length
+/** Data configuration is read-only: it only shows which Snowflake table and schema each input of the patient flow is read from. */
+function StageData({ c, ind, update, go }: Ctx) {
+  if (!c.inds.some(i => i.arch)) return <EmptyState icon={<Database size={18} />} title="No inputs to show yet" action={<Btn size="sm" onClick={() => go(2)}>Choose archetypes</Btn>}>Inputs appear once each revenue stream has an archetype.</EmptyState>
   return (
-    <>
-      <div className="grid gap-3 @xl:grid-cols-3">
-        {PATHWAYS.map(pw => <div key={pw.id} className="flex items-start gap-3 rounded-2xl border border-border bg-surface shadow-card p-3.5"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface-2 text-text-2"><pw.icon size={15} /></span><span className="min-w-0"><span className="block text-[13px] font-semibold">{pw.label} <span className="font-mono text-text-3">{n(pw.id)}</span></span><span className="block text-[11px] text-text-3">{pw.hint}</span></span></div>)}
-      </div>
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-        <table className="w-full min-w-[820px] text-sm">
-          <thead>
-            <tr className="border-b border-border bg-background/60 text-left text-xs uppercase tracking-wide text-text-3">
-              <th scope="col" className="px-4 py-3 font-semibold">Input · feeds</th>
-              <th scope="col" className="px-3 py-3 font-semibold">Pathway</th>
-              <th scope="col" className="px-3 py-3 font-semibold">Source · mapping</th>
-              <th scope="col" className="px-3 py-3 font-semibold">In the Forecaster</th>
-            </tr>
-          </thead>
-          {groups.map(g => (
-            <tbody key={g.scope}>
-              {groups.length > 1 && (
-                <tr className="border-b border-border bg-surface-2/60">
-                  <th scope="rowgroup" colSpan={4} className="px-4 py-2 text-left text-xs font-semibold text-text">{g.label}<span className="ml-2 font-normal text-text-3">{g.scope === 'brand' ? 'Shared across every revenue stream' : `${g.rows.length} input${g.rows.length > 1 ? 's' : ''}`}</span></th>
-                </tr>
-              )}
-              {g.rows.map(b => {
-                const x = c.bindings[b.key], pw = pathOf(x)
-                return (
-                  <tr key={b.key} data-agent={`bind-${b.key}`} className={cx('border-b border-border align-top last:border-0', live === `bind-${b.key}` && 'agent-row')}>
-                    <td className="px-4 py-3"><p className="font-medium text-text">{b.input.name}</p><p className="text-xs text-text-3">Feeds {b.input.feeds}</p></td>
-                    <td className="px-3 py-3"><select aria-label={`Pathway for ${b.input.name}`} className={cx(inputCls(), 'h-8! text-[13px]')} value={pw} onChange={e => setB(b.key, { path: e.target.value as Pathway, expose: e.target.value === 'Manual' ? 'Editable' : x?.expose })}>{PATHWAYS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></td>
-                    <td className="px-3 py-3 text-[13px]">
-                      {pw === 'Connected' && <><select aria-label={`Source for ${b.input.name}`} className={cx(inputCls(), 'h-8! text-[13px]')} value={x?.source || b.input.suggested} onChange={e => setB(b.key, { source: e.target.value })}>{Array.from(new Set([b.input.suggested, ...SOURCE_OPTIONS])).map(o => <option key={o} value={o}>{o}{o === b.input.suggested ? ' (suggested)' : ''}</option>)}</select><p className="mt-1 text-[11px] text-text-3">Already available to the platform</p></>}
-                      {pw === 'File' && <><input aria-label={`Mapped field for ${b.input.name}`} className={cx(inputCls(), 'h-8! text-[13px]')} value={x?.mapField ?? ''} onChange={e => setB(b.key, { mapField: e.target.value })} placeholder="Column in the file, e.g. Px_net" /><p className="mt-1 text-[11px] text-text-3">Maps to {b.input.name.toLowerCase()}</p></>}
-                      {pw === 'Manual' && <p className="text-text-2">Entered in the Forecaster workspace</p>}
-                    </td>
-                    <td className="px-3 py-3"><select aria-label={`Forecaster exposure for ${b.input.name}`} className={cx(inputCls(), 'h-8! text-[13px]')} value={exposeOf(x)} disabled={pw === 'Manual'} onChange={e => setB(b.key, { expose: e.target.value as Exposure })}>{EXPOSURE.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          ))}
-        </table>
-      </div>
-      <section className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface">
-        <div className="border-b border-border px-5 pb-3 pt-4">
-          <h3 className="text-sm font-semibold">Inputs exposed to the Forecaster</h3>
-          <p className="mt-0.5 text-xs text-text-2">What forecasters can change, and within which bounds.</p>
-        </div>
-        <StreamList c={c} ind={ind} update={update} tabs sub={i => i.arch ? [`${Object.values(i.perms).filter(p => p.open).length} editable`, true] : ['No archetype', false]} />
-        <div className="p-5">
-          {!ind.arch ? <EmptyState icon={<Layers size={18} />} title="No archetype yet" action={<Btn size="sm" onClick={() => go(2)}>Choose an archetype</Btn>}>Inputs come from the archetype.</EmptyState> : (
-            <>
-              <p className="mb-3 text-xs text-text-3">{exposed} of {perms.length} editable by the Forecaster · {perms.length - exposed} locked</p>
-              <ul className="divide-y divide-border">
-                {perms.map(a => {
-                  const p = ind.perms[a.id]
-                  const bad = outOfBand(p)
-                  return (
-                    <li key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0">
-                      <div className="min-w-[180px] flex-1"><p className="text-[13px] font-semibold">{a.name}</p><p className="text-xs text-text-3">Base {p.value} {a.unit}</p></div>
-                      {p.open ? (
-                        <div className="flex items-center gap-2 text-xs text-text-2">
-                          <label className="flex items-center gap-1.5">Min<input type="number" aria-label={`${a.name} minimum`} className={cx(inputCls(bad), 'h-8 w-20 px-2')} value={p.min} onChange={e => setP(a.id, { min: Number(e.target.value) })} /></label>
-                          <label className="flex items-center gap-1.5">Max<input type="number" aria-label={`${a.name} maximum`} className={cx(inputCls(bad), 'h-8 w-20 px-2')} value={p.max} onChange={e => setP(a.id, { max: Number(e.target.value) })} /></label>
-                          <span className="text-text-3">{a.unit}</span>
-                        </div>
-                      ) : <span className="flex items-center gap-1.5 text-xs text-text-3"><Lock size={12} />Locked</span>}
-                      <label className="flex items-center gap-2 text-xs text-text-2"><Switch on={p.open} onChange={v => setP(a.id, { open: v })} label={`Forecaster can edit ${a.name}`} />{p.open ? 'Editable' : 'Locked'}</label>
-                      {bad && <p className="w-full text-xs text-err">Bounds must be increasing and contain the base value ({p.value}).</p>}
-                    </li>
-                  )
-                })}
-              </ul>
-            </>
-          )}
-        </div>
-      </section>
-    </>
+    <div className="@container space-y-4">
+      {c.inds.length > 1 && <IndTabs c={c} stage={5} issues={[]} onPick={id => update({ active: id })} />}
+      <SnowflakeSources map={ind.inputMap} />
+    </div>
   )
 }
-
 /* ───────────────────────── Step 6 · Review configuration ───────────────────────── */
 
 /** Visual model flow: setup → archetype → modes → modules → data, per stream, ending at what forecasters will see. */
@@ -4743,6 +4621,30 @@ const flowRows = (c: Config): FlowRow[] => c.inds.map((i, k) => {
   }
 })
 
+/** The configuration as a short step-by-step flow for the preview panel: what is complete and what was chosen under each step. */
+const SF_TABLES = new Set(FLOW_INPUTS.flatMap(x => x.sources.map(s => s.table))).size
+function flowView(c: Config, stage: number, reached: number): { setup: StepView; streams: StreamFlow[] } {
+  const state = (n: number, ok: boolean): StepView['state'] => n === stage ? 'current' : ok && n < reached ? 'done' : 'todo'
+  const names = c.inds.map(i => i.name.trim()).filter(Boolean)
+  const setupOk = !!c.brand.trim() && c.inds.length > 0 && c.inds.every(i => i.name.trim())
+  const setup: StepView = { stage: 1, title: 'Model setup', state: state(1, setupOk), lines: [`${c.brand || 'Untitled model'} · ${c.market || 'US'} · ${c.cycle}`, `${c.inds.length} stream${c.inds.length === 1 ? '' : 's'}${names.length ? `: ${names.join(', ')}` : ''}`] }
+  const streams = c.inds.map((i, k): StreamFlow => {
+    const modes = i.arch ? modesFor(i.arch).filter(m => !m.optional && (!m.showIf || m.showIf(i.modes))) : []
+    const mods = i.arch ? orderedModules(i) : [], classes = new Set(mods.map(m => m.cat)).size
+    const mapped = i.arch ? FLOW_INPUTS.filter(x => mapOf(i.inputMap)[x.id]).length : 0
+    return {
+      id: i.id, name: i.name.trim() || `Stream ${k + 1}`, hue: FLOW_HUES[k % FLOW_HUES.length]!,
+      steps: [
+        { stage: 2, title: 'Archetype', state: state(2, !!i.arch), lines: i.arch ? [archName(i.arch), i.engine] : ['Not chosen yet'] },
+        { stage: 3, title: 'Modes', state: state(3, !!i.arch && modes.every(m => !!i.modes[m.id])), lines: modes.length ? modes.slice(0, 3).map(m => `${m.label}: ${i.modes[m.id] || '—'}`) : ['Choose an archetype first'] },
+        { stage: 4, title: 'Module map', state: state(4, !!i.arch && mods.length > 0), lines: i.arch ? [`${mods.length} modules across ${classes} group classes`, `${mapped} of ${FLOW_INPUTS.length} patient-flow inputs on a class`] : ['Choose an archetype first'] },
+        { stage: 5, title: 'Data configuration', state: state(5, !!i.arch), lines: i.arch ? [`${FLOW_INPUTS.filter(x => x.sources.length).length} inputs read from Snowflake`, `${SF_TABLES} tables · read-only`] : ['Choose an archetype first'] },
+      ],
+    }
+  })
+  return { setup, streams }
+}
+
 /* A simple top-to-bottom flow: streams → archetype engines → total net revenue. Streams on the same archetype merge.
    Band widths follow each stream's net revenue (square-root scaled so small streams stay visible). */
 type VNode = { key: string; row: number; x: number; w: number; label: string; pending?: boolean; hue?: string; stream?: string; tone: 'stream' | 'engine' | 'total' }
@@ -4841,12 +4743,13 @@ function FlowSankey({ rows, onPick, go, hov, setHov }: { rows: FlowRow[]; onPick
     </div>
   )
 }
-function ForecastFlowPanel({ c, stage, go, onPick, open, aiOpen, onOpen, onClose }: {
-  c: Config; stage: number; go: (n: number) => void; canGo: (n: number) => boolean; onPick: (id: string) => void
+
+function ForecastFlowPanel({ c, stage, reached, go, onPick, open, aiOpen, onOpen, onClose }: {
+  c: Config; stage: number; reached: number; go: (n: number) => void; canGo: (n: number) => boolean; onPick: (id: string) => void
   open: boolean; aiOpen: boolean; onOpen: () => void; onClose: () => void
 }) {
   const rows = useMemo(() => flowRows(c), [c])
-  const [hov, setHov] = useState<string | null>(null)
+  const view = useMemo(() => flowView(c, stage, reached), [c, stage, reached])
   const [big, setBig] = useState(false)
   useEffect(() => { if (!big) return; const k = (e: KeyboardEvent) => e.key === 'Escape' && setBig(false); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [big])
   const live = rows.filter(r => r.arch && r.net > 0)
@@ -4871,41 +4774,16 @@ function ForecastFlowPanel({ c, stage, go, onPick, open, aiOpen, onOpen, onClose
         <span className="text-text-3"> · </span>
         <span>{c.inds.length} stream{c.inds.length > 1 ? 's' : ''}</span>
       </div>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Total net revenue</p>
       {inBuild ? (
-        <>
-          <p className="mt-0.5 text-[15px] font-medium italic text-text-3">Not yet calculated</p>
-        </>
+        <p className="text-[11.5px] text-text-3">Each step is ticked as you complete it. Revenue calculates in Step 6 (Review).</p>
       ) : (
         <>
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Total net revenue</p>
           <p className="mt-0.5 font-mono text-[26px] font-semibold leading-tight tracking-tight text-brand-dark">{net > 0 ? fmtFunnel(net, '$') : '—'}</p>
         </>
       )}
     </div>
   )
-  const list = (close?: () => void) => (
-    <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
-      {rows.map(r => {
-        const done = r.steps.filter(Boolean).length
-        return (
-          <li key={r.id} onMouseEnter={() => setHov(r.id)} onMouseLeave={() => setHov(null)}>
-            <button type="button" onClick={() => { onPick(r.id); close?.() }} className={cx('flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-surface-2', c.active === r.id && 'bg-brand-soft/40')}>
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: r.hue }} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[12.5px] font-semibold">{r.name}</span>
-                <span className={cx('block truncate text-[11.5px]', r.arch ? 'text-text-3' : 'text-warn')}>{r.arch ? archName(r.arch) : 'No archetype yet'}</span>
-              </span>
-              <span className="shrink-0 text-right">
-                <span className="block font-mono text-[12px] font-semibold">{r.arch && r.net > 0 ? fmtFunnel(r.net, '$') : '—'}</span>
-                <span className="block text-[10.5px] text-text-3">{done}/5 steps</span>
-              </span>
-            </button>
-          </li>
-        )
-      })}
-    </ul>
-  )
-
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
@@ -4917,8 +4795,7 @@ function ForecastFlowPanel({ c, stage, go, onPick, open, aiOpen, onOpen, onClose
         </div>
       </div>
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
-        <div id="export-flow-side" className="space-y-5 bg-background">{kpi}<FlowSankey rows={rows} onPick={onPick} go={go} hov={hov} setHov={setHov} id="flow-side" /></div>
-        {list()}
+        <div id="export-flow-side" className="space-y-4 bg-background">{kpi}<FlowSteps setup={view.setup} streams={view.streams} active={c.active} onPick={onPick} go={go} compact /></div>
       </div>
 
       {big && createPortal(
@@ -4929,8 +4806,8 @@ function ForecastFlowPanel({ c, stage, go, onPick, open, aiOpen, onOpen, onClose
               <div className="flex items-center gap-1"><ChartActions target="export-flow-big" title="Full flow preview" subtitle={c.brand || 'Untitled model'} /><button type="button" onClick={() => setBig(false)} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><X size={16} /></button></div>
             </header>
             <div className="grid min-h-0 flex-1 md:grid-cols-[minmax(0,1fr)_300px]">
-              <div className="min-h-0 overflow-y-auto bg-background px-10 py-8"><div id="export-flow-big" className="bg-background p-2"><FlowSankey rows={rows} onPick={id => { onPick(id); setBig(false) }} go={n => { go(n); setBig(false) }} hov={hov} setHov={setHov} id="flow-big" /></div></div>
-              <aside className="min-h-0 space-y-5 overflow-y-auto border-l border-border px-5 py-5">{kpi}{list(() => setBig(false))}</aside>
+              <div className="min-h-0 overflow-y-auto bg-background px-10 py-8"><div id="export-flow-big" className="mx-auto max-w-md bg-background p-2"><FlowSteps setup={view.setup} streams={view.streams} active={c.active} onPick={onPick} go={n => { go(n); setBig(false) }} /></div></div>
+              <aside className="min-h-0 space-y-5 overflow-y-auto border-l border-border px-5 py-5">{kpi}</aside>
             </div>
           </div>
         </div>, document.body)}
@@ -5244,12 +5121,6 @@ function ProfileMenu({ onAdmin, onLogout, onTour, placement }: { onAdmin: () => 
             <div className="mt-2 flex gap-1"><Badge tone="brand">Super Admin</Badge><Badge>CoE Configurator</Badge></div>
           </div>
           <button type="button" role="menuitem" onClick={() => { setOpen(false); onAdmin() }} className="flex w-full items-center gap-3 px-4 py-2.5 text-left text-sm hover:bg-surface-2"><ShieldCheck size={16} className="text-text-2" /><span><span className="block font-medium">Admin portal</span><span className="block text-xs text-text-3">Users, roles and access</span></span></button>
-          {onTour && <div className="border-t border-border py-1">
-            <p className="px-4 pb-1 pt-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-text-3">Start onboarding</p>
-            {([['coe', 'CoE flow', 'Configurator changes'], ['fc', 'Forecaster flow', 'New tabs, modules and KPIs']] as const).map(([id, t, d]) => (
-              <button key={id} type="button" role="menuitem" onClick={() => { setOpen(false); onTour(id) }} className="flex w-full items-center gap-3 px-4 py-2 text-left text-sm hover:bg-surface-2"><Sparkles size={16} className="text-brand" /><span><span className="block font-medium">{t}</span><span className="block text-xs text-text-3">{d}</span></span></button>
-            ))}
-          </div>}
           <button type="button" role="menuitem" onClick={() => { setOpen(false); onLogout() }} className="flex w-full items-center gap-3 border-t border-border px-4 py-2.5 text-left text-sm hover:bg-surface-2"><LogOut size={16} className="text-text-2" />Log out</button>
         </div>
       )}

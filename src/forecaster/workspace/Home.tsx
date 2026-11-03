@@ -4,7 +4,6 @@ import { DEFAULT_MODEL } from './engine'
 import type { ModelCfg } from './engine'
 import { Btn, Seg, Tag, cx } from './ui'
 import type { Notify } from './Drivers'
-import { TOUR_FLAG, WHATS_NEW_KEY, WhatsNew } from './WhatsNew'
 
 export type BrandRow = {
   id: string
@@ -225,9 +224,6 @@ export default function ForecasterHome({ onOpen, notify }: { onOpen: (b: BrandRo
   // Temporary: compare the current table with Syeda's HTML concept, served as-is from public/.
   const [ux, setUx] = useState<'fractal' | 'syeda'>('fractal')
   const [syeda, setSyeda] = useState<BrandRow | null>(null)
-  // Shown once per browser; "What's new" reopens it.
-  const [tour, setTour] = useState(() => { try { return !localStorage.getItem(WHATS_NEW_KEY) } catch { return false } })
-  const closeTour = () => { setTour(false); try { localStorage.setItem(WHATS_NEW_KEY, '1') } catch { /* storage unavailable */ } }
   const toggleSort = (k: SortKey) => setSort(s => s?.k !== k ? { k, dir: 1 } : s.dir === 1 ? { k, dir: -1 } : null)
   const filtered = brands.filter(b => f === 'all' || b.status === f)
   const rows = sort ? [...filtered].sort((a, b) => String(a[sort.k] ?? '').localeCompare(String(b[sort.k] ?? '')) * sort.dir) : filtered
@@ -271,7 +267,6 @@ export default function ForecasterHome({ onOpen, notify }: { onOpen: (b: BrandRo
         <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-[28px] font-semibold tracking-tight">Your forecasts</h1>
           <div className="flex items-center gap-2">
-            <Btn variant="secondary" icon={<Sparkles size={14} />} onClick={() => setTour(true)}>What’s new</Btn>
             <span className="ml-1 hidden text-xs font-medium text-text-3 sm:inline">Layout</span>
             <Seg label="UX" value={ux} onChange={setUx} options={[{ id: 'fractal', label: 'A' }, { id: 'syeda', label: 'B' }]} />
           </div>
@@ -337,8 +332,6 @@ export default function ForecasterHome({ onOpen, notify }: { onOpen: (b: BrandRo
             </tbody>
           </table>
         </div>
-
-        {tour && brands[0] && <WhatsNew brand={brands[0].brand} onClose={closeTour} onStart={() => { closeTour(); try { sessionStorage.setItem(TOUR_FLAG, '1') } catch { /* tour just won't auto-start */ } onOpen(brands[0]!) }} />}
         {versions && <VersionsDrawer b={versions} onClose={() => setVersions(null)} />}
         {renamingBrand && (
           <RenameDialog

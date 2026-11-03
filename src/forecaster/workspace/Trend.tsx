@@ -43,13 +43,15 @@ const TONE: Record<Verdict, { box: string; dot: string; text: string; note: stri
 }
 
 /** CR-003: can you depend on the trend? One verdict per metric, evidence one click away. */
-export function TrendPanel({ id }: { id: DriverId }) {
+/** `id` checks a driver's actuals; pass `series`, `label` and `fmt` instead to check an output such as net revenue. */
+export function TrendPanel({ id, series, label, fmt }: { id?: DriverId; series?: number[]; label?: string; fmt?: (v: number) => string }) {
   const [open, setOpen] = useState(false)
-  const c = trendCheck(ACTUALS[id]), t = TONE[c.verdict], d = DRV[id]
-  const unit = d.pct ? ' pts' : ''
-  const miss = (v: number) => d.pct ? `${v.toFixed(2)}${unit}` : fmtV(id, v)
+  const d = id ? DRV[id] : null
+  const c = trendCheck(series ?? ACTUALS[id!]), t = TONE[c.verdict]
+  const show = (v: number) => fmt ? fmt(v) : fmtV(id!, v)
+  const miss = (v: number) => d?.pct ? `${v.toFixed(2)} pts` : show(v)
   return (
-    <aside data-tour="trend" aria-label={`Trend reliability for ${d.label}`} className="flex flex-col rounded-2xl border border-border bg-surface shadow-card p-4">
+    <aside data-tour="trend" aria-label={`Trend reliability for ${label ?? d!.label}`} className="flex flex-col rounded-2xl border border-border bg-surface shadow-card p-4">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Can you depend on the trend?</p>
       <div className={cx('mt-2 rounded-md px-3 py-2.5', t.box)}>
         <p className={cx('flex items-center gap-2 text-[15px] font-semibold', t.text)}><span className={cx('h-2.5 w-2.5 rounded-full', t.dot)} />{c.verdict}</p>
@@ -67,7 +69,7 @@ export function TrendPanel({ id }: { id: DriverId }) {
         <table className="mt-2 w-full text-[11.5px]">
           <thead><tr className="text-text-3"><th className="py-1 text-left font-medium">Month</th><th className="py-1 text-right font-medium">Actual</th><th className="py-1 text-right font-medium">Trend</th><th className="py-1 text-right font-medium">Miss</th></tr></thead>
           <tbody>{c.rows.map(r => { const m = r.actual - r.trend; return (
-            <tr key={r.i} className="border-t border-border"><td className="py-1">{mLabel(r.i)}</td><td className="py-1 text-right font-mono">{fmtV(id, r.actual)}</td><td className="py-1 text-right font-mono">{fmtV(id, r.trend)}</td><td className={cx('py-1 text-right font-mono', m >= 0 ? 'text-ok' : 'text-err')}>{m >= 0 ? '+' : '−'}{miss(Math.abs(m))}</td></tr>) })}</tbody>
+            <tr key={r.i} className="border-t border-border"><td className="py-1">{mLabel(r.i)}</td><td className="py-1 text-right font-mono">{show(r.actual)}</td><td className="py-1 text-right font-mono">{show(r.trend)}</td><td className={cx('py-1 text-right font-mono', m >= 0 ? 'text-ok' : 'text-err')}>{m >= 0 ? '+' : '−'}{miss(Math.abs(m))}</td></tr>) })}</tbody>
         </table>
       )}
       {ACT < 18 && <p className="mt-2 text-[11px] text-text-3">Fewer than 18 months of actuals: verdict is indicative.</p>}

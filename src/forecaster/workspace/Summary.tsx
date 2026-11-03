@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+﻿import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { ScenarioPart } from './Stages'
@@ -81,9 +81,9 @@ function Tile({ k, v, d, base, sameAs }: { k: string; v: string; d?: string | nu
   )
 }
 
-export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, setSelId, model, notify, renderPart, uePct = UE_PRIOR }: {
+export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, setSelId, model, notify, renderPart, uePct = UE_PRIOR, woh }: {
   scenarios: Scenario[]; setScenarios: SetScenarios; calc: Calc; events: EventDef[]; selId: string; setSelId: (id: string) => void
-  model: ModelCfg; notify: Notify; renderPart: (p: ScenarioPart) => ReactNode; uePct?: number
+  model: ModelCfg; notify: Notify; renderPart: (p: ScenarioPart) => ReactNode; uePct?: number; woh?: number
 }) {
   const [editing, setEditing] = useState(false)
   const [hovStep, setHovStep] = useState<string | null>(null)
@@ -149,7 +149,7 @@ export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, 
   const bridgeRow = (k: 'gross' | 'tud' | 'inv' | 'ueD', name: string, tip: string) => (
     <>
       {rowLabel(name, tip)}
-      {scenarios.map(s => { const v = bridgeOf(figs[s.id]!.rev, uePct)[k], b0 = bridgeOf(b.rev, uePct)[k], d = v - b0, isB = s.id === base.id; return (
+      {scenarios.map(s => { const v = bridgeOf(figs[s.id]!.rev, uePct, woh)[k], b0 = bridgeOf(b.rev, uePct, woh)[k], d = v - b0, isB = s.id === base.id; return (
         <div key={s.id} className={cx(col(s), 'flex flex-col items-center justify-center py-2')}>
           <span className={cx('font-mono text-[13px]', isB && 'font-semibold')}>{v < 0 ? '−' : ''}{fmtB(Math.abs(v))}</span>
           <span className={cx('font-mono text-[11px]', isB || near(d, v) ? 'text-text-3' : tone(d))}>{isB ? 'comparison' : near(d, v) ? 'same' : `${d >= 0 ? '+' : '−'}$${Math.abs(d).toFixed(1)}M`}</span>
@@ -237,7 +237,7 @@ export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, 
           {grp('Volume and sales')}
           {stat('share', 'Patients on brand', 'Average month across the year.')}
           {stat('trx', 'TRx', 'Prescriptions, total for the year.')}
-          {stat('price', 'Net price per Rx', 'After gross-to-net. Year average.')}
+          {stat('price', 'Weighted gross price', 'Per pack, before gross-to-net. Year average.')}
           {stat('rev', 'Net revenue', 'Total for the year, $M.')}
           {grp('Revenue bridge · default modules')}
           {bridgeRow('tud', 'Total underlying demand', 'Calculated demand dollars. Change it upstream.')}
@@ -404,7 +404,7 @@ export function ScenarioBuilder({ scenarios, calc, events, model, year, base, on
               <MiniFunnel f={f} base={funnelOf(calc[base.id]!.layer, year)} color={color} width={width} label="Preview funnel" />
               <div className="mt-2 grid grid-cols-2 gap-1.5">
                 <Tile k="TRx" v={fmtN(x.trx)} d={fmtNDelta(x.trx - bx.trx)} sameAs={near(x.trx - bx.trx, x.trx)} />
-                <Tile k="Net price" v={fmtV('price', x.price)} d={`${x.price - bx.price >= 0 ? '+' : '−'}$${Math.abs(x.price - bx.price).toFixed(2)}`} sameAs={near(x.price - bx.price, x.price)} />
+                <Tile k="Gross price" v={fmtV('price', x.price)} d={`${x.price - bx.price >= 0 ? '+' : '−'}$${Math.abs(x.price - bx.price).toFixed(2)}`} sameAs={near(x.price - bx.price, x.price)} />
               </div>
             </div>
             <ul className="space-y-1 text-[12px] text-text-2">
@@ -423,3 +423,4 @@ export function ScenarioBuilder({ scenarios, calc, events, model, year, base, on
     </div>
   )
 }
+

@@ -1,8 +1,8 @@
 import { Fragment, useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, Check, ChevronDown, CircleCheck, CircleAlert, CircleMinus, GitBranch, Lock, Plus, Save, Target, Trash2, X, Zap } from 'lucide-react'
 import {
-  ACT, CURVE_LABEL, DRV, FC_YEARS, FY, HORIZON_LABEL, MEASURE_LABEL, N, OUTPUTS, OVR_LABEL, UNBIASED,
-  adjusted, applyEvents, applyOverrides, bridge, describeOverride, fmtDelta, fmtRev, fmtV, funnelOf, fyAvg, goalSeekOrdered, idxOf, mLong, measure,
+  ACT, ACTUALS, BASELINE, CURVE_LABEL, DRV, FC_YEARS, FY, HORIZON_LABEL, MEASURE_LABEL, N, OUTPUTS, OVR_LABEL, UNBIASED,
+  adjusted, applyEvents, applyOverrides, bridge, describeOverride, fmtDelta, fmtRev, fmtV, funnelOf, fyAvg, goalSeekOrdered, idxOf, mLong, measure, yearOf,
 } from './engine'
 import type { Curve, DriverId, EventDef, Goal, GoalStep, Horizon, Layer, ModelCfg, OutputId, OvrKind, Override, Scenario } from './engine'
 import { Btn, COLOR, Card, ForecastChart, Label, Legend, Seg, Tag, cx, field } from './ui'
@@ -83,7 +83,7 @@ export function FunnelCompare({ scenarios, calc, selId, onSelect, model, default
                 <tr key={r.id} className="border-b border-border">
                   <td className="px-3 py-2.5 align-top">
                     <p className="font-medium">{isDrv ? DRV[r.id as DriverId].label : r.label}</p>
-                    <p className="text-[11px] text-text-3">{isDrv ? (r.id === 'price' ? 'Net price → net revenue' : `→ ${r.label.toLowerCase()} patients`) : r.id === 'prev' ? 'Starting population' : `Rx from on-brand patients`}{locked.has(r.id as DriverId) && <> · <Lock size={9} className="inline" /> system-fed</>}</p>
+                    <p className="text-[11px] text-text-3">{isDrv ? (r.id === 'price' ? 'Gross price × (1 − GtN) → net revenue' : `→ ${r.label.toLowerCase()} patients`) : r.id === 'prev' ? 'Starting population' : `Rx from on-brand patients`}{locked.has(r.id as DriverId) && <> · <Lock size={9} className="inline" /> system-fed</>}</p>
                   </td>
                   {cols.map(c => {
                     const x = c.f.find(y => y.id === r.id)!, b = c.br?.find(y => y.id === r.id)
@@ -94,7 +94,7 @@ export function FunnelCompare({ scenarios, calc, selId, onSelect, model, default
                           <div className="flex items-baseline justify-between gap-2"><span className="font-mono font-medium">{fmtV(r.id as DriverId, x.rate)}</span>
                             {c.s.id !== anc && Math.abs(dr) > 0.005 && <span className={cx('font-mono text-[11px]', tone(dr))}>{dr >= 0 ? '+' : '−'}{Math.abs(dr).toFixed(DRV[r.id as DriverId].dp)}{r.id === 'price' ? '' : ' pts'}</span>}</div>
                           {r.id !== 'price' && <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${Math.min(100, x.rate)}%`, background: COLOR.alt[c.k % COLOR.alt.length] }} /></div>}
-                          <div className="mt-1 flex items-baseline justify-between gap-2 text-[11px] text-text-2"><span>{r.id === 'price' ? 'per Rx' : `${fmtVol(x.vol, x.unit)} ${r.label.toLowerCase()}`}</span>
+                          <div className="mt-1 flex items-baseline justify-between gap-2 text-[11px] text-text-2"><span>{r.id === 'price' ? 'per pack' : `${fmtVol(x.vol, x.unit)} ${r.label.toLowerCase()}`}</span>
                             {b && Math.abs(b.d) > 0.05 && <span className={cx('font-mono', tone(b.d))} title="Contribution to the net revenue gap">{fmtDelta(b.d)}</span>}</div>
                         </> : <span className="font-mono">{fmtVol(x.vol, x.unit)}</span>}
                       </td>
@@ -138,7 +138,7 @@ const blankOvr = (driver: DriverId, work: Layer): Override => ({
   years: Object.fromEntries(FC_YEARS.map(y => [y, +fyAvg(work[driver], y).toFixed(DRV[driver].dp)])), note: '',
 })
 
-export function ScenarioOverrides({ sel, setScenarios, work, events, model, notify }: { sel: Scenario; setScenarios: SetScenarios; work: Layer; events: EventDef[]; model: ModelCfg; notify: Notify }) {
+export function ScenarioOverrides({ sel, setScenarios, work, events, model, notify, driver }: { sel: Scenario; setScenarios: SetScenarios; work: Layer; events: EventDef[]; model: ModelCfg; notify: Notify; driver?: DriverId }) {
   const editable = editableOf(model)
   const [draft, setDraft] = useState<Override | null>(null)
   const lock = sel.locked, list = sel.ovr ?? []
@@ -157,7 +157,7 @@ export function ScenarioOverrides({ sel, setScenarios, work, events, model, noti
   const pv: ChartSeries | null = draft && before ? { actual: UNBIASED[draft.driver], working: before[draft.driver], scenario: applyOverrides(before, [draft])[draft.driver], scenarioName: 'With this override' } : null
   return (
     <Card title={`${sel.name} overrides`} sub="Scenario-only values by month or year. Not events."
-      right={<Btn variant="secondary" disabled={lock || !!draft || !editable.length} onClick={() => setDraft(blankOvr(editable.includes('share') ? 'share' : editable[0]!, pre))} icon={<Plus size={14} />}>Add override</Btn>}>
+      right={<Btn variant="secondary" disabled={lock || !!draft || !editable.length} onClick={() => setDraft(blankOvr(driver && editable.includes(driver) ? driver : editable.includes('share') ? 'share' : editable[0]!, pre))} icon={<Plus size={14} />}>Add override</Btn>}>
       {list.length ? (
         <ul className="divide-y divide-border">{list.map(o => (
           <li key={o.id} className={cx('flex flex-wrap items-start gap-x-3 gap-y-1 py-2.5 first:pt-0 last:pb-0', draft?.id === o.id && 'rounded bg-brand-soft/40 px-2')}>
@@ -169,10 +169,10 @@ export function ScenarioOverrides({ sel, setScenarios, work, events, model, noti
       {lock && <p className="mt-3 flex items-center gap-1.5 text-[12px] text-text-3"><Lock size={12} />{sel.name} is final. Reopen it to change overrides.</p>}
       {draft && d && (
         <div className="mt-4 grid gap-5 rounded-md border border-brand/30 bg-brand-soft/20 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-          <div className="space-y-3 lg:order-last">
+          <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <label className="block"><Label className="mb-1">Assumption</Label><select value={draft.driver} onChange={e => setDraft(blankOvr(e.target.value as DriverId, pre))} className={field}>{editable.map(id => <option key={id} value={id}>{DRV[id].label}</option>)}</select></label>
-              <label className="block"><Label className="mb-1">Type</Label><select value={draft.kind} onChange={e => set({ kind: e.target.value as OvrKind, value: e.target.value === 'shift' ? 0 : +pre[draft.driver][N - 1]!.toFixed(d.dp) })} className={field}>{(Object.keys(OVR_LABEL) as OvrKind[]).map(k => <option key={k} value={k}>{OVR_LABEL[k]}</option>)}</select></label>
+              <label className="block"><Label className="mb-1">Type</Label><select value={draft.kind} onChange={e => set({ kind: e.target.value as OvrKind, value: e.target.value === 'shift' || e.target.value === 'linear' || e.target.value === 'hold' ? 0 : e.target.value === 'growth' ? 2 : +pre[draft.driver][N - 1]!.toFixed(d.dp) })} className={field}>{(Object.keys(OVR_LABEL) as OvrKind[]).map(k => <option key={k} value={k}>{OVR_LABEL[k]}</option>)}</select></label>
             </div>
             {draft.kind === 'byYear' ? (
               <div><Label className="mb-1">{d.label} by year · {d.unit}</Label>
@@ -184,8 +184,9 @@ export function ScenarioOverrides({ sel, setScenarios, work, events, model, noti
                 <Period label={draft.kind === 'target' ? 'Reach it by' : 'Until'} value={draft.end} min={Math.max(ACT, draft.start)} max={N - 1} onChange={v => set({ end: v })} />
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <NumField label={draft.kind === 'shift' ? `Change (${unitOf(draft.driver)})` : `Value (${d.unit})`} value={draft.value} step={d.pct ? 0.1 : 1} onChange={v => set({ value: v })} />
-                {draft.kind === 'target' && <label className="block"><Label className="mb-1">Path</Label><select value={draft.curve} onChange={e => set({ curve: e.target.value as Curve })} className={field}>{(Object.keys(CURVE_LABEL) as Curve[]).map(c => <option key={c} value={c}>{CURVE_LABEL[c]}</option>)}</select></label>}
+                {draft.kind === 'hold' ? <div><Label className="mb-1">Carried value</Label><p className="flex h-9 items-center rounded-md bg-surface-2 px-3 font-mono text-sm">{fmtV(draft.driver, ACTUALS[draft.driver][ACT - 1]!)} <span className="ml-2 font-sans text-text-3">last actual</span></p></div>
+                  : <NumField label={draft.kind === 'shift' ? `Change (${unitOf(draft.driver)})` : draft.kind === 'linear' ? `Change per month (${d.pct ? 'pts' : '$'})` : draft.kind === 'growth' ? 'Growth % a year' : `Value (${d.unit})`} value={draft.value} step={draft.kind === 'growth' ? 0.5 : draft.kind === 'linear' ? (d.pct ? 0.05 : 0.25) : d.pct ? 0.1 : 1} onChange={v => set({ value: v })} />}
+                {draft.kind === 'target' &&<label className="block"><Label className="mb-1">Path</Label><select value={draft.curve} onChange={e => set({ curve: e.target.value as Curve })} className={field}>{(Object.keys(CURVE_LABEL) as Curve[]).map(c => <option key={c} value={c}>{CURVE_LABEL[c]}</option>)}</select></label>}
               </div>
             </>}
             <label className="block"><Label className="mb-1" hint="optional">Rationale</Label><input value={draft.note} onChange={e => set({ note: e.target.value })} placeholder="e.g. Brand plan: peak share by Dec 2028" className={field} /></label>
@@ -193,7 +194,16 @@ export function ScenarioOverrides({ sel, setScenarios, work, events, model, noti
             <div className="flex justify-end gap-2"><Btn variant="secondary" onClick={() => setDraft(null)}>Cancel</Btn><Btn disabled={draft.kind === 'byYear' ? !Object.values(draft.years).some(Number.isFinite) : !Number.isFinite(draft.value)} onClick={save} icon={<Save size={14} />}>Save override</Btn></div>
           </div>
           {pv && <div><Label className="mb-1.5">{d.label} · {sel.name}</Label><div className="mb-1"><Legend s={{ ...pv, working: pv.working }} /></div>
-            <ForecastChart title={`${d.label} override`} s={pv} fmt={v => fmtV(draft.driver, v)} dp={d.dp} unit={d.unit} height={220} canSave={false} /></div>}
+            <ForecastChart title={`${d.label} override`} s={pv} fmt={v => fmtV(draft.driver, v)} dp={d.dp} unit={d.unit} height={220} canSave={false} />
+            {before && draft.kind !== 'byYear' && (() => {
+              // Before and after by month: the window plus two months, so the hold after it is visible.
+              const a = Math.max(ACT, draft.start), b = Math.max(a, Math.min(N - 1, draft.end)), tail = Math.min(N - 1, b + 2), after = applyOverrides(before, [draft])[draft.driver]
+              const idx = Array.from({ length: Math.min(8, tail - a + 1) }, (_, k) => a + k)
+              return (
+                <div className="mt-3 overflow-x-auto"><table className="w-full text-[11.5px]"><thead><tr className="text-text-3"><th className="py-1 text-left font-semibold" />{idx.map(i => <th key={i} className={cx('px-1.5 py-1 text-right font-semibold', i > b && 'text-text-3/60')}>{mLong(i).slice(0, 3)} {String(yearOf(i)).slice(2)}</th>)}</tr></thead>
+                  <tbody>{([['Before', before[draft.driver]], ['After', after]] as const).map(([k, s]) => <tr key={k} className="border-t border-border"><th className="py-1 text-left font-semibold text-text-2">{k}</th>{idx.map(i => <td key={i} className={cx('px-1.5 py-1 text-right font-mono', k === 'After' && Math.abs(s[i]! - before[draft.driver][i]!) > 1e-9 && 'bg-[#FDE9A8] font-semibold')}>{fmtV(draft.driver, s[i]!)}</td>)}</tr>)}</tbody></table>
+                  <p className="mt-1 text-[11px] text-text-3">Months in the period are highlighted when they change; the greyed months show what follows it.{idx.length < tail - a + 1 ? ' First eight months shown.' : ''}</p></div>)
+            })()}</div>}
         </div>
       )}
     </Card>
@@ -210,6 +220,7 @@ const RANGES: Record<DriverId, Range> = {
   treat: { lo: 12, hi: 12, conf: 'Medium', src: 'Claims treated rate + KOL panel' },
   access: { lo: 6, hi: 4, conf: 'Medium', src: 'Payer contracting outlook' },
   share: { lo: 25, hi: 25, conf: 'Low', src: 'Analog launches + market research (n=120 neurologists)' },
+  rx: { lo: 4, hi: 4, conf: 'High', src: 'Claims-derived fills per patient, 3-year history' },
   price: { lo: 8, hi: 5, conf: 'High', src: 'Pricing committee guidance, gross-to-net model' },
 }
 type Change = { id: string; driver: DriverId; how: 'pts' | 'pct'; step: number; from: number; to: number }
@@ -271,7 +282,7 @@ export function SensitivityStage({ scenarios, setScenarios, calc, selId, setSelI
   const plural = changes.length > 1
   const what = plural ? `${changes.length} changes` : `${DRV[changes[0]!.driver].label} ${stepTxt(changes[0]!)}`
   const series: ChartSeries = { actual: OUTPUTS.rev.fn(UNBIASED), scenario: OUTPUTS.rev.fn(base), scenarioName: `${sel.name} as it is`,
-    extra: [{ name: `With the change${plural ? 's' : ''}`, color: COLOR.preview, series: OUTPUTS.rev.fn(up) }, { name: 'Reversed', color: '#a9c4e4', series: OUTPUTS.rev.fn(dn) }] }
+    extra: [{ name: `With the change${plural ? 's' : ''}`, color: COLOR.preview, series: OUTPUTS.rev.fn(up) }, { name: 'Reversed', color: '#b9bdc7', series: OUTPUTS.rev.fn(dn) }] }
   const alone = plural ? changes.map(c => ({ c, d: m(windowed(base, [c])) - bN })) : []
   const inter = (uN - bN) - alone.reduce((a, p) => a + p.d, 0)
 
@@ -321,8 +332,8 @@ export function SensitivityStage({ scenarios, setScenarios, calc, selId, setSelI
         {yearSeg}
       </div>
 
-      <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <Card title="Assumption changes" sub="Each change applies over its own period." fill className="lg:order-last">
+      <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <Card title="Assumption changes" sub="Each change applies over its own period." fill>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block"><Label className="mb-1">Scenario</Label>
               <select aria-label="Scenario" value={sel.id} onChange={e => setSelId(e.target.value)} className={cx(field, 'font-medium')}>{scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
@@ -492,8 +503,8 @@ export function GoalSeekPanel({ base, sel, setScenarios, model, notify }: { base
   const unit = (g: Goal) => (g.metric === 'rev' ? '$M' : 'K')
   return (
     <div className="space-y-5">
-      <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <Card title="Targets" sub="Solved in order, each by moving one assumption." fill className="lg:order-last">
+      <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)]">
+        <Card title="Targets" sub="Solved in order, each by moving one assumption." fill>
           <ol className="space-y-2.5">
             {goals.map((g, k) => {
               const isOpen = openG === g.id
@@ -516,7 +527,9 @@ export function GoalSeekPanel({ base, sel, setScenarios, model, notify }: { base
                       <label className="block"><Label className="mb-1">Period</Label><select value={String(g.h)} onChange={e => patch(g.id, { h: e.target.value === 'all' ? 'all' : +e.target.value })} className={field}>{HORIZONS.map(x => <option key={String(x)} value={String(x)}>{HORIZON_LABEL(x)}</option>)}</select></label>
                       <NumField label={`From (${unit(g)})`} value={g.min} step={g.metric === 'rev' ? 5 : 0.5} onChange={v => patch(g.id, { min: v })} />
                       <NumField label={`To (${unit(g)})`} value={g.max} step={g.metric === 'rev' ? 5 : 0.5} onChange={v => patch(g.id, { max: v })} />
-                      <label className="block"><Label className="mb-1">By moving</Label><select value={g.lever} onChange={e => patch(g.id, { lever: e.target.value as DriverId })} className={field}>{editable.map(id => <option key={id} value={id}>{DRV[id].label}</option>)}</select></label>
+                      <label className="block"><Label className="mb-1">By moving</Label><select value={g.lever} onChange={e => patch(g.id, { lever: e.target.value as DriverId })} className={field}>{editable.map(id => <option key={id} value={id}>{DRV[id].label}</option>)}</select>
+                        {/* Call feedback: show the statistical range of the lever (from the baseline metadata) so the forecaster knows what is plausible. */}
+                        <span className="mt-1 block text-[11px] text-text-3">Statistical range FY{FY}: <b className="font-mono font-semibold text-text-2">{fmtV(g.lever, BASELINE[g.lever].lo[idxOf(FY, 11)]!)} – {fmtV(g.lever, BASELINE[g.lever].hi[idxOf(FY, 11)]!)}</b> · {RANGES[g.lever].conf.toLowerCase()} confidence · {RANGES[g.lever].src}</span></label>
                       <p className="self-end pb-2 text-[12px] text-text-3">Now <b className="font-mono text-text">{fmtM(g.metric, measure(g.metric, base, g.h))}</b>{g.min > g.max && <span className="text-err"> · From must be below To</span>}</p>
                     </div>
                   )}
@@ -562,3 +575,4 @@ export function GoalSeekPanel({ base, sel, setScenarios, model, notify }: { base
     </div>
   )
 }
+

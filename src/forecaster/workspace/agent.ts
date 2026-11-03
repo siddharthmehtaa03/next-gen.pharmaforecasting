@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useRef, useState } from 'react'
+﻿import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import { ACT, DRIVERS, DRV, FY, MONTHS, N, bridge, defaultEdit, describeOverride, fmtDelta, fmtRev, fmtV, fySum, idxOf, measure, revenue, scaled, scenarioLayer, workingLayer } from './engine'
 import type { DriverId, Edit, EventDef, Override, Scenario } from './engine'
 
@@ -21,13 +21,13 @@ export type CopilotProps = {
 export type AgentStatus = { running: boolean; title: string; body: string; step?: string; progress?: [number, number]; before?: number; after?: number }
 type Edits = Partial<Record<DriverId, Edit>>
 type State = { edits: Edits; events: EventDef[]; scenarios: Scenario[]; selId: string }
-export type AgentView = 'Overview' | 'Assumptions' | 'Scenarios' | 'Events' | 'Sensitivity' | 'Goal seek' | 'Summary' | 'Review'
+export type AgentView = 'Overview' | 'Assumptions' | 'LRF' | 'Scenarios' | 'Events' | 'Sensitivity' | 'Goal seek' | 'Summary' | 'Review'
 type Wait = (ms: number) => Promise<void>
 /** One step of a chat request: what it is, where it shows, and how to animate it. */
 type Action = { label: string; view: AgentView; section: string; field: string | null; run: (wait: Wait) => Promise<void> }
 
 const COMP_ID = 'ev-charles-comp'
-const STEPS = ['Read the brief and the reference baseline', 'Share: 11.5% by Dec 2027 on an S-curve', 'Access: 90% by Dec 2027', 'Net price: 3% annual growth', 'Event: competitor CGRP launch, Apr 2027', 'Base Case: switch the new event on', 'Hand over for your review']
+const STEPS = ['Read the brief and the reference baseline', 'Share: 11.5% by Dec 2027 on an S-curve', 'Access: 90% by Dec 2027', 'Gross price: 3% annual growth', 'Event: competitor CGRP launch, Apr 2027', 'Base Case: switch the new event on', 'Hand over for your review']
 
 /** FY revenue for one scenario, computed with the same engine path as the workspace. */
 export function fyFor(st: State, id = st.selId) {
@@ -93,7 +93,7 @@ export function useForecastAgent({ name, brand, state, set, show, blocked, edita
       const plan: [number, DriverId, 'target' | 'growth', number, Partial<Edit>, string][] = [
         [1, 'share', 'target', 11.5, { method: 'target', curve: 's', start: ACT, end: idxOf(FY, 11), hold: true }, 'brief asks for 11.5% exit share; S-curve matches the last two launches.'],
         [2, 'access', 'target', 90, { method: 'target', curve: 'linear', start: ACT, end: idxOf(FY, 11), hold: true }, '90% coverage assumes the Part D wins hold through 2027.'],
-        [3, 'price', 'growth', 3, { method: 'growth', start: ACT, end: idxOf(2028, 11), hold: true }, '3% net price growth, in line with the pricing committee guidance.'],
+        [3, 'price', 'growth', 3, { method: 'growth', start: ACT, end: idxOf(2028, 11), hold: true }, '3% gross price growth, in line with the pricing committee guidance.'],
       ]
       for (const [i, id, key, to, base, why] of plan) {
         step(i, 'assume', key)
@@ -192,9 +192,9 @@ export function useForecastAgent({ name, brand, state, set, show, blocked, edita
   }
   const growthAct = (g: number): Action | string => {
     if (!editable.includes('price')) return 'Price is CoE-locked in this model.'
-    if (g > 15) return 'Net price growth above 15% a year is outside the guardrails.'
+    if (g > 15) return 'Gross price growth above 15% a year is outside the guardrails.'
     const base: Partial<Edit> = { method: 'growth', start: ACT, end: idxOf(2028, 11), hold: true }
-    return { label: `Net price growth ${g}%`, view: 'Assumptions', section: 'assume', field: 'growth', run: async w => { set.sel('price'); await w(300); await tween(w, 'price', 'growth', g, base) } }
+    return { label: `Gross price growth ${g}%`, view: 'Assumptions', section: 'assume', field: 'growth', run: async w => { set.sel('price'); await w(300); await tween(w, 'price', 'growth', g, base) } }
   }
   const probAct = (t: string, n: number): Action | string => {
     const ev = st.current.events.find(e => t.includes(e.name.toLowerCase().split(' ')[0]!) || (/pediatric|label/.test(t) && /pediatric/i.test(e.name)) || (/competitor|cgrp/.test(t) && e.id === COMP_ID) || (/formulary|part d/.test(t) && /formulary/i.test(e.name)) || (/wac/.test(t) && /wac/i.test(e.name)))
@@ -308,14 +308,14 @@ export function useForecastAgent({ name, brand, state, set, show, blocked, edita
     if (/price|wac|growth/.test(t)) {
       const g = n ?? 3
       if (!editable.includes('price')) return { title: 'Price is CoE-locked', body: `The CoE has not exposed **price** for override in this model, so I can't change it.` }
-      if (g > 15) return { title: 'Out of range', body: 'Net price growth above 15% a year falls outside the guardrails for this model.' }
+      if (g > 15) return { title: 'Out of range', body: 'Gross price growth above 15% a year falls outside the guardrails for this model.' }
       const base: Partial<Edit> = { method: 'growth', start: ACT, end: idxOf(2028, 11), hold: true }
       const after = projected({ ...st.current.edits, price: { ...editOf('price'), ...base, growth: g } })
       set.sel('price')
-      void apply(`Net price growth ${g}%`, 'Assumptions', [w => tween(w, 'price', 'growth', g, base)], 'assume', 'growth')
-      return { title: `Net price growth ${g}%`, body: `Setting **net price** to grow **${g}%** a year. FY${FY} goes from **${fmtRev(fy())}** to about **${fmtRev(after)}**.` }
+      void apply(`Gross price growth ${g}%`, 'Assumptions', [w => tween(w, 'price', 'growth', g, base)], 'assume', 'growth')
+      return { title: `Gross price growth ${g}%`, body: `Setting **gross price** to grow **${g}%** a year. FY${FY} goes from **${fmtRev(fy())}** to about **${fmtRev(after)}**.` }
     }
-    return { title: 'What I can change', body: `I can change numbers in this forecast and show the effect on FY${FY} revenue. Try:\n- “Raise share target to 12%”\n- “Peak share 14% by Dec 2028 in Optimistic”\n- “Increase share by 1 point from May 2027”\n- “Share to 12%, then access to 92%” (I'll do them one at a time)\n- “What moves revenue most?” or “Compare the scenarios”\n- “Set access to 92%”\n- “Net price growth 2%”\n- “Set pediatric label probability to 70%”\n- “Make it more conservative”\n\nOr run the demo to watch me build the base case. Engine math, CoE-locked inputs and finalising stay out of my reach.` }
+    return { title: 'What I can change', body: `I can change numbers in this forecast and show the effect on FY${FY} revenue. Try:\n- “Raise share target to 12%”\n- “Peak share 14% by Dec 2028 in Optimistic”\n- “Increase share by 1 point from May 2027”\n- “Share to 12%, then access to 92%” (I'll do them one at a time)\n- “What moves revenue most?” or “Compare the scenarios”\n- “Set access to 92%”\n- “Gross price growth 2%”\n- “Set pediatric label probability to 70%”\n- “Make it more conservative”\n\nOr run the demo to watch me build the base case. Engine math, CoE-locked inputs and finalising stay out of my reach.` }
   }
 
   const copilot = (onReview: () => void): CopilotProps => ({
@@ -324,8 +324,9 @@ export function useForecastAgent({ name, brand, state, set, show, blocked, edita
     context: [brand, `FY${FY}`, scName(state.selId)],
     chips: ['Peak share 14% by Dec 2028 in Optimistic', 'Share to 12%, then access to 92%', 'What moves revenue most?', 'Compare the scenarios', 'Undo your last change'],
     respond,
-    demo: { title: `Build the ${brand} base case from the brief`, prompt: 'Build the base case: share to 11.5% by end of 2027, access to 90%, 3% net price growth, and factor in the competitor launch in April.', steps: STEPS, demo, onRun: () => void runDemo(), onStop: stop, onReview, reviewLabel: 'Review the forecast', note: 'Changes assumptions, events and the Base Case, then stops at Review. Saving and finalising stay with you.' },
+    demo: { title: `Build the ${brand} base case from the brief`, prompt: 'Build the base case: share to 11.5% by end of 2027, access to 90%, 3% gross price growth, and factor in the competitor launch in April.', steps: STEPS, demo, onRun: () => void runDemo(), onStop: stop, onReview, reviewLabel: 'Review the forecast', note: 'Changes assumptions, events and the Base Case, then stops at Review. Saving and finalising stay with you.' },
   })
 
   return { focus, status, setStatus, undo: undo ? undoAll : null, stop, copilot }
 }
+

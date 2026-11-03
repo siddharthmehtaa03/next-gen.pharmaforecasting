@@ -7,7 +7,7 @@ import { useInsights } from './insightsCtx'
 import { ACT, N, START_YEAR, mLabel, mLong } from './engine'
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
-export const COLOR = { actual: '#000067', unbiased: '#767676', ci: '#767676', working: '#0000c9', scenario: '#0095ff', preview: '#a68aff', grid: '#dbe8f6', alt: ['#0095ff', '#007a6c', '#c4122f', '#8f5a00', '#a68aff', '#0000c9'] }
+export const COLOR = { actual: '#000067', unbiased: '#767676', ci: '#767676', working: '#0000c9', scenario: '#0095ff', preview: '#a68aff', grid: '#e3e5ea', alt: ['#0095ff', '#007a6c', '#c4122f', '#8f5a00', '#a68aff', '#0000c9'] }
 export const field = 'h-10 w-full rounded-lg border border-border-strong bg-surface px-2.5 text-sm outline-none transition-colors focus:border-brand disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-text-3'
 
 export function Btn({ children, variant = 'primary', onClick, icon, disabled, size = 'md', title, className }: { children?: ReactNode; variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; onClick?: () => void; icon?: ReactNode; disabled?: boolean; size?: 'sm' | 'md'; title?: string; className?: string }) {
@@ -54,8 +54,13 @@ export function Stat({ k, v, sub, tone }: { k: string; v: ReactNode; sub?: React
 
 export type ChartSeries = {
   actual?: number[]; unbiased?: number[]; lo?: number[]; hi?: number[]; working?: number[]; preview?: number[]; scenario?: number[]; scenarioName?: string
-  extra?: { name: string; color: string; series: number[] }[]
+  /** Other lines (e.g. every scenario). `bold` draws a thick solid line; otherwise a thin dotted one. */
+  extra?: { name: string; color: string; series: number[]; bold?: boolean }[]
+  /** Which line is being worked on: it is drawn thick, the rest thin and dotted. Default: the active forecast. */
+  focus?: 'working' | 'scenario'
+  scenarioColor?: string
 }
+const thin = { w: 1.6, dash: '2 3' }, thick = { w: 3.5, dash: undefined as string | undefined }
 type Row = Record<string, number | number[] | undefined> & { i: number }
 
 export function Legend({ s }: { s: ChartSeries }) {
@@ -66,16 +71,15 @@ export function Legend({ s }: { s: ChartSeries }) {
       {s.actual && item('Actuals', line(COLOR.actual, undefined, 2.5))}
       {s.unbiased && item('Reference baseline · Data Science', line(COLOR.unbiased, '5 4'))}
       {s.lo && item('95% CI (reference)', <span className="h-2.5 w-5 rounded-sm" style={{ background: 'rgb(138 143 168 / .25)' }} />)}
-      {s.working && item('Active forecast', line(COLOR.working, undefined, 2.5))}
+      {s.working && item('Active forecast', s.focus === 'scenario' ? line(COLOR.working, thin.dash, thin.w) : line(COLOR.working, undefined, 2.5))}
       {s.preview && item('Unapplied preview', line(COLOR.preview, '2 3'))}
-      {s.scenario && item(s.scenarioName ?? 'Scenario', line(COLOR.scenario, undefined, 2.5))}
-      {s.extra?.map(x => item(x.name, line(x.color)))}
+      {s.scenario && item(s.scenarioName ?? 'Scenario', line(s.scenarioColor ?? COLOR.scenario, undefined, 2.5))}
+      {s.extra?.map(x => item(x.name, x.bold ? line(x.color, undefined, 3) : line(x.color, thin.dash, thin.w)))}
     </div>
   )
 }
 
 type Grain = 'month' | 'quarter' | 'year'
-const YEARS_N = N / 12
 const SPAN: Record<Grain, number> = { month: 1, quarter: 3, year: 12 }
 const roll = (a: number[] | undefined, y: number, agg: 'sum' | 'avg', n = 12) => {
   if (!a) return undefined
@@ -88,9 +92,11 @@ const roll = (a: number[] | undefined, y: number, agg: 'sum' | 'avg', n = 12) =>
 const BUDGET_YEAR = START_YEAR + Math.floor((ACT - 1) / 12), BUDGET_UPLIFT = 1.02
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 
-export function ForecastChart({ s, fmt, height = 300, dp = 1, unit, title = 'Forecast chart', context, toolbar, defaultGrain = 'month', canSave = true }: { s: ChartSeries; fmt: (v: number) => string; height?: number; dp?: number; unit?: string; title?: string; context?: string; toolbar?: boolean; defaultGrain?: Grain; canSave?: boolean }) {
+/** `range` limits the chart to a start and end month (inclusive indexes), at any grain. */
+export function ForecastChart({ s, fmt, height = 300, dp = 1, unit, title = 'Forecast chart', context, toolbar, defaultGrain = 'month', canSave = true, range }: { s: ChartSeries; fmt: (v: number) => string; height?: number; dp?: number; unit?: string; title?: string; context?: string; toolbar?: boolean; defaultGrain?: Grain; canSave?: boolean; range?: [number, number] }) {
   const ins = useInsights()
-  const showBar = toolbar ?? height >= 250
+  // The Monthly / Quarterly / Annual switch sits on every chart that is big enough to read, not only the large ones.
+  const showBar = toolbar ?? height >= 180
   const agg: 'sum' | 'avg' = unit === '$M' ? 'sum' : 'avg'
   const [grain, setGrain] = useState<Grain>(defaultGrain)
   const [status, setStatus] = useState('')
@@ -120,8 +126,16 @@ export function ForecastChart({ s, fmt, height = 300, dp = 1, unit, title = 'For
   const val = (r: Row | undefined) => { if (!r) return undefined; for (const k of ['actual', 'working', 'scenario', 'unbiased'] as const) if (typeof r[k] === 'number') return r[k] as number; return undefined }
   const lag = 12 / n
   const budgetAt = (i: number) => { const from = i * n; if (START_YEAR + Math.floor(from / 12) !== BUDGET_YEAR || !s.unbiased) return undefined; const v = roll(s.unbiased, i, agg, n); return v === undefined ? undefined : v * BUDGET_UPLIFT }
-  const vals = data.flatMap(r => Object.entries(r).filter(([k]) => k !== 'i').flatMap(([, v]) => Array.isArray(v) ? v : typeof v === 'number' ? [v] : []))
-  const min = Math.min(...vals), max = Math.max(...vals), pad = (max - min) * 0.1 || 1
+  // Start / end month → the first and last point shown at this grain.
+  const lo = range ? Math.max(0, Math.floor(range[0] / n)) : 0, hi = range ? Math.min(P - 1, Math.floor(range[1] / n)) : P - 1
+  const vis = range ? data.filter(r => r.i >= lo && r.i <= hi) : data
+  const vals = vis.flatMap(r => Object.entries(r).filter(([k]) => k !== 'i').flatMap(([, v]) => Array.isArray(v) ? v : typeof v === 'number' ? [v] : []))
+  const min = vals.length ? Math.min(...vals) : 0, max = vals.length ? Math.max(...vals) : 1, pad = (max - min) * 0.1 || 1
+  // Scenarios that agree with each other lie exactly on top of one another. Each thin line gets its own slot in the dash pattern, so overlapping lines show as interleaved colours instead of hiding one another.
+  const thinKeys = [...(s.extra ?? []).flatMap((x, k) => (x.bold ? [] : [`x${k}`])), ...(s.working && s.focus === 'scenario' ? ['working'] : []), ...(s.scenario && s.focus === 'working' ? ['scenario'] : [])]
+  const thinDash = (key: string) => { const m = thinKeys.length, k = thinKeys.indexOf(key); return m <= 1 ? { d: thin.dash, o: 0 } : { d: `3 ${3 * (m - 1)}`, o: -3 * k } }
+  const tickEvery =grain === 'year' ? 1 : grain === 'quarter' ? 2 : 6
+  const ticks = Array.from({ length: Math.ceil((hi - lo + 1) / tickEvery) }, (_, k) => lo + k * tickEvery)
   const xLabel = (i: number) => grain === 'year' ? String(START_YEAR + i) : grain === 'quarter' ? `Q${(i % 4) + 1} ${String(START_YEAR + Math.floor(i / 4)).slice(2)}` : mLabel(i)
   const pointLabel = (i: number) => grain === 'year' ? String(START_YEAR + i) : grain === 'quarter' ? `Q${(i % 4) + 1} ${START_YEAR + Math.floor(i / 4)}` : mLong(i)
 
@@ -131,7 +145,7 @@ export function ForecastChart({ s, fmt, height = 300, dp = 1, unit, title = 'For
     if (s.unbiased) l.push({ name: 'Reference baseline (Data Science)', color: COLOR.unbiased, key: 'unbiased' })
     if (s.working) l.push({ name: 'Active forecast', color: COLOR.working, key: 'working' })
     if (s.preview) l.push({ name: 'Unapplied preview', color: COLOR.preview, key: 'preview' })
-    if (s.scenario) l.push({ name: s.scenarioName ?? 'Scenario', color: COLOR.scenario, key: 'scenario' })
+    if (s.scenario) l.push({ name: s.scenarioName ?? 'Scenario', color: s.scenarioColor ?? COLOR.scenario, key: 'scenario' })
     ;(s.extra ?? []).forEach((x, k) => l.push({ name: x.name, color: x.color, key: `x${k}` }))
     return l
   }, [s])
@@ -171,10 +185,10 @@ export function ForecastChart({ s, fmt, height = 300, dp = 1, unit, title = 'For
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
             <CartesianGrid stroke={COLOR.grid} vertical={false} />
-            <XAxis dataKey="i" type="number" domain={yr ? [-0.2, P - 0.8] : [0, N - 1]} ticks={grain === 'year' ? Array.from({ length: YEARS_N }, (_, k) => k) : grain === 'quarter' ? Array.from({ length: P / 2 }, (_, k) => k * 2) : Array.from({ length: N / 6 }, (_, k) => k * 6)} tickFormatter={xLabel} tick={{ fontSize: 11, fill: '#767676' }} tickLine={false} axisLine={{ stroke: COLOR.grid }} />
+            <XAxis dataKey="i" type="number" allowDataOverflow domain={yr ? [lo - 0.2, hi + 0.2] : [lo, hi]} ticks={ticks} tickFormatter={xLabel} tick={{ fontSize: 11, fill: '#767676' }} tickLine={false} axisLine={{ stroke: COLOR.grid }} />
             <YAxis domain={[min - pad, max + pad]} tickFormatter={(v: number) => v.toFixed(dp)} tick={{ fontSize: 11, fill: '#767676' }} tickLine={false} axisLine={false} width={48} />
-            {!yr && <ReferenceLine x={ACT - 1} stroke="#a9c4e4" strokeDasharray="3 3" label={{ value: 'Actuals end', position: 'insideTopLeft', fontSize: 10, fill: '#767676' }} />}
-            <Tooltip isAnimationActive={false} cursor={{ stroke: '#a9c4e4' }} content={({ active, payload }) => {
+            {!yr && ACT - 1 >= lo && ACT - 1 <= hi && <ReferenceLine x={ACT - 1} stroke="#b9bdc7" strokeDasharray="3 3" label={{ value: 'Actuals end', position: 'insideTopLeft', fontSize: 10, fill: '#767676' }} />}
+            <Tooltip isAnimationActive={false} cursor={{ stroke: '#b9bdc7' }} content={({ active, payload }) => {
               if (!active || !payload?.length) return null
               const r = payload[0]!.payload as Row
               const rows: [string, string, string][] = []
@@ -183,18 +197,21 @@ export function ForecastChart({ s, fmt, height = 300, dp = 1, unit, title = 'For
               if (Array.isArray(r.ci)) rows.push(['95% CI', COLOR.ci, `${fmt(r.ci[0]!)} – ${fmt(r.ci[1]!)}`])
               if (typeof r.working === 'number') rows.push(['Active forecast', COLOR.working, fmt(r.working)])
               if (typeof r.preview === 'number') rows.push(['Unapplied preview', COLOR.preview, fmt(r.preview)])
-              if (typeof r.scenario === 'number') rows.push([s.scenarioName ?? 'Scenario', COLOR.scenario, fmt(r.scenario)])
+              if (typeof r.scenario === 'number') rows.push([s.scenarioName ?? 'Scenario', s.scenarioColor ?? COLOR.scenario, fmt(r.scenario)])
               ;(s.extra ?? []).forEach((x, k) => { const v = r[`x${k}`]; if (typeof v === 'number') rows.push([x.name, x.color, fmt(v)]) })
-              // CR-002: value, %G YoY and % of Budget for the hovered point.
-              const v = val(r), prev = val(data[r.i - lag]), bud = budgetAt(r.i)
+              // CR-002: value, %G YoY and % of Budget for the hovered point. Call feedback: also month over month (monthly) and quarter over quarter (quarterly).
+              const v = val(r), prev = val(data[r.i - lag]), bud = budgetAt(r.i), prevStep = val(data[r.i - 1])
               const g = v !== undefined && prev ? (v / prev - 1) * 100 : undefined, b = v !== undefined && bud ? (v / bud) * 100 : undefined
+              const gs = v !== undefined && prevStep ? (v / prevStep - 1) * 100 : undefined
+              const pct = (x: number | undefined) => x === undefined ? '—' : `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(1)}%`
               const kpi = (label: string, dot: string, text: string, cls = '') => <p className="flex items-center justify-between gap-5"><span className="inline-flex items-center gap-1.5 text-text-2"><span className="h-2 w-2 rounded-full" style={{ background: dot }} />{label}</span><span className={cx('font-mono font-semibold', cls)}>{text}</span></p>
               return (
                 <div className="min-w-[200px] rounded-md border border-border bg-surface px-3 py-2 text-[12px] shadow-md">
                   <p className="mb-1.5 border-b border-border pb-1.5 font-semibold">{pointLabel(r.i)}</p>
                   {v !== undefined && <div className="mb-1.5 space-y-0.5 border-b border-border pb-1.5">
                     {kpi('Value', COLOR.working, fmt(v))}
-                    {kpi('%G YoY', '#007a6c', g === undefined ? '—' : `${g >= 0 ? '+' : '−'}${Math.abs(g).toFixed(1)}%`, g === undefined ? 'text-text-3' : g >= 0 ? 'text-ok' : 'text-err')}
+                    {kpi('%G YoY', '#007a6c', pct(g), g === undefined ? 'text-text-3' : g >= 0 ? 'text-ok' : 'text-err')}
+                    {grain !== 'year' && kpi(grain === 'month' ? '%G MoM' : '%G QoQ', '#0e7490', pct(gs), gs === undefined ? 'text-text-3' : gs >= 0 ? 'text-ok' : 'text-err')}
                     {kpi('% of Budget', '#b7791f', b === undefined ? '—' : `${b.toFixed(1)}%`, b === undefined ? 'text-text-3' : b >= 100 ? 'text-ok' : 'text-err')}
                   </div>}
                   {rows.map(([n, c, v]) => <p key={n} className="flex items-center justify-between gap-5"><span className="inline-flex items-center gap-1.5 text-text-2"><span className="h-2 w-2 rounded-full" style={{ background: c }} />{n}</span><span className="font-mono">{v}</span></p>)}
@@ -204,9 +221,10 @@ export function ForecastChart({ s, fmt, height = 300, dp = 1, unit, title = 'For
             {s.lo && s.hi && <Area dataKey="ci" stroke="none" fill="#767676" fillOpacity={0.2} isAnimationActive={false} activeDot={false} />}
             {s.unbiased && <Line dataKey="unbiased" stroke={COLOR.unbiased} strokeWidth={2} strokeDasharray="5 4" dot={yr ? { r: 3 } : false} isAnimationActive={false} />}
             {s.actual && <Line dataKey="actual" stroke={COLOR.actual} strokeWidth={2.5} dot={yr ? { r: 4 } : false} isAnimationActive={false} />}
-            {s.working && <Line dataKey="working" stroke={COLOR.working} strokeWidth={2.5} dot={yr ? { r: 4 } : false} isAnimationActive={false} />}
-            {s.extra?.map((x, k) => <Line key={x.name} dataKey={`x${k}`} stroke={x.color} strokeWidth={2} dot={yr ? { r: 3 } : false} isAnimationActive={false} />)}
-            {s.scenario && <Line dataKey="scenario" stroke={COLOR.scenario} strokeWidth={2.5} dot={yr ? { r: 4 } : false} isAnimationActive={false} />}
+            {s.extra?.filter(x => !x.bold).map(x => { const k = `x${s.extra!.indexOf(x)}`; return <Line key={x.name} dataKey={k} stroke={x.color} strokeWidth={thin.w} strokeDasharray={thinDash(k).d} strokeDashoffset={thinDash(k).o} dot={yr ? { r: 2.5 } : false} isAnimationActive={false} /> })}
+            {s.working && <Line dataKey="working" stroke={COLOR.working} strokeWidth={s.focus === 'scenario' ? thin.w : thick.w} strokeDasharray={s.focus === 'scenario' ? thinDash('working').d : thick.dash} strokeDashoffset={s.focus === 'scenario' ? thinDash('working').o : 0} dot={yr ? { r: s.focus === 'scenario' ? 2.5 : 4 } : false} isAnimationActive={false} />}
+            {s.scenario && <Line dataKey="scenario" stroke={s.scenarioColor ?? COLOR.scenario} strokeWidth={s.focus === 'working' ? thin.w : thick.w} strokeDasharray={s.focus === 'working' ? thinDash('scenario').d : thick.dash} strokeDashoffset={s.focus === 'working' ? thinDash('scenario').o : 0} dot={yr ? { r: 4 } : false} isAnimationActive={false} />}
+            {s.extra?.filter(x => x.bold).map(x => <Line key={x.name} dataKey={`x${s.extra!.indexOf(x)}`} stroke={x.color} strokeWidth={thick.w} dot={yr ? { r: 4 } : false} isAnimationActive={false} />)}
             {s.preview && <Line dataKey="preview" stroke={COLOR.preview} strokeWidth={2.5} strokeDasharray="2 3" dot={yr ? { r: 3 } : false} isAnimationActive={false} />}
           </ComposedChart>
         </ResponsiveContainer>

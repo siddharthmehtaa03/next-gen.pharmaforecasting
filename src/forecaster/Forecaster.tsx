@@ -9,7 +9,6 @@ import {
 import Workbook from './Workbook'
 import FunnelFlow from './funnel/FunnelFlow'
 import ForecastWorkspace from './workspace/ForecastWorkspace'
-import { TOUR_FLAG } from './workspace/WhatsNew'
 import ForecasterHome, { BRANDS } from './workspace/Home'
 import ForecasterChat from './ForecasterChat'
 import type { Insight as BoardInsight } from './workspace/insights'
@@ -1688,7 +1687,7 @@ export type ForecasterProps = {
 /** Forecaster: brand home → workspace, plus Chat; insights live inside each brand. */
 export default function Forecaster({ section, setSection, notify, insights, setInsights, chat, setChatBrand, onWorkspace, Copilot, onPublished }: ForecasterProps) {
   // Opening the Forecaster tour from the profile menu lands straight in the first brand's workspace.
-  const [brand, setBrand] = useState<HomeBrand | null>(() => { try { return sessionStorage.getItem(TOUR_FLAG) ? BRANDS[0] ?? null : null } catch { return null } })
+  const [brand, setBrand] = useState<HomeBrand | null>(null)
   const inWs = section === 'forecasts' && !!brand
   useEffect(() => { onWorkspace?.(inWs) }, [inWs, onWorkspace])
   const ask = (id?: string) => { if (id) setChatBrand(id); setSection('chat') }

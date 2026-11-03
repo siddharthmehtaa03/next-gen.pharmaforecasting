@@ -1,15 +1,15 @@
-import type { MutableRefObject } from 'react'
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Check, ClipboardPaste, Lock, PanelRightClose, PencilLine, RotateCcw, Upload, Users } from 'lucide-react'
+import type { MutableRefObject, ReactNode } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { ArrowRight, Check, ClipboardPaste, Lock, PencilLine, RotateCcw, Upload, Users } from 'lucide-react'
 import {
-  ACT, ACTUALS, BASELINE, CURVE_LABEL, DRIVERS, DRV, FY, METHOD_LABEL, MONTHS, N, OUTPUTS, UNBIASED, YEARS,
+  ACT, ACTUALS, BASELINE, CURVE_LABEL, DRIVERS, DRV, FY, GTN, METHOD_LABEL, MONTHS, N, OUTPUTS, UNBIASED, YEARS,
   applyEdit, defaultEdit, fmtV, fyAvg, idxOf, mLong, revenue, yearOf, fySum,
 } from './engine'
-import type { Curve, DriverId, Edit, Layer, Method, ModelCfg, OutputId } from './engine'
+import type { Curve, DriverId, Edit, EventDef, Layer, Method, ModelCfg, OutputId, Scenario } from './engine'
 import { Btn, Card, ForecastChart, Label, Legend, Seg, Tag, Toggle, cx, field } from './ui'
 import { AgentFrame } from '../../chat/Agent'
 import { TrendPanel } from './Trend'
-import { MODS, bridgeOf, fmtB } from './Modules'
+import { bridgeOf, fmtB, ueFy } from './Modules'
 import type { ModId } from './Modules'
 import { useAgentFocus } from './agent'
 import type { ChartSeries } from './ui'
@@ -27,66 +27,92 @@ export function OutputSelect({ model, metric, onChange }: { model: ModelCfg; met
   )
 }
 
-export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, onMod, uePct, onCollapse }: { sel: Sel; onSel: (s: Sel) => void; edits: Edits; working: Layer; model: ModelCfg; metric: OutputId; mod: ModId | null; onMod: (m: ModId) => void; uePct: number; onCollapse?: () => void }) {
+export type MapProps = {
+  sel: Sel; metric: OutputId; onSel: (s: Sel) => void; mod: ModId | null; onMod: (m: ModId) => void; onOutcome: (m: OutputId) => void
+  edits: Edits; reference: Layer; layer: Layer; scenario: Scenario | null; events: EventDef[]; model: ModelCfg; ue: number[]; woh: number; year: number
+}
+const signed = (d: number, txt: string) => `${d >= 0 ? '+' : '−'}${txt}`
+/** The funnel from the forecast page of the team's reference build: stages that narrow towards revenue, each node showing the selected scenario's value and its change against the active forecast. */
+export function ForecastMap({ sel, metric, onSel, mod, onMod, onOutcome, edits, reference: ref, layer, scenario: sc, events, model, ue, woh, year }: MapProps) {
   const agent = useAgentFocus()
-  const node = (id: DriverId, editable: boolean, width?: string) => {
-    const d = DRV[id], on = !mod && sel === id, changed = !!edits[id]
-    return (
-      <button key={id} type="button" onClick={() => onSel(id)} aria-current={on ? 'true' : undefined} style={{ width }}
-        className={cx('group mx-auto flex min-w-0 items-center justify-between gap-2 rounded-md border px-3 py-2.5 text-left transition-all', on ? 'border-brand bg-brand text-white shadow-md' : 'border-border bg-surface hover:border-brand/60', on && agent.section === 'assume' && 'agent-ring')}>
+  const has = (id: DriverId) => model.modules.some(m => m.id === id)
+  const editable = (id: DriverId) => model.modules.find(m => m.id === id)?.editable !== false
+  const evN = (id: DriverId) => sc ? events.filter(e => sc.active.includes(e.id) && e.impacts.some(i => i.metric === id)).length : 0
+  const moved = (id: DriverId) => sc ? !!sc.adj[id] || (sc.ovr ?? []).some(o => o.driver === id) : !!edits[id]
+  const net = fySum(revenue(layer), year), netRef = fySum(revenue(ref), year)
+  const b = bridgeOf(net, ueFy(ue), woh), bRef = bridgeOf(netRef, ueFy(ue), woh)
+
+  type N = { key: string; label: string; step?: string; value: string; delta?: number; dtxt?: string; on: boolean; kind: 'input' | 'calc' | 'locked' | 'outcome'; onClick?: () => void; mark?: boolean; ev?: number; live?: boolean; inv?: boolean }
+  const Node = (n: N) => {
+    const hot = n.delta !== undefined && Math.abs(n.delta) > 0.005 && n.dtxt
+    const inner = (
+      <>
         <span className="min-w-0">
-          <span className={cx('block truncate text-[10px] font-semibold uppercase tracking-wider', on ? 'text-white/70' : 'text-text-3')}>{d.step}</span>
-          <span className="block truncate text-[13px] font-semibold">{d.label}</span>
+          {n.step && <span className={cx('block truncate text-[9.5px] font-semibold uppercase tracking-wider', n.on ? 'text-white/70' : 'text-text-3')}>{n.step}</span>}
+          <span className="flex items-center gap-1 truncate text-[12.5px] font-semibold">{n.label}
+            {n.mark && <span title={sc ? 'Changed in this scenario' : 'Modified in the active forecast'} className={cx('h-1.5 w-1.5 shrink-0 rounded-full', n.on ? 'bg-white' : 'bg-brand')} />}
+            {!!n.ev && <span title={`${n.ev} event${n.ev > 1 ? 's' : ''} move this`} className={cx('shrink-0 rounded-full border px-1 text-[9px] font-bold leading-[13px]', n.on ? 'border-white/70 text-white' : 'border-text-3 text-text-2')}>{n.ev}</span>}
+          </span>
         </span>
         <span className="flex shrink-0 flex-col items-end">
-          <span className="font-mono text-[13px]">{fmtV(id, fyAvg(working[id]))}</span>
-          {!editable ? <span className={cx('inline-flex items-center gap-1 text-[10px] font-semibold uppercase', on ? 'text-white/80' : 'text-text-3')}><Lock size={9} />System-fed</span>
-            : changed ? <span className={cx('inline-flex items-center gap-1 text-[10px] font-semibold uppercase', on ? 'text-white' : 'text-brand')}><span className={cx('h-1.5 w-1.5 rounded-full', on ? 'bg-white' : 'bg-brand')} />Modified</span>
-            : <span className={cx('text-[10px]', on ? 'text-white/70' : 'text-text-3')}>FY{FY} avg</span>}
+          <span className={cx('font-mono text-[12.5px]', n.kind === 'outcome' && !n.on && 'font-bold text-brand')}>{n.value}</span>
+          {hot ? <span className={cx('font-mono text-[10px]', n.on ? 'text-white/90' : n.delta! > 0 ? 'text-ok' : 'text-err')}>{n.dtxt}</span>
+            : n.kind === 'locked' ? <span className={cx('inline-flex items-center gap-1 text-[9.5px] font-semibold uppercase', n.on ? 'text-white/80' : 'text-text-3')}><Lock size={8} />{n.inv ? 'target WOH' : 'read-only'}</span>
+            : n.kind === 'calc' ? <span className={cx('inline-flex items-center gap-1 text-[9.5px] font-semibold uppercase', n.on ? 'text-white/80' : 'text-text-3')}><Lock size={8} />calculated</span> : null}
         </span>
-      </button>
+      </>
     )
+    const cls = cx('mx-auto flex w-full min-w-0 items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-left transition-all',
+      n.on ? 'border-brand bg-brand text-white shadow-md' : n.kind === 'outcome' ? 'border-brand/50 bg-surface hover:border-brand' : n.kind === 'locked' ? 'border-border bg-surface-2/60 hover:border-brand/60' : n.kind === 'calc' ? 'border-border bg-surface hover:border-brand/60' : 'border-border bg-surface hover:border-brand/60',
+      n.live && 'agent-ring', !n.onClick && 'cursor-default border-dashed')
+    return n.onClick ? <button key={n.key} type="button" onClick={n.onClick} aria-current={n.on ? 'true' : undefined} className={cls}>{inner}</button> : <div key={n.key} className={cls}>{inner}</div>
   }
-  const link = (k: string) => <div key={k} className="mx-auto h-3 w-px bg-border-strong" />
-  const funnel = model.modules.filter(m => DRV[m.id].pct), side = model.modules.filter(m => !DRV[m.id].pct)
-  const out = OUTPUTS[metric]
+  const driver = (id: DriverId): N => {
+    const d = DRV[id], v = fyAvg(layer[id], year), dv = v - fyAvg(ref[id], year)
+    return { key: id, label: d.label, step: d.step, value: fmtV(id, v), delta: dv, dtxt: signed(dv, d.pct ? `${Math.abs(dv).toFixed(1)} pts` : `$${Math.abs(dv).toFixed(2)}`),
+      on: !mod && sel === id, kind: editable(id) ? 'input' : 'locked', onClick: () => onSel(id), mark: moved(id), ev: evN(id), live: agent.section === 'assume' && sel === id }
+  }
+  const stage = (i: number, name: string, what: string, nodes: (N | null)[]) => (
+    <div key={name} className="mx-auto" style={{ width: `${100 - i * 7}%` }}>
+      <p className="text-center text-[10px] font-semibold uppercase tracking-[.08em] text-text-3">{name}</p>
+      <p className="mb-1 text-center text-[10.5px] text-text-3">{what}</p>
+      <div className="space-y-1">{nodes.filter((n): n is N => !!n).map(Node)}</div>
+    </div>
+  )
+  const join = <div aria-hidden className="mx-auto my-1 h-2.5 w-px bg-border-strong" />
+  const dnp = (fyAvg(layer.price, year) - fyAvg(ref.price, year)) * (1 - GTN)
+  const trx = OUTPUTS.trx, trxV = fySum(trx.fn(layer), year), trxD = trxV - fySum(trx.fn(ref), year)
+  const bn = (id: Exclude<ModId, 'gp' | 'netp'>, label: string, value: string, d: number, dtxt: string, kind: N['kind'], inv?: boolean): N => ({ key: id, label, value, delta: d, dtxt, on: mod === id, kind, inv, onClick: () => onMod(id) })
+  const money = (d: number) => signed(d, fmtB(Math.abs(d)))
+  const stages: ReactNode[][] = [
+    [stage(0, 'Patient pool', 'how many people could be treated', [
+      { key: 'start', label: model.start.label, step: 'Starting point', value: model.start.value, on: false, kind: 'locked' },
+      has('diag') ? driver('diag') : null, has('treat') ? driver('treat') : null])],
+    [stage(1, 'New to brand', 'who starts on the brand', [has('access') ? driver('access') : null, has('share') ? driver('share') : null])],
+    // Total prescriptions is an input module like the others: it shows TRx and is overridden through prescriptions per patient.
+    [stage(2, 'Volume', 'prescriptions', [has('rx') ? { key: 'rx', label: 'Total prescriptions', step: 'TRx', value: trx.fmt(trxV), delta: trxD, dtxt: trx.delta(trxD), on: !mod && sel === 'rx', kind: editable('rx') ? 'input' : 'locked', onClick: () => onSel('rx'), mark: moved('rx'), ev: evN('rx') }
+      : { key: 'trx', label: 'Total prescriptions', step: 'TRx', value: trx.fmt(trxV), delta: trxD, dtxt: trx.delta(trxD), on: !mod && sel === 'rev' && metric === 'trx', kind: 'calc', onClick: () => onOutcome('trx') }])],
+    // Sales: weighted gross price and change in inventory are modules of the flow (trend + override); net sales price is a read-only calculation.
+    [stage(3, 'Sales', 'gross price, inventory and revenue', [
+      has('price') ? { ...driver('price'), on: mod === 'gp', onClick: () => onMod('gp'), live: false } : null,
+      bn('inv', 'Δ Inventory', `+${fmtB(b.inv)}`, b.inv - bRef.inv, money(b.inv - bRef.inv), 'locked', true),
+      { key: 'netp', label: 'Net sales price', step: 'Calculated', value: fmtV('price', fyAvg(layer.price, year) * (1 - GTN)), delta: dnp, dtxt: signed(dnp, `$${Math.abs(dnp).toFixed(2)}`), on: mod === 'netp', kind: 'calc', onClick: () => onMod('netp') },
+      { key: 'rev', label: 'Net revenue', step: 'Outcome', value: fmtB(net), delta: net - netRef, dtxt: money(net - netRef), on: !mod && sel === 'rev' && metric !== 'trx', kind: 'outcome', onClick: () => onOutcome('rev') }])],
+    [stage(4, 'Revenue bridge', 'default modules · required in every model', [
+      bn('tud', 'Total underlying demand', fmtB(b.tud), b.tud - bRef.tud, money(b.tud - bRef.tud), 'calc'),
+      bn('inv', 'Δ Inventory', `+${fmtB(b.inv)}`, b.inv - bRef.inv, money(b.inv - bRef.inv), 'locked', true),
+      bn('ue','Unexplained difference', `${ueFy(ue).toFixed(1)}%`, 0, '', 'input'),
+      bn('fx', 'Exchange rates', '1.00', 0, '', 'locked')])],
+  ]
   return (
-    <nav aria-label="Forecast map" className="rounded-2xl border border-border bg-surface shadow-card p-4">
-      <div className="mb-3 flex items-center justify-between gap-2"><Label>Forecast map</Label>
-        <span className="ml-auto text-[11px] text-text-3">{model.modules.length} modules · from model</span>
-        {onCollapse && <button type="button" onClick={onCollapse} aria-label="Collapse forecast map" title="Collapse" className="-mr-1 grid h-7 w-7 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><PanelRightClose size={15} /></button>}</div>
-      <div className="mx-auto flex w-full items-center justify-between gap-2 rounded-md border border-dashed border-border-strong bg-surface-2 px-3 py-2.5">
-        <span className="min-w-0"><span className="block text-[10px] font-semibold uppercase tracking-wider text-text-3">Starting point</span><span className="block truncate text-[13px] font-semibold">{model.start.label}</span></span>
-        <span className="flex items-center gap-1 font-mono text-[13px] text-text-2"><Lock size={11} />{model.start.value}</span>
-      </div>
-      {funnel.flatMap((m, k) => [link(`l${m.id}`), node(m.id, m.editable, `${Math.max(60, 100 - k * 8)}%`)])}
-      {side.length > 0 && <div className="relative mx-auto my-2 flex items-center gap-2 pl-2 text-[11px] text-text-3"><span className="h-px flex-1 bg-border" />combined with<span className="h-px flex-1 bg-border" /></div>}
-      {side.map(m => node(m.id, m.editable, '70%'))}
-      {link('bridge')}
-      <div data-tour="bridge" className="rounded-md border border-border bg-surface-2/60 p-2">
-        <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-text-3">Revenue bridge · required in every model</p>
-        <div className="space-y-1">{MODS.map(m => {
-          const on = mod === m.id, b = bridgeOf(fySum(revenue(working)), uePct)
-          const v = m.id === 'tud' ? fmtB(b.tud) : m.id === 'inv' ? `+${fmtB(b.inv)}` : m.id === 'ue' ? `${uePct.toFixed(1)}%` : m.id === 'fx' ? '1.00' : ''
-          return (
-            <button key={m.id} type="button" onClick={() => onMod(m.id)} aria-current={on ? 'true' : undefined}
-              className={cx('flex w-full items-center justify-between gap-2 rounded px-2.5 py-1.5 text-left transition-colors', on ? 'bg-brand text-white' : 'bg-surface hover:ring-1 hover:ring-brand/60')}>
-              <span className="min-w-0"><span className="block truncate text-[12.5px] font-semibold">{m.label}</span>
-                <span className={cx('inline-flex items-center gap-1 text-[10px] font-semibold uppercase', on ? 'text-white/75' : m.edit ? 'text-warn' : 'text-text-3')}>{!m.edit && <Lock size={9} />}{m.kind}</span></span>
-              {v && <span className="shrink-0 font-mono text-[12px]">{v}</span>}
-            </button>)
-        })}</div>
-      </div>
-      {link('out')}
-      <button type="button" onClick={() => onSel('rev')} aria-current={!mod && sel === 'rev' ? 'true' : undefined}
-        className={cx('flex w-full items-center justify-between gap-2 rounded-md border px-3 py-3 text-left transition-colors', !mod && sel === 'rev' ? 'border-brand-dark bg-brand-dark text-white' : 'border-brand/40 bg-brand-soft hover:border-brand')}>
-        <span className="min-w-0"><span className={cx('block text-[10px] font-semibold uppercase tracking-wider', !mod && sel === 'rev' ? 'text-white/70' : 'text-brand')}>Outcome</span><span className="block truncate text-[13px] font-semibold">{out.label}</span></span>
-        <span className="font-mono text-[13px]">{out.fmt(fySum(out.fn(working)))}</span>
-      </button>
-      <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-snug text-text-3"><Users size={12} className="mt-px shrink-0" />Modules, order and editable inputs come from the model published by the CoE. Formulas are locked.</p>
+    <nav data-tour="funnel" aria-label="Forecast map" className="rounded-2xl border border-border bg-surface shadow-card p-3.5">
+      <div className="mb-2.5 flex items-center justify-between gap-2"><Label>Assumptions</Label><span className="truncate text-[11px] text-text-3">FY{year} · {sc ? sc.name : 'Active forecast'}</span></div>
+      {stages.map((s, k) => <Fragment key={k}>{k > 0 && join}{s}</Fragment>)}
+      <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-snug text-text-3"><Users size={12} className="mt-px shrink-0" /><span><span className="mr-1 inline-block h-1.5 w-1.5 rounded-full bg-brand align-middle" />changed · <span className="mx-0.5 rounded-full border border-text-3 px-1 text-[9px] font-bold">n</span> events move it · change shown against the active forecast. Modules and formulas come from the CoE model.</span></p>
     </nav>
   )
 }
+
 
 /* ───────── Period picker ───────── */
 export function Period({ label, value, min, max, onChange }: { label: string; value: number; min: number; max: number; onChange: (i: number) => void }) {
@@ -112,8 +138,8 @@ export function NumField({ label, value, onChange, suffix, step = 0.1, live }: {
   )
 }
 
-type CellState = 'system' | 'override' | 'recalc'
-function GridCell({ value, dp, state, onCommit, onCancel }: { value: number; dp: number; state: CellState; onCommit: (v: number) => string | null; onCancel: () => void }) {
+export type CellState = 'system' | 'override' | 'recalc'
+export function GridCell({ value, dp, state, onCommit, onCancel }: { value: number; dp: number; state: CellState; onCommit: (v: number) => string | null; onCancel: () => void }) {
   const [txt, setTxt] = useState<string | null>(null)
   const [bad, setBad] = useState(false)
   const commit = () => {
@@ -134,33 +160,35 @@ const parseNums = (t: string) => t.split(/[\s,;]+/).map(s => s.replace(/[%$]/g, 
 export type DriverMode = 'overview' | 'assumptions'
 
 export type DriverActions = { apply: () => void; discard: () => void }
-export function DriverWorkspace({ mode, sel, edits, setEdits, scenarioLayer, scenarioName, workingLayer, model, metric, setMetric, onOpenAssumptions, onGo, onDirty, actions, notify }: {
+/** Multi-scenario view of the Forecast workspace chart: the other scenarios as lines, the chip row and period picker above it, and the month range the chart is zoomed to. */
+export type CompareProps = { extra?: ChartSeries['extra']; header?: ReactNode; range?: [number, number]; hideForecast?: boolean; /** a scenario (a bold line in `extra`) is the one being worked on, so the active forecast is drawn thin */ scenarioFocus?: boolean }
+export function DriverWorkspace({ mode, sel, edits, setEdits, scenarioLayer, scenarioName, workingLayer, model, metric, setMetric, onOpenAssumptions, onGo, onDirty, actions, notify, compare }: {
   mode: DriverMode; sel: Sel; edits: Edits; setEdits: (f: (e: Edits) => Edits) => void; scenarioLayer: Layer; scenarioName: string; workingLayer: Layer
   model: ModelCfg; metric: OutputId; setMetric: (m: OutputId) => void; onOpenAssumptions: () => void
-  onGo: (s: 'assumptions' | 'events') => void; onDirty: (v: boolean) => void; actions?: MutableRefObject<DriverActions | null>; notify: Notify
+  onGo: (s: 'assumptions' | 'events') => void; onDirty: (v: boolean) => void; actions?: MutableRefObject<DriverActions | null>; notify: Notify; compare?: CompareProps
 }) {
-  if (sel === 'rev') return <RevenueView {...{ workingLayer, scenarioLayer, scenarioName, model, metric, setMetric }} />
+  if (sel === 'rev') return <RevenueView {...{ workingLayer, scenarioLayer, scenarioName, model, metric, setMetric, compare }} />
   const cfg = model.modules.find(m => m.id === sel)
-  return <DriverEditorView key={sel} id={sel} locked={!!cfg && !cfg.editable} {...{ mode, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify }} />
+  return <DriverEditorView key={sel} id={sel} locked={!!cfg && !cfg.editable} {...{ mode, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify, compare }} />
 }
 
-function RevenueView({ workingLayer, scenarioLayer, scenarioName, model, metric, setMetric }: { workingLayer: Layer; scenarioLayer: Layer; scenarioName: string; model: ModelCfg; metric: OutputId; setMetric: (m: OutputId) => void }) {
+function RevenueView({ workingLayer, scenarioLayer, scenarioName, model, metric, setMetric, compare }: { workingLayer: Layer; scenarioLayer: Layer; scenarioName: string; model: ModelCfg; metric: OutputId; setMetric: (m: OutputId) => void; compare?: CompareProps }) {
   const o = OUTPUTS[metric]
-  const s: ChartSeries = { actual: o.fn(FULL_ACTUALS), unbiased: o.fn(UNBIASED), working: o.fn(workingLayer), scenario: o.fn(scenarioLayer), scenarioName }
+  const s: ChartSeries = { actual: o.fn(FULL_ACTUALS), unbiased: o.fn(UNBIASED), working: compare?.hideForecast ? undefined : o.fn(workingLayer), scenario: compare ? undefined : o.fn(scenarioLayer), scenarioName, extra: compare?.extra, focus: compare?.scenarioFocus ? 'scenario' : 'working' }
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div><Tag tone="brand">Outcome · calculated</Tag><h2 className="mt-2 text-[22px] font-semibold tracking-tight">{o.label}</h2></div>
         <OutputSelect model={model} metric={metric} onChange={setMetric} />
       </div>
-      <Card title={`Monthly ${o.label.toLowerCase()}`} sub={o.unit} right={<Legend s={s} />}><ForecastChart title={`${o.label} forecast`} s={s} fmt={v => o.fmt(v, 1)} dp={0} unit={o.unit} height={320} /></Card>
+      <Card title={`Monthly ${o.label.toLowerCase()}`} sub={o.unit} right={<Legend s={s} />}>{compare?.header && <div className="mb-3 space-y-3">{compare.header}</div>}<ForecastChart title={`${o.label} forecast`} s={s} fmt={v => o.fmt(v, 1)} dp={0} unit={o.unit} height={320} range={compare?.range} /></Card>
     </div>
   )
 }
 
-function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify }: {
+function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify, compare }: {
   id: DriverId; mode: DriverMode; locked: boolean; edits: Edits; setEdits: (f: (e: Edits) => Edits) => void; scenarioLayer: Layer; scenarioName: string; workingLayer: Layer
-  onOpenAssumptions: () => void; onGo: (s: 'assumptions' | 'events') => void; onDirty: (v: boolean) => void; actions?: MutableRefObject<DriverActions | null>; notify: Notify
+  onOpenAssumptions: () => void; onGo: (s: 'assumptions' | 'events') => void; onDirty: (v: boolean) => void; actions?: MutableRefObject<DriverActions | null>; notify: Notify; compare?: CompareProps
 }) {
   const d = DRV[id], applied = edits[id]
   // The draft follows the applied value (including changes Charles makes) until the user starts their own edit.
@@ -182,7 +210,7 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
   const patch = (p: Partial<Edit>) => setDraft(x => ({ ...x, ...p }))
   useEffect(() => { onDirty(dirty); return () => onDirty(false) }, [dirty, onDirty])
 
-  const series: ChartSeries = { actual: ACTUALS[id], unbiased: unb, lo: BASELINE[id].lo, hi: BASELINE[id].hi, working: work, preview: dirty ? preview : undefined, scenario: scnDiffers ? scn : undefined, scenarioName }
+  const series: ChartSeries = { actual: ACTUALS[id], unbiased: unb, lo: BASELINE[id].lo, hi: BASELINE[id].hi, working: compare?.hideForecast ? undefined : work, preview: dirty ? preview : undefined, scenario: scnDiffers && !compare ? scn : undefined, scenarioName, extra: compare?.extra, focus: 'working' }
   const lastActual = ACTUALS[id][ACT - 1]!
 
   const apply = () => {
@@ -242,9 +270,15 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
         {mode === 'overview' && !locked && <Btn onClick={onOpenAssumptions} icon={<PencilLine size={15} />}>Open in Forecast workspace</Btn>}
       </div>
 
+      {id === 'rx' && (() => {
+        const t = OUTPUTS.trx, ts: ChartSeries = { actual: t.fn(FULL_ACTUALS), unbiased: t.fn(UNBIASED), working: t.fn(workingLayer), scenario: scnDiffers ? t.fn(scenarioLayer) : undefined, scenarioName }
+        return <Card title="Total prescriptions (TRx) · monthly" sub="K Rx. Patients on brand × prescriptions per patient: it moves with share and with the override below." right={<Legend s={ts} />}>
+          <ForecastChart title="Total prescriptions" s={ts} fmt={v => t.fmt(v, 0)} dp={0} unit={t.unit} height={240} range={compare?.range} /></Card>
+      })()}
       <div className={cx('grid gap-4', mode === 'overview' && 'xl:grid-cols-[minmax(0,1fr)_260px]')}>
         <div data-tour="chart" className="min-w-0"><Card title={`${d.label} · monthly`} sub={d.unit === '%' ? 'Percent' : d.unit} right={<Legend s={series} />}>
-          <ForecastChart title={`${d.label} forecast`} s={series} fmt={v => fmtV(id, v)} dp={d.dp} unit={d.unit} height={mode === 'overview' ? 340 : 280} />
+          {compare?.header && <div className="mb-3 space-y-3">{compare.header}</div>}
+          <ForecastChart title={`${d.label} forecast`} s={series} fmt={v => fmtV(id, v)} dp={d.dp} unit={d.unit} height={mode === 'overview' ? 340 : 300} range={compare?.range} />
         </Card></div>
         {mode === 'overview' && <TrendPanel id={id} />}
       </div>
@@ -417,3 +451,4 @@ function AssumptionGrid({ id, preview, cellState, onCell, onCancel }: {
     </div>
   )
 }
+
