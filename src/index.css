@@ -10,41 +10,41 @@
 
 @theme inline {
   /* Surfaces: white cards on a pale-blue canvas (Blue 05 / Blue 10) */
-  --color-background: #fbfaf7;
-  --color-rail: #efeee9;
+  --color-background: #f8fcff;
+  --color-rail: #f0efee;
   --color-surface: #ffffff;
-  --color-surface-2: #f3f2ed;
-  --color-border: #e2e0d8;
-  --color-border-strong: #8f8d82;
+  --color-surface-2: #f1f5f9;
+  --color-border: #d4d4d8;
+  --color-border-strong: #858590;
   /* Text: Blue 90 for primary, softened navy-greys for secondary / captions (AA on white) */
-  --color-text: #101433;
-  --color-text-2: #464a63;
-  --color-text-3: #656980;
+  --color-text: #18181b;
+  --color-text-2: #3f3f46;
+  --color-text-3: #686872;
   /* Brand: Blue 70 primary, Blue 10 soft */
   --color-brand: #0000c9;
-  --color-brand-dark: #0000a3;
-  --color-brand-soft: #eaeffb;
-  --color-navy: #000067;
-  --color-cyan: #0095ff;
+  --color-brand-dark: #02005e;
+  --color-brand-soft: #e8f2ff;
+  --color-navy: #02005e;
+  --color-cyan: #1474fc;
   --color-teal: #00b7a5;
   /* Status colours stay semantic and AA-legible */
-  --color-ok: #007a6c;
-  --color-ok-soft: #e0f6f3;
-  --color-warn: #8f5a00;
-  --color-warn-soft: #fff3d9;
-  --color-err: #c4122f;
-  --color-err-soft: #fde8ec;
+  --color-ok: #008253;
+  --color-ok-soft: #ebfef4;
+  --color-warn: #823a0c;
+  --color-warn-soft: #fffaec;
+  --color-err: #a20f2c;
+  --color-err-soft: #fff1f1;
 
   --font-sans: 'Pfizer Diatype', 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'Pfizer Diatype', 'Helvetica Neue', Arial, sans-serif;
   --font-display: 'Pfizer Tomorrow', 'Franklin Gothic Medium', Arial, sans-serif;
 
   /* Meraki-style generous corner radii */
-  --radius-xs: 6px;
+  --radius-xs: 4px;
   --radius-sm: 8px;
-  --radius-md: 12px;
+  --radius-md: 8px;
   --radius-lg: 16px;
-  --radius-xl: 20px;
+  --radius-xl: 16px;
   --radius-2xl: 24px;
 
   --shadow-card: 0 1px 2px rgb(20 28 70 / 0.07), 0 8px 20px -10px rgb(20 28 70 / 0.18);
@@ -148,33 +148,26 @@ main { animation: fade-in .3s ease both; }
 .ai-btn[aria-pressed="true"] { background: #000067; }
 
 /* Colour discipline: Blue 70 fills primary buttons only. Everywhere else brand accents resolve to ink. */
-.text-brand, .hover\:text-brand:hover, .group:hover .group-hover\:text-brand, .focus-visible\:text-brand:focus-visible { color: var(--color-text); }
-.border-brand, .focus\:border-brand:focus, .hover\:border-brand\/60:hover { border-color: var(--color-text); }
-.bg-brand-soft\/40, .bg-brand-soft\/30 { background-color: var(--color-surface-2); }
 tbody tr:hover { background: var(--color-surface-2); }
-button.border.bg-surface:not(:disabled):hover { border-color: var(--color-text); color: var(--color-text); background: var(--color-surface-2); }
-button.hover\:bg-surface-2:hover { color: var(--color-text); }
 a.border:hover, button.border.text-left:not(:disabled):hover, button.rounded-lg.border.bg-surface:not(:disabled):hover, button.rounded-xl.border.bg-surface:not(:disabled):hover { border-color: var(--color-border-strong); }
 input:not([type='checkbox']):not([type='radio']):not([type='range']):hover:not(:disabled), select:hover:not(:disabled), textarea:hover:not(:disabled) { border-color: var(--color-border-strong); }
-input:not([type='checkbox']):not([type='radio']):not([type='range']):focus, select:focus, textarea:focus { border-color: var(--color-text); box-shadow: 0 0 0 3px rgb(21 23 46 / .08); }
-:focus-visible { outline-color: var(--color-text); }
-input[type='checkbox'], input[type='radio'], input[type='range'] { accent-color: #15172e; }
+input:not([type='checkbox']):not([type='radio']):not([type='range']):focus, select:focus, textarea:focus { border-color: var(--color-brand); box-shadow: 0 0 0 3px rgb(0 0 201 / .12); }
 
 /* AI has its own colour: Pfizer lavender / violet, distinct from the brand blue. */
-:root { --agent-grad: linear-gradient(90deg, #4a2bb0, #7a5cff, #a68aff, #d9ccff, #c04bd9, #7a5cff, #4a2bb0); --agent: #7a5cff; --agent-deep: #4a2bb0; }
-.agent-section { box-shadow: 0 18px 50px -18px rgba(122, 92, 255, .5); }
-.agent-section::after { background: linear-gradient(100deg, transparent 30%, rgba(122, 92, 255, .08) 50%, transparent 70%); }
-.agent-field :is(input, select) { box-shadow: 0 0 0 4px rgba(122, 92, 255, .16); }
-.agent-row > * { background-color: rgb(122 92 255 / 0.08) !important; }
-.agent-row > :first-child { box-shadow: inset 3px 0 0 #7a5cff; }
-.agent-ring { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #7a5cff, 0 10px 24px -10px rgba(122, 92, 255, .6) !important; }
-.agent-caret::after { background: #7a5cff; }
-.ai-orb { background-color: #7a5cff; background-image: radial-gradient(circle at center, #d9ccff 0%, transparent 55%), radial-gradient(circle at center, #ffffff 0%, transparent 50%), radial-gradient(circle at center, #c04bd9 0%, transparent 60%), radial-gradient(circle at center, #4a2bb0 0%, transparent 60%); }
-.ai-orb-busy { box-shadow: 0 0 0 3px rgb(122 92 255 / 0.2), 0 0 14px rgb(122 92 255 / 0.4); }
-.ai-frame { background: linear-gradient(110deg, #4a2bb0, #a68aff, #ffffff, #7a5cff, #4a2bb0, #d9ccff, #ffffff, #4a2bb0); background-size: 300% 100%; }
-.ai-btn { background: #6a45f0; }
-.ai-btn:hover { background: #4a2bb0; box-shadow: 0 8px 18px -8px rgb(106 69 240 / .6); }
-.ai-btn[aria-pressed="true"] { background: #4a2bb0; }[class*="border-brand/"] { border-color: var(--color-border); }
+:root { --agent-grad: linear-gradient(90deg, #0000c9, #6f6fff, #a8a8ff, #d6d6ff, #009de6, #6f6fff, #0000c9); --agent: #6f6fff; --agent-deep: #0000c9; }
+.agent-section { box-shadow: 0 18px 50px -18px rgba(111, 111, 255, .5); }
+.agent-section::after { background: linear-gradient(100deg, transparent 30%, rgba(111, 111, 255, .08) 50%, transparent 70%); }
+.agent-field :is(input, select) { box-shadow: 0 0 0 4px rgba(111, 111, 255, .16); }
+.agent-row > * { background-color: rgb(111 111 255 / 0.08) !important; }
+.agent-row > :first-child { box-shadow: inset 3px 0 0 #6f6fff; }
+.agent-ring { box-shadow: 0 0 0 2px #fff, 0 0 0 4px #6f6fff, 0 10px 24px -10px rgba(111, 111, 255, .6) !important; }
+.agent-caret::after { background: #6f6fff; }
+.ai-orb { background-color: #6f6fff; background-image: radial-gradient(circle at center, #d6d6ff 0%, transparent 55%), radial-gradient(circle at center, #ffffff 0%, transparent 50%), radial-gradient(circle at center, #009de6 0%, transparent 60%), radial-gradient(circle at center, #0000c9 0%, transparent 60%); }
+.ai-orb-busy { box-shadow: 0 0 0 3px rgb(111 111 255 / 0.2), 0 0 14px rgb(111 111 255 / 0.4); }
+.ai-frame { background: linear-gradient(110deg, #0000c9, #a8a8ff, #ffffff, #6f6fff, #0000c9, #d6d6ff, #ffffff, #0000c9); background-size: 300% 100%; }
+.ai-btn { background: #3a3af0; }
+.ai-btn:hover { background: #0000c9; box-shadow: 0 8px 18px -8px rgb(58 58 240 / .6); }
+.ai-btn[aria-pressed="true"] { background: #0000c9; }[class*="border-brand/"] { border-color: var(--color-border); }
 [class*="bg-brand/"] { background-color: var(--color-surface-2); }
 
 /* Depth: tinted canvas, white cards that lift on hover, white sticky chrome with a shadow, tinted table headers. */

@@ -2103,7 +2103,7 @@ function Charles({ context, chips, respond, greeting, extra, busy, busyLabel = '
             <span className={cx('ai-orb h-9 w-9 shrink-0 rounded-full', busy && 'ai-orb-busy')} aria-hidden />
             <div className="min-w-0 flex-1">
               <p title={E.label} className="flex items-center gap-1.5 text-sm font-semibold leading-tight"><E.icon size={14} className="shrink-0 text-brand" /><span className="truncate">{E.short}</span></p>
-              <p className="flex items-center gap-1.5 text-xs text-text-3"><span className={cx('h-1.5 w-1.5 shrink-0 rounded-full', busy ? 'animate-pulse bg-[#7a5cff]' : 'bg-ok')} /><span className="truncate">{busy ? busyLabel : E.mode}</span></p>
+              <p className="flex items-center gap-1.5 text-xs text-text-3"><span className={cx('h-1.5 w-1.5 shrink-0 rounded-full', busy ? 'animate-pulse bg-[#6f6fff]' : 'bg-ok')} /><span className="truncate">{busy ? busyLabel : E.mode}</span></p>
             </div>
             <div className="flex shrink-0 items-center">
               {dock === 'float' && !min && <button type="button" onClick={() => setSize(size === 'lg' ? 'md' : 'lg')} title={size === 'lg' ? 'Smaller' : 'Larger'} aria-label={size === 'lg' ? 'Make the chat smaller' : 'Make the chat larger'} className="hidden h-8 w-8 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text sm:grid">{size === 'lg' ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</button>}
@@ -2128,7 +2128,7 @@ function Charles({ context, chips, respond, greeting, extra, busy, busyLabel = '
           <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">
             {chips.map(c => <button type="button" key={c} onClick={() => send(c)} className="shrink-0 rounded-full border border-border px-2.5 py-1 text-xs text-text-2 hover:border-brand hover:text-brand">{c}</button>)}
           </div>
-          <form onSubmit={e => { e.preventDefault(); send(q) }} className="relative rounded-2xl border border-[#7a5cff]/30 bg-surface p-3 shadow-[0_0_0_4px_rgb(122_92_255/0.08)] transition-shadow focus-within:border-[#7a5cff]/60 focus-within:shadow-[0_0_0_4px_rgb(47_158_115/0.14)]">
+          <form onSubmit={e => { e.preventDefault(); send(q) }} className="relative rounded-2xl border border-[#6f6fff]/30 bg-surface p-3 shadow-[0_0_0_4px_rgb(111_111_255/0.08)] transition-shadow focus-within:border-[#6f6fff]/60 focus-within:shadow-[0_0_0_4px_rgb(47_158_115/0.14)]">
             <textarea rows={1} value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(q) } }}
               placeholder={E.placeholder} aria-label={`Message ${E.label}`}
               className="block max-h-40 min-h-[32px] w-full resize-none bg-transparent px-1 py-1 text-[15px] outline-none placeholder:text-text-3" />

@@ -11,7 +11,7 @@ export type DemoRun = { i: number; done: boolean } | null
 export function AgentButton({ children, onClick, icon, variant = 'solid' }: { children: ReactNode; onClick: () => void; icon?: ReactNode; variant?: 'solid' | 'outline' }) {
   return (
     <button type="button" onClick={onClick} className={cx('inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-md px-3 text-[13px] font-semibold transition-colors',
-      variant === 'solid' ? 'ai-btn text-white' : 'border border-[#7a5cff]/40 bg-surface text-[#4a2bb0] hover:border-[#7a5cff] hover:bg-[#7a5cff]/5')}>
+      variant === 'solid' ? 'ai-btn text-white' : 'border border-[#6f6fff]/40 bg-surface text-[#0000c9] hover:border-[#6f6fff] hover:bg-[#6f6fff]/5')}>
       {icon}{children}
     </button>
   )
@@ -23,16 +23,16 @@ export function AgentDemoCard({ assistant, title, prompt, steps, demo, onRun, on
 }) {
   const running = !!demo && !demo.done
   return (
-    <div className={cx('rounded-xl p-[1.5px]', running ? 'agent-bg' : 'bg-[linear-gradient(110deg,#4a2bb0,#7a5cff,#d9ccff)]')}>
+    <div className={cx('rounded-xl p-[1.5px]', running ? 'agent-bg' : 'bg-[linear-gradient(110deg,#0000c9,#6f6fff,#d6d6ff)]')}>
       <div className="rounded-[10px] bg-surface p-3.5 text-sm">
-        <span className="mb-1.5 inline-flex items-center gap-1 rounded bg-[#7a5cff]/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#4a2bb0]"><Zap size={10} />Demo · agent workflow</span>
+        <span className="mb-1.5 inline-flex items-center gap-1 rounded bg-[#6f6fff]/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[#0000c9]"><Zap size={10} />Demo · agent workflow</span>
         <p className="font-semibold">{title}</p>
         <p className="mt-1.5 rounded-md bg-background px-2.5 py-2 text-xs italic text-text-2">“{prompt}”</p>
         {demo && (
           <ol className="mt-3 space-y-2">{steps.map((t, k) => {
             const st = demo.i > k || demo.done ? 'done' : demo.i === k ? 'doing' : 'todo'
             return <li key={t} className={cx('flex items-center gap-2 text-xs', st === 'todo' ? 'text-text-3' : 'text-text')}>
-              {st === 'done' ? <CheckCircle2 size={14} className="shrink-0 text-[#7a5cff]" /> : st === 'doing' ? <Loader2 size={14} className="shrink-0 animate-spin text-[#7a5cff]" /> : <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-border-strong" />}
+              {st === 'done' ? <CheckCircle2 size={14} className="shrink-0 text-[#6f6fff]" /> : st === 'doing' ? <Loader2 size={14} className="shrink-0 animate-spin text-[#6f6fff]" /> : <span className="h-3.5 w-3.5 shrink-0 rounded-full border border-border-strong" />}
               <span className={cx(st === 'doing' && 'agent-caret font-semibold')}>{t}</span>
             </li>
           })}</ol>
@@ -53,17 +53,17 @@ export function AgentBanner({ assistant, running, step, progress, title, childre
   assistant: string; running: boolean; step?: string; progress?: [number, number]; title: string; children?: ReactNode; onStop?: () => void; actions?: ReactNode; onDismiss?: () => void
 }) {
   return (
-    <div role="status" aria-live="polite" className={cx('rise rounded-xl p-[1.5px] shadow-[0_12px_32px_-18px_rgba(122,92,255,0.45)]', running ? 'agent-bg' : 'bg-[linear-gradient(110deg,#4a2bb0,#7a5cff,#d9ccff,#7a5cff)]')}>
+    <div role="status" aria-live="polite" className={cx('rise rounded-xl p-[1.5px] shadow-[0_12px_32px_-18px_rgba(111,111,255,0.45)]', running ? 'agent-bg' : 'bg-[linear-gradient(110deg,#0000c9,#6f6fff,#d6d6ff,#6f6fff)]')}>
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 rounded-[10px] bg-surface px-4 py-2.5">
         <span className={cx('ai-orb h-8 w-8 shrink-0 rounded-full', running && 'ai-orb-busy')} aria-hidden />
         <div className="min-w-0 flex-1">
           <p className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] font-semibold text-text">
             {title}
-            {running && step && <span className="inline-flex items-center gap-1 rounded bg-[#7a5cff]/10 px-1.5 py-0.5 text-[11px] font-semibold text-[#4a2bb0]"><Loader2 size={10} className="animate-spin" />{step}</span>}
-            {!running && <span className="inline-flex items-center gap-1 rounded bg-[#7a5cff]/10 px-1.5 py-0.5 text-[11px] font-semibold text-[#4a2bb0]">Built by {assistant} · needs your review</span>}
+            {running && step && <span className="inline-flex items-center gap-1 rounded bg-[#6f6fff]/10 px-1.5 py-0.5 text-[11px] font-semibold text-[#0000c9]"><Loader2 size={10} className="animate-spin" />{step}</span>}
+            {!running && <span className="inline-flex items-center gap-1 rounded bg-[#6f6fff]/10 px-1.5 py-0.5 text-[11px] font-semibold text-[#0000c9]">Built by {assistant} · needs your review</span>}
           </p>
           {children && <div className="mt-0.5 text-[12px] leading-snug text-text-2">{children}</div>}
-          {running && progress && <div className="mt-1.5 h-1 max-w-sm overflow-hidden rounded-full bg-[#7a5cff]/15"><div className="h-full rounded-full bg-[#7a5cff] transition-all duration-500" style={{ width: `${Math.round((progress[0] / progress[1]) * 100)}%` }} /></div>}
+          {running && progress && <div className="mt-1.5 h-1 max-w-sm overflow-hidden rounded-full bg-[#6f6fff]/15"><div className="h-full rounded-full bg-[#6f6fff] transition-all duration-500" style={{ width: `${Math.round((progress[0] / progress[1]) * 100)}%` }} /></div>}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {running && onStop && <AgentButton variant="outline" icon={<Square size={11} />} onClick={onStop}>Stop</AgentButton>}
