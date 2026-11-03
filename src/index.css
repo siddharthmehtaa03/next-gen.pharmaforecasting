@@ -144,8 +144,8 @@ main { animation: fade-in .3s ease both; }
 
 /* Top-bar AI button: solid brand blue pill. The animated treatment is kept for the chat itself. */
 .ai-btn { background: #0000c9; border-radius: 9999px; box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12) inset; }
-.ai-btn:hover { background: #0000a3; box-shadow: 0 8px 18px -8px rgb(0 0 201 / .6); }
-.ai-btn[aria-pressed="true"] { background: #000067; }
+.ai-btn:hover { background: linear-gradient(135deg, #02005e, #2a2ae0); box-shadow: 0 8px 18px -8px rgb(2 0 94 / .6); }
+.ai-btn[aria-pressed="true"] { background: #02005e; }
 
 /* Colour discipline: Blue 70 fills primary buttons only. Everywhere else brand accents resolve to ink. */
 tbody tr:hover { background: var(--color-surface-2); }
@@ -165,9 +165,9 @@ input:not([type='checkbox']):not([type='radio']):not([type='range']):focus, sele
 .ai-orb { background-color: #6f6fff; background-image: radial-gradient(circle at center, #d6d6ff 0%, transparent 55%), radial-gradient(circle at center, #ffffff 0%, transparent 50%), radial-gradient(circle at center, #009de6 0%, transparent 60%), radial-gradient(circle at center, #0000c9 0%, transparent 60%); }
 .ai-orb-busy { box-shadow: 0 0 0 3px rgb(111 111 255 / 0.2), 0 0 14px rgb(111 111 255 / 0.4); }
 .ai-frame { background: linear-gradient(110deg, #0000c9, #a8a8ff, #ffffff, #6f6fff, #0000c9, #d6d6ff, #ffffff, #0000c9); background-size: 300% 100%; }
-.ai-btn { background: #3a3af0; }
-.ai-btn:hover { background: #0000c9; box-shadow: 0 8px 18px -8px rgb(58 58 240 / .6); }
-.ai-btn[aria-pressed="true"] { background: #0000c9; }[class*="border-brand/"] { border-color: var(--color-border); }
+.ai-btn { background: linear-gradient(135deg, #02005e, #3a3af0); border-radius: 9999px; box-shadow: 0 0 0 1px rgb(255 255 255 / 0.12) inset; }
+.ai-btn:hover { background: linear-gradient(135deg, #02005e, #2a2ae0); box-shadow: 0 8px 18px -8px rgb(2 0 94 / .6); }
+.ai-btn[aria-pressed="true"] { background: #02005e; }
 [class*="bg-brand/"] { background-color: var(--color-surface-2); }
 
 /* Depth: tinted canvas, white cards that lift on hover, white sticky chrome with a shadow, tinted table headers. */
@@ -190,3 +190,9 @@ section.shadow-card:hover, div.shadow-card:hover { box-shadow: 0 1px 2px rgb(16 
 tbody tr:hover { background: var(--color-surface-2); }
 a.border:hover, button.border.text-left:not(:disabled):hover, button.rounded-lg.border.bg-surface:not(:disabled):hover, button.rounded-xl.border.bg-surface:not(:disabled):hover { box-shadow: 0 6px 16px -10px rgb(16 20 51 / 0.2); }
 select, input:not([type='checkbox']):not([type='radio']):not([type='range']), textarea { background-color: var(--color-surface); }
+/* Modals: one scrim for the whole screen, rail included. Overlays dim to the same black, and the rail is covered and inert while any modal is open. */
+.fixed.inset-0[class*="bg-brand-dark/"], .fixed.inset-0[class*="bg-text/"] { background-color: rgb(9 9 11 / 0.55) !important; }
+body:has([aria-modal="true"]) nav[aria-label$="navigation"]::after { content: ''; position: absolute; inset: 0; z-index: 60; background: rgb(9 9 11 / 0.55); cursor: default; }
+body:has([aria-modal="true"]) nav[aria-label$="navigation"] { pointer-events: none; }
+body:has([aria-modal="true"]) nav[aria-label$="navigation"]::after { pointer-events: auto; }body:has([aria-modal="true"]) header[data-app-header]::after { content: ''; position: absolute; inset: 0; z-index: 60; background: rgb(9 9 11 / 0.55); }
+button[role='radio'].rounded-xl { border-radius: var(--radius-xl); }

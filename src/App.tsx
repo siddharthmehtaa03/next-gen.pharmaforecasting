@@ -482,7 +482,7 @@ function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'brand' | 'o
     <span className={cx(
       'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
       tone === 'neutral' && 'bg-surface-2 text-text-2',
-      tone === 'brand' && 'bg-brand-soft text-brand',
+      tone === 'brand' && 'bg-surface-2 text-text ring-1 ring-border',
       tone === 'ok' && 'bg-ok-soft text-ok',
       tone === 'warn' && 'bg-warn-soft text-warn',
       tone === 'err' && 'bg-err-soft text-err',
@@ -555,9 +555,9 @@ function Banner({ tone, title, children, action }: { tone: 'info' | 'ok' | 'warn
   const Icon = tone === 'ok' ? CheckCircle2 : tone === 'err' ? AlertCircle : tone === 'warn' ? AlertTriangle : Info
   return (
     <div role={tone === 'err' ? 'alert' : 'status'} className={cx('rise flex gap-3 rounded-lg border p-3.5',
-      tone === 'info' && 'border-brand/20 bg-brand-soft/60', tone === 'ok' && 'border-ok/25 bg-ok-soft',
+      tone === 'info' && 'border-border bg-surface-2', tone === 'ok' && 'border-ok/25 bg-ok-soft',
       tone === 'warn' && 'border-warn/25 bg-warn-soft', tone === 'err' && 'border-err/25 bg-err-soft')}>
-      <Icon size={18} className={cx('mt-px shrink-0', tone === 'info' && 'text-brand', tone === 'ok' && 'text-ok', tone === 'warn' && 'text-warn', tone === 'err' && 'text-err')} />
+      <Icon size={18} className={cx('mt-px shrink-0', tone === 'info' && 'text-text-2', tone === 'ok' && 'text-ok', tone === 'warn' && 'text-warn', tone === 'err' && 'text-err')} />
       <div className="min-w-0 flex-1 text-sm">
         <p className="font-semibold text-text">{title}</p>
         {children && <div className="mt-0.5 text-text-2">{children}</div>}
@@ -1895,8 +1895,8 @@ function AiButton({ on, onClick, label }: { on: boolean; onClick: () => void; la
 
 function TopBar({ collab, crumbs, onHome, onAdmin, onLogout, models, onResume, fixtures }: { collab?: { on: boolean; toggle: () => void; label: string }; crumbs: string[]; onHome: () => void; onAdmin: () => void; onLogout: () => void; models: ModelRow[]; onResume: (m: ModelRow) => void; ai: boolean; onAI: () => void; notify: (t: Toast) => void; fixtures: boolean; onFixtures: () => void }) {
   return (
-    <header className="z-40 flex h-14 shrink-0 items-center gap-4 border-b border-border bg-surface px-6">
-      {crumbs.length > 0 && <nav aria-label="Breadcrumb"><ol className="flex items-center gap-1.5 text-[13px]">{crumbs.filter(Boolean).map((c, k, a) => <li key={c} className="flex items-center gap-1.5">{k > 0 && <ChevronRight size={13} className="text-text-3" />}{k === a.length - 1 ? <span aria-current="page" className="font-semibold text-brand">{c}</span> : <button type="button" onClick={onHome} className="rounded text-text-2 hover:text-brand hover:underline">{c}</button>}</li>)}</ol></nav>}
+    <header data-app-header className="relative z-40 flex h-14 shrink-0 items-center gap-4 border-b border-border bg-surface px-6">
+      {crumbs.length > 0 && <nav aria-label="Breadcrumb"><ol className="flex items-center gap-1.5 text-[13px]">{crumbs.filter(Boolean).map((c, k, a) => <li key={c} className="flex items-center gap-1.5">{k > 0 && <ChevronRight size={13} className="text-text-3" />}{k === a.length - 1 ? <span aria-current="page" className="font-semibold text-text">{c}</span> : <button type="button" onClick={onHome} className="rounded text-text-2 hover:text-text hover:underline">{c}</button>}</li>)}</ol></nav>}
       <div id="topbar-ws" className="flex min-w-0 items-center gap-2.5" />
       <div className="ml-auto flex items-center gap-1.5">
         {collab && <AiButton on={collab.on} onClick={collab.toggle} label={collab.label} />}
@@ -2630,24 +2630,26 @@ function NewModelDialog({ models, onClose, onStart }: { models: ModelRow[]; onCl
   const src = models.find(m => m.id === from)
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-brand-dark/50 p-4" role="dialog" aria-modal="true" aria-labelledby="new-title" onClick={onClose}>
-      <div className="rise flex max-h-[92dvh] w-full max-w-2xl flex-col rounded-lg bg-surface shadow-xl" onClick={e => e.stopPropagation()}>
+      <div className="rise flex max-h-[92dvh] w-full max-w-3xl flex-col rounded-2xl bg-surface shadow-xl" onClick={e => e.stopPropagation()}>
         <header className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
           <div><h2 id="new-title" className="text-lg font-semibold">New brand model</h2>
             <p className="mt-1 text-sm text-text-2">Choose a starting point. Every path uses the same configuration steps.</p></div>
           <button type="button" aria-label="Close" onClick={onClose} className="rounded p-1 text-text-3 hover:bg-surface-2 hover:text-text"><X size={16} /></button>
         </header>
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
-        <div className="grid gap-3 sm:grid-cols-3">
-          {([['copy', 'Use a template', 'Start from a previously saved model', Copy], ['blank', 'Start from scratch', 'Blank configuration', Plus], ['import', 'Import a model · exploratory', 'Future scope — AI proposes a structure for review', Upload]] as const).map(([id, t, d, Icon]) => (
-            <button type="button" key={id} aria-pressed={mode === id} disabled={id === 'copy' && !models.length} onClick={() => setMode(id)}
-              className={cx('flex h-full items-start gap-3 rounded-md border p-3.5 text-left transition-colors disabled:opacity-40', mode === id ? 'border-brand bg-brand-soft/50 ring-1 ring-brand' : 'border-border-strong hover:border-text')}>
-              <span className={cx('grid h-8 w-8 shrink-0 place-items-center rounded-md', mode === id ? 'bg-brand text-white' : 'bg-surface-2 text-brand')}><Icon size={15} /></span>
-              <span className="min-w-0"><span className="block whitespace-nowrap text-[13px] font-semibold">{t}</span><span className="mt-0.5 block text-xs text-text-2">{d}</span></span>
+        <div role="radiogroup" aria-label="Starting point" className="grid gap-3 sm:grid-cols-3">
+          {([['copy', 'Use a template', 'Start from a previously saved model.', Copy], ['blank', 'Start from scratch', 'Begin with a blank configuration.', Plus], ['import', 'Import a model', 'Exploratory. AI proposes a structure for review.', Upload]] as const).map(([id, t, d, Icon]) => (
+            <button type="button" role="radio" key={id} aria-checked={mode === id} disabled={id === 'copy' && !models.length} onClick={() => setMode(id)}
+              className={cx('relative flex min-h-[116px] flex-col items-start gap-1.5 rounded-xl border bg-surface p-4 text-left transition-colors disabled:opacity-40', mode === id ? 'border-brand ring-1 ring-brand' : 'border-border hover:border-border-strong')}>
+              <span className="flex w-full items-center justify-between gap-2"><Icon size={18} className={mode === id ? 'text-brand' : 'text-text-2'} />
+                <span aria-hidden className={cx('grid h-5 w-5 place-items-center rounded-full border', mode === id ? 'border-brand bg-brand text-white' : 'border-border-strong')}>{mode === id && <Check size={12} />}</span></span>
+              <span className="mt-1 block text-[14px] font-semibold leading-snug">{t}</span>
+              <span className="block text-[12.5px] leading-snug text-text-2">{d}</span>
             </button>
           ))}
         </div>
         {mode === 'copy' && models.length > 0 && (
-          <div>
+          <div className="max-w-sm">
             <Field label="Template" hint={src ? `${src.inds.length} indication${src.inds.length > 1 ? 's' : ''} · ${Array.from(new Set(src.inds.map(i => i.arch))).join(' + ')} · ${src.version}` : undefined}>
               <select className={inputCls()} value={from} onChange={e => setFrom(e.target.value)}>
                 {models.map(m => <option key={m.id} value={m.id}>{m.brand} {m.market} · {m.version}</option>)}
@@ -3175,7 +3177,7 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
           <div className="p-5">
             <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Configuration</p>
             <div className="mt-3 flex items-center gap-3">
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border"><div className="h-full rounded-full bg-brand transition-all" style={{ width: `${(doneCount / (LAST - 1)) * 100}%` }} /></div>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border"><div className="h-full rounded-full bg-navy transition-all" style={{ width: `${(doneCount / (LAST - 1)) * 100}%` }} /></div>
               <span className="font-mono text-xs text-text-2">{doneCount}/{LAST - 1}</span>
             </div>
           </div>
@@ -3188,10 +3190,10 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
                 <li key={s.id} data-tour={s.id === LAST ? 'coe-review' : undefined} className="shrink-0">
                   <button type="button" onClick={() => go(s.id)} disabled={locked} aria-current={s.id === stage ? 'step' : undefined}
                     title={locked ? `Complete ${STAGES[firstOpen - 1].title} first` : undefined}
-                    className={cx('flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed', s.id === stage ? 'bg-surface text-brand shadow-sm ring-1 ring-border' : locked ? 'opacity-55' : 'text-text hover:bg-surface-2')}>
+                    className={cx('flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed', s.id === stage ? 'bg-surface text-text shadow-sm ring-1 ring-border' : locked ? 'opacity-55' : 'text-text hover:bg-surface-2')}>
                     <span className={cx('grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold',
                       st === 'done' && 'bg-ok text-white', st === 'error' && 'bg-err text-white',
-                      st === 'current' && 'bg-brand text-white', st === 'todo' && 'border border-border-strong text-text-2')}>
+                      st === 'current' && 'bg-navy text-white', st === 'todo' && 'border border-border-strong text-text-2')}>
                       {st === 'done' ? <Check size={13} strokeWidth={3} /> : st === 'error' ? '!' : locked ? <Lock size={11} /> : s.id}
                     </span>
                     <span className="min-w-0">
