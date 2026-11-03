@@ -2,7 +2,8 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { createPortal } from 'react-dom'
 import type { ComponentType } from 'react'
 import { scrollFrameTop } from '../../frame'
-import { ArrowLeft, ArrowRight, Check, PanelRightOpen, Save } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, Maximize2, Minimize2, PanelRightOpen, Save, SlidersHorizontal } from 'lucide-react'
+import { CountryCompare, FunnelTable, PipelineView } from './Extras'
 import { DEFAULT_MODEL, SEED_EVENTS, SEED_SCENARIOS, fySum, revenue, scenarioLayer, workingLayer } from './engine'
 import type { DriverId, EventDef, ModelCfg, OutputId, Scenario } from './engine'
 import { Btn, Tag, cx, field } from './ui'
@@ -30,7 +31,7 @@ type View = AgentView | 'Actuals'
 const STEPS: View[] = ['Overview', 'Assumptions', 'Events', 'Scenarios', 'Sensitivity', 'Goal seek', 'Summary', 'Review']
 // Tab names shown to forecasters; internal ids stay stable for the assistant.
 // CR-004: analytics layer below the workflow tabs. Tab content is defined in follow-up change requests.
-const ANALYTICS = ['Patient Funnel', 'Performance Dashboard', 'Sales Drivers', 'Judgement Layer', 'Long Range Plan', 'Competition', 'Financial Bridges', 'Needs-to-Meet', 'GTN Analysis']
+const ANALYTICS = ['Patient Funnel', 'Performance Dashboard', 'Sales Drivers', 'Judgement Layer', 'Long Range Plan', 'Competition', 'Financial Bridges', 'Needs-to-Meet', 'GTN Analysis', 'Markets']
 // Tab structure per the forecaster team's reference: eight tabs; Actuals under Baseline dashboard, Analytics under Forecast workspace.
 const GROUPS: { id: string; items: string[] }[] = [
   { id: 'Baseline dashboard', items: ['Overview', 'Actuals'] }, { id: 'Forecast workspace', items: ['Assumptions', ...ANALYTICS] },
@@ -45,7 +46,7 @@ const TOUR: (TourStep & { view: View })[] = [
   { view: 'Overview', target: 'chart', title: 'Quarterly view and richer hover', body: 'Switch Monthly · Quarterly · Annual. Hover any point to see the value, %G YoY and % of budget for that period.' },
   { view: 'Overview', target: 'trend', title: 'Can you depend on the trend?', body: 'One verdict per metric (Reliable, Watch or Don’t rely), from a backtest of recent months. Show evidence opens the month-by-month misses.' },
   { view: 'Overview', target: 'bridge', title: 'Five default modules in the forecast map', body: 'Every model carries the revenue bridge: weighted gross price, total underlying demand, Δ inventory, unexplained difference and exchange rates. Click one to open it.' },
-  { view: 'Assumptions', target: 'subtabs', title: 'Forecast workspace and Analytics', body: 'Edit drivers and modules here; yellow cells are yours to change. The nine Analytics views sit beside Workspace in this row.' },
+  { view: 'Assumptions', target: 'subtabs', title: 'Forecast workspace and Analytics', body: 'Edit drivers and modules here; yellow cells are yours to change. The ten Analytics views sit beside Workspace in this row.' },
   { view: 'Events', target: 'add-event', title: 'Category, then event type', body: 'New events take a category and a matching event type. MFN Policy Implementation under Pricing adds a sub-stratification.' },
   { view: 'Summary', target: 'summary', title: 'One comparison table', body: 'Summary is now just the scenario comparison, with the revenue bridge rows (TUD, Δ inventory, unexplained, gross) for every scenario.' },
   { view: 'Summary', target: 'bottombar', title: 'Save draft lives at the bottom', body: 'The saved state, Save draft and Next stay in this bar on every tab. That’s the tour; reopen it any time from What’s new on Your forecasts.' },
@@ -74,6 +75,13 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
   const [selId, setSelId] = useState('sc2')
   const [metric, setMetric] = useState<OutputId>(model.outputs[0]!)
   const [presenting, setPresenting] = useState(false)
+  const [order, setOrder] = useState<string[]>(GROUPS.map(g => g.id))
+  const [hidden, setHidden] = useState<string[]>([])
+  const [custom, setCustom] = useState(false)
+  const [full, setFull] = useState(false)
+  useEffect(() => { const h = () => setFull(!!document.fullscreenElement); document.addEventListener('fullscreenchange', h); return () => document.removeEventListener('fullscreenchange', h) }, [])
+  const toggleFull = () => { try { if (document.fullscreenElement) void document.exitFullscreen(); else void document.documentElement.requestFullscreen() } catch { /* unsupported */ } }
+  const move = (id: string, d: number) => setOrder(o => { const i = o.indexOf(id), j = i + d; if (j < 0 || j >= o.length) return o; const n = [...o]; [n[i], n[j]] = [n[j]!, n[i]!]; return n })
   const [driverDirty, setDriverDirty] = useState(false)
   const actions = useRef<DriverActions | null>(null)
   const snapshot = useMemo(() => JSON.stringify({ edits, events, scenarios }), [edits, events, scenarios])
@@ -150,11 +158,16 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
           {/* Two levels: a few global tabs, and one sub-tab row for the active group. */}
           <nav data-tour="tabs" aria-label="Forecast sections" className="mx-auto max-w-[1240px] overflow-x-auto px-6">
             <div role="tablist" className="flex min-w-max items-end gap-1">
-              {GROUPS.map(g => (
+              {order.map(id => GROUPS.find(g => g.id === id)!).filter(g => !hidden.includes(g.id) || g.id === group).map(g => (
                 <button key={g.id} type="button" role="tab" aria-selected={g.id === group} onClick={() => g.id !== group && go(g.items[0] as View)}
                   className={cx('-mb-px whitespace-nowrap border-b-2 px-3.5 py-2.5 text-[13.5px] font-semibold transition-colors', g.id === group ? 'border-brand text-brand' : 'border-transparent text-text-2 hover:text-text')}>{g.id}</button>
               ))}
+              <button type="button" onClick={() => setCustom(c => !c)} aria-expanded={custom} title="Customise tabs" className="mb-1 ml-auto inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12.5px] font-semibold text-text-2 hover:bg-surface-2 hover:text-brand"><SlidersHorizontal size={14} />Customise</button>
+              <button type="button" onClick={toggleFull} title={full ? 'Exit full screen' : 'Full screen'} aria-label={full ? 'Exit full screen' : 'Full screen'} className="mb-1 grid h-8 w-8 shrink-0 place-items-center rounded-full text-text-2 hover:bg-surface-2 hover:text-brand">{full ? <Minimize2 size={15} /> : <Maximize2 size={15} />}</button>
             </div>
+            {custom && <div className="mb-3 rounded-2xl border border-border bg-surface p-4 shadow-card"><p className="text-[13px] font-semibold">Customise your tabs</p><p className="mt-0.5 text-[12px] text-text-3">Show, hide and reorder the top-level tabs. Your choice applies to this forecast only.</p>
+              <ul className="mt-3 grid gap-1.5 sm:grid-cols-2">{order.map((id, i) => <li key={id} className="flex items-center gap-2 rounded-lg border border-border px-3 py-1.5 text-[13px]"><label className="flex flex-1 items-center gap-2"><input type="checkbox" checked={!hidden.includes(id)} disabled={id === group} onChange={() => setHidden(h => h.includes(id) ? h.filter(x => x !== id) : [...h, id])} />{id}</label><button type="button" aria-label={'Move ' + id + ' left'} disabled={i === 0} onClick={() => move(id, -1)} className="text-text-3 hover:text-brand disabled:opacity-30"><ChevronLeft size={15} /></button><button type="button" aria-label={'Move ' + id + ' right'} disabled={i === order.length - 1} onClick={() => move(id, 1)} className="text-text-3 hover:text-brand disabled:opacity-30"><ChevronRight size={15} /></button></li>)}</ul>
+              <button type="button" onClick={() => { setOrder(GROUPS.map(g => g.id)); setHidden([]) }} className="mt-3 text-[12.5px] font-semibold text-brand hover:underline">Reset to default</button></div>}
           </nav>
           {subs.length > 1 && (
             <div className="border-t border-border bg-background">
@@ -187,7 +200,10 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
       )}
 
       {an ? (
-        <div className="mx-auto max-w-[1240px] px-6 py-8">
+        an === 'Patient Funnel' ? <FunnelTable calc={calc} scenarios={scenarios} />
+        : an === 'Long Range Plan' ? <PipelineView />
+        : an === 'Markets' ? <CountryCompare calc={calc} scenarios={scenarios} />
+        : <div className="mx-auto max-w-[1240px] px-6 py-8">
           <div className="grid place-items-center rounded-lg border border-dashed border-border-strong bg-surface-2/50 px-6 py-16 text-center">
             <div><p className="text-[15px] font-semibold">{an}</p><p className="mt-1 text-[13px] text-text-3">Tab content is defined in a follow-up change request.</p>
               <Btn variant="secondary" className="mt-4" onClick={() => go(view)}>Back to {LABEL[view].toLowerCase()}</Btn></div>
