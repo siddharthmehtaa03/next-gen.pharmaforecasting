@@ -1010,34 +1010,34 @@ function AppFrame({ onHome, items, active, flow, header, collab, onCollab, foote
   useEffect(() => { if (collab) setSize('md') }, [collab])
   const w = open ? 244 : 76
   return (
-    <div className="h-dvh overflow-hidden bg-[#eceef3]">
+    <div className="h-dvh overflow-hidden bg-navy">
       <nav aria-label={`${flow} navigation`}
         className={'fixed inset-y-0 left-0 z-50 flex flex-col py-4 transition-[width] duration-200'} style={{ width: w }}>
-        <button type="button" onClick={onHome} aria-label="Pfizer · Go to home" className={cx('mb-6 flex shrink-0 flex-col justify-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-brand', open ? 'mx-4 items-start gap-1.5 px-1.5' : 'mx-auto h-10 items-center px-0')}>
+        <button type="button" onClick={onHome} aria-label="Pfizer · Go to home" className={cx('mb-6 flex shrink-0 flex-col justify-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-white', open ? 'mx-4 items-start gap-1.5 px-1.5' : 'mx-auto h-10 items-center px-0')}>
           {open
-            ? <><img src={pfizerLogo} alt="" className="h-9 w-auto select-none" draggable={false} />
-                <span className="min-w-0 text-left leading-tight"><span className="block truncate text-[13px] font-semibold tracking-tight text-text">NextGen Forecasting</span><span className="block text-[11px] text-text-3">{flow}</span></span></>
-            : <img src={pfizerMark} alt="" className="h-8 w-8 select-none" draggable={false} />}
+            ? <><img src={pfizerLogo} alt="" className="h-9 w-auto select-none brightness-0 invert" draggable={false} />
+                <span className="min-w-0 text-left leading-tight"><span className="block truncate text-[13px] font-semibold tracking-tight text-white">NextGen Forecasting</span><span className="block text-[11px] text-white/70">{flow}</span></span></>
+            : <img src={pfizerMark} alt="" className="h-8 w-8 select-none brightness-0 invert" draggable={false} />}
         </button>
         <ul className={cx('flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto', open ? 'px-3' : 'items-center px-0')}>
           {items.map((it, k) => {
             const on = active === it.id
             return (
               <Fragment key={it.id}>
-                {k === 1 && <li aria-hidden className={cx('my-1.5 h-px bg-border-strong/70', open ? 'mx-2' : 'w-8')} />}
+                {k === 1 && <li aria-hidden className={cx('my-1.5 h-px bg-white/25', open ? 'mx-2' : 'w-8')} />}
                 <li className={open ? '' : 'w-full flex justify-center'}>
                   <button type="button" onClick={it.go} aria-current={on ? 'page' : undefined} title={open ? undefined : it.label}
-                    className={cx('flex h-11 items-center gap-3 rounded-xl text-[13.5px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand', open ? 'w-full px-3' : 'w-11 justify-center', on ? 'bg-surface text-brand shadow-[0_1px_2px_rgba(16,24,40,0.08)] ring-1 ring-border' : 'text-text-2 hover:bg-black/[0.05] hover:text-text')}>
+                    className={cx('flex h-11 items-center gap-3 rounded-xl text-[13.5px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white', open ? 'w-full px-3' : 'w-11 justify-center', on ? 'bg-white text-navy shadow-sm' : 'text-white/85 hover:bg-white/10 hover:text-white')}>
                     <it.icon size={18} className="shrink-0" />{open && <span className="truncate">{it.label}</span>}
                   </button>
                   {open && it.sub && (
-                    <div className="ml-[22px] mt-1 border-l border-border-strong/70 pl-2.5">
-                      <button type="button" onClick={it.sub.onNew} className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-[12.5px] font-medium text-text hover:bg-black/[0.05]"><SquarePen size={13} />New chat</button>
+                    <div className="ml-[22px] mt-1 border-l border-white/25 pl-2.5">
+                      <button type="button" onClick={it.sub.onNew} className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-[12.5px] font-medium text-white hover:bg-white/10"><SquarePen size={13} />New chat</button>
                       {it.sub.items.length > 0 && <ul className="max-h-[40dvh] space-y-0.5 overflow-y-auto">{it.sub.items.map(t => (
-                        <li key={t.id} className={cx('group/t relative flex h-8 items-center rounded-lg', t.active ? 'bg-surface' : 'hover:bg-[#e2e5ec]')}>
-                          <button type="button" onClick={t.go} aria-current={t.active ? 'page' : undefined} title={t.label} className={cx('flex h-8 min-w-0 flex-1 items-center rounded-lg px-2 text-left text-[12.5px]', t.active ? 'font-medium text-brand' : 'text-text-2 hover:text-text')}><span className="truncate">{t.label}</span></button>
-                          <span className={cx('absolute inset-y-0 right-0 hidden items-center gap-0.5 rounded-r-lg bg-gradient-to-l to-transparent pl-4 pr-1 group-focus-within/t:flex group-hover/t:flex', t.active ? 'from-surface via-surface' : 'from-[#e2e5ec] via-[#e2e5ec]')}>
-                            <button type="button" onClick={t.dup} aria-label={`Duplicate ${t.label}`} title="Duplicate" className="grid h-6 w-6 place-items-center rounded-md text-text-3 hover:bg-black/[0.06] hover:text-text"><Copy size={12} /></button>
+                        <li key={t.id} className={cx('group/t relative flex h-8 items-center rounded-lg', t.active ? 'bg-white/15' : 'hover:bg-white/10')}>
+                          <button type="button" onClick={t.go} aria-current={t.active ? 'page' : undefined} title={t.label} className={cx('flex h-8 min-w-0 flex-1 items-center rounded-lg px-2 text-left text-[12.5px]', t.active ? 'font-semibold text-white' : 'text-white/80 hover:text-white')}><span className="truncate">{t.label}</span></button>
+                          <span className={cx('absolute inset-y-0 right-0 hidden items-center gap-0.5 rounded-r-lg bg-gradient-to-l to-transparent pl-4 pr-1 group-focus-within/t:flex group-hover/t:flex', t.active ? 'from-navy via-navy' : 'from-navy via-navy')}>
+                            <button type="button" onClick={t.dup} aria-label={`Duplicate ${t.label}`} title="Duplicate" className="grid h-6 w-6 place-items-center rounded-md text-white/70 hover:bg-white/15 hover:text-white"><Copy size={12} /></button>
                             <button type="button" onClick={t.del} aria-label={`Delete ${t.label}`} title="Delete" className="grid h-6 w-6 place-items-center rounded-md text-text-3 hover:bg-err-soft hover:text-err"><Trash2 size={12} /></button>
                           </span></li>))}</ul>}
                     </div>
@@ -1049,9 +1049,9 @@ function AppFrame({ onHome, items, active, flow, header, collab, onCollab, foote
         </ul>
         <div className={cx('mt-2 flex shrink-0', open ? 'px-3' : 'justify-center')}>
           <button data-tour="rail-toggle" type="button" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-label={open ? 'Collapse navigation' : 'Expand navigation'} title={open ? 'Collapse' : 'Expand'}
-            className="grid h-9 w-9 place-items-center rounded-lg text-text-2 outline-none hover:bg-black/[0.05] hover:text-text focus-visible:ring-2 focus-visible:ring-brand">{open ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}</button>
+            className="grid h-9 w-9 place-items-center rounded-lg text-white/85 outline-none hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white">{open ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}</button>
         </div>
-        <div className={cx('mt-2 flex shrink-0 items-center gap-3', open ? 'px-5' : 'justify-center')}>{footer}{open && <span className="min-w-0 leading-tight"><span className="block truncate text-[13px] font-medium text-text">{ME}</span><span className="block text-[11px] text-text-3">Super Admin</span></span>}</div>
+        <div className={cx('mt-2 flex shrink-0 items-center gap-3', open ? 'px-5' : 'justify-center')}>{footer}{open && <span className="min-w-0 leading-tight"><span className="block truncate text-[13px] font-medium text-white">{ME}</span><span className="block text-[11px] text-white/70">Super Admin</span></span>}</div>
       </nav>
       <div className="flex h-full gap-2 py-2 pr-2 transition-[padding] duration-200" style={{ paddingLeft: w }}>
         <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-2xl bg-surface shadow-[0_1px_3px_rgba(16,24,40,0.06)]">
@@ -1833,7 +1833,7 @@ function Landing({ onCoE, onForecast }: { onCoE: () => void; onForecast: () => v
       <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-6 pb-16">
         <div className="flex items-center gap-2">
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/70">Integrated Forecasting</p>
-          <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-semibold tracking-wide text-white">MVP prototype</span>
+          <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold tracking-wide text-white">MVP prototype</span>
         </div>
         <h1 className="mt-4 text-center font-display text-4xl font-bold tracking-tight text-white sm:text-5xl">
           Build the model once. <span className="text-[#68d1ff]">Forecast inside it.</span>
@@ -1848,12 +1848,12 @@ function Landing({ onCoE, onForecast }: { onCoE: () => void; onForecast: () => v
             return (
               <div key={r.id} onClick={r.live ? go : soon} style={{ animationDelay: `${i * 70}ms` }} className={cx('rise group flex cursor-pointer flex-col rounded-2xl border p-7 transition-all duration-200 hover:-translate-y-1', r.live ? 'border-white/15 bg-white/[0.07] hover:border-[#68d1ff]/70 hover:bg-white/[0.12] hover:shadow-[0_24px_48px_-20px_rgba(0,0,0,0.6)]' : 'border-dashed border-white/25 bg-white/[0.03] hover:bg-white/[0.07]')}>
                 <div className="flex items-start justify-between gap-2">
-                  <span className={cx('grid h-11 w-11 place-items-center rounded-xl font-display text-lg font-bold transition-transform duration-200 group-hover:scale-105', r.live ? 'bg-brand text-white ring-1 ring-white/25' : 'bg-white/10 text-white')}>{i + 1}</span>
-                  <span className={cx('rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide', r.live ? 'bg-[#68d1ff]/20 text-[#aee3ff]' : 'bg-white/10 text-white/70')}>{r.live ? 'Available' : 'Concept'}</span>
+                  <span className={cx('grid h-11 w-11 place-items-center rounded-xl font-display text-lg font-bold transition-transform duration-200 group-hover:scale-105', r.live ? 'bg-white text-navy' : 'bg-white/10 text-white')}>{i + 1}</span>
+                  <span className={cx('rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide', r.live ? 'bg-[#68d1ff]/20 text-[#aee3ff]' : 'bg-white/15 text-white')}>{r.live ? 'Available' : 'Concept'}</span>
                 </div>
-                <p className="mt-5 text-[11px] font-semibold uppercase tracking-wider text-white/60">{r.who}</p>
+                <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-white/75">{r.who}</p>
                 <h2 className="mt-1.5 text-xl font-bold tracking-tight text-white">{r.title}</h2>
-                <p className="mt-2 flex-1 text-sm text-white/75">{r.desc}</p>
+                <p className="mt-2 flex-1 text-[15px] leading-relaxed text-white/85">{r.desc}</p>
                 {r.live
                   ? <button type="button" onClick={e => { e.stopPropagation(); go() }} className="mt-6 inline-flex items-center gap-2 self-start rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-brand hover:bg-brand-soft">Get started <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" /></button>
                   : <button type="button" onClick={e => { e.stopPropagation(); soon() }} className="mt-6 inline-flex items-center gap-2 self-start rounded-full border-2 border-white/40 px-5 py-2.5 text-sm font-semibold text-white hover:border-white hover:bg-white/10">Coming soon <ArrowRight size={16} /></button>}
@@ -5112,7 +5112,7 @@ function ProfileMenu({ onAdmin, onLogout, onTour, placement }: { onAdmin: () => 
   return (
     <div ref={ref} className="relative">
       <button data-tour="profile" type="button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(v => !v)} title={`${ME} · Super Admin`}
-        className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-full text-xs font-semibold text-white outline-none', placement === 'rail' ? 'bg-brand-dark ring-1 ring-black/5 focus-visible:ring-2 focus-visible:ring-brand' : 'bg-brand-dark ring-offset-2 focus-visible:ring-2 focus-visible:ring-brand')}>JA</button>
+        className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-full text-xs font-semibold outline-none', placement === 'rail' ? 'bg-white text-navy ring-2 ring-white/40 focus-visible:ring-white' : 'bg-brand-dark text-white ring-offset-2 focus-visible:ring-2 focus-visible:ring-brand')}>JA</button>
       {open && (
         <div role="menu" className={cx('rise absolute z-[60] w-64 overflow-hidden rounded-2xl border border-border bg-surface shadow-card shadow-xl', placement === 'rail' ? 'bottom-0 left-12' : 'right-0 top-11')}>
           <div className="border-b border-border px-4 py-3">

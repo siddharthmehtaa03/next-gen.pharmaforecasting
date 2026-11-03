@@ -26,3 +26,6 @@ logs/
 /figma-make-app-code.zip
 /LES_Context/
 package-lock.json
+
+.agents/
+skills-lock.json
