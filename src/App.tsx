@@ -1027,16 +1027,16 @@ function AppFrame({ onHome, items, active, flow, header, collab, onCollab, foote
                 {k === 1 && <li aria-hidden className={cx('my-1.5 h-px bg-border-strong/50', open ? 'mx-2' : 'w-8')} />}
                 <li className={open ? '' : 'w-full flex justify-center'}>
                   <button type="button" onClick={it.go} aria-current={on ? 'page' : undefined} title={open ? undefined : it.label}
-                    className={cx('flex h-11 items-center gap-3 rounded-xl text-[13.5px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand', open ? 'w-full px-3' : 'w-11 justify-center', on ? 'bg-surface text-text shadow-sm ring-1 ring-border' : 'text-text-2 hover:bg-black/[0.05] hover:text-text')}>
+                    className={cx('flex h-11 items-center gap-3 rounded-xl text-[13.5px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand', open ? 'w-full px-3' : 'w-11 justify-center', on ? 'bg-brand-soft font-semibold text-navy' : 'text-text-2 hover:bg-surface-2 hover:text-text')}>
                     <it.icon size={18} className="shrink-0" />{open && <span className="truncate">{it.label}</span>}
                   </button>
                   {open && it.sub && (
                     <div className="ml-[22px] mt-1 border-l border-border-strong/50 pl-2.5">
                       <button type="button" onClick={it.sub.onNew} className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-[12.5px] font-medium text-text hover:bg-black/[0.05]"><SquarePen size={13} />New chat</button>
                       {it.sub.items.length > 0 && <ul className="max-h-[40dvh] space-y-0.5 overflow-y-auto">{it.sub.items.map(t => (
-                        <li key={t.id} className={cx('group/t relative flex h-8 items-center rounded-lg', t.active ? 'bg-surface' : 'hover:bg-black/[0.05]')}>
+                        <li key={t.id} className={cx('group/t relative flex h-8 items-center rounded-lg', t.active ? 'bg-brand-soft' : 'hover:bg-surface-2')}>
                           <button type="button" onClick={t.go} aria-current={t.active ? 'page' : undefined} title={t.label} className={cx('flex h-8 min-w-0 flex-1 items-center rounded-lg px-2 text-left text-[12.5px]', t.active ? 'font-semibold text-text' : 'text-text-2 hover:text-text')}><span className="truncate">{t.label}</span></button>
-                          <span className={cx('absolute inset-y-0 right-0 hidden items-center gap-0.5 rounded-r-lg bg-gradient-to-l to-transparent pl-4 pr-1 group-focus-within/t:flex group-hover/t:flex', t.active ? 'from-surface via-surface' : 'from-rail via-rail')}>
+                          <span className={cx('absolute inset-y-0 right-0 hidden items-center gap-0.5 rounded-r-lg bg-gradient-to-l to-transparent pl-4 pr-1 group-focus-within/t:flex group-hover/t:flex', t.active ? 'from-brand-soft via-brand-soft' : 'from-surface via-surface')}>
                             <button type="button" onClick={t.dup} aria-label={`Duplicate ${t.label}`} title="Duplicate" className="grid h-6 w-6 place-items-center rounded-md text-text-3 hover:bg-black/[0.06] hover:text-text"><Copy size={12} /></button>
                             <button type="button" onClick={t.del} aria-label={`Delete ${t.label}`} title="Delete" className="grid h-6 w-6 place-items-center rounded-md text-text-3 hover:bg-err-soft hover:text-err"><Trash2 size={12} /></button>
                           </span></li>))}</ul>}
@@ -3190,7 +3190,7 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
                 <li key={s.id} data-tour={s.id === LAST ? 'coe-review' : undefined} className="shrink-0">
                   <button type="button" onClick={() => go(s.id)} disabled={locked} aria-current={s.id === stage ? 'step' : undefined}
                     title={locked ? `Complete ${STAGES[firstOpen - 1].title} first` : undefined}
-                    className={cx('flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed', s.id === stage ? 'bg-surface text-text shadow-sm ring-1 ring-border' : locked ? 'opacity-55' : 'text-text hover:bg-surface-2')}>
+                    className={cx('flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed', s.id === stage ? 'bg-brand-soft text-navy' : locked ? 'opacity-55' : 'text-text hover:bg-surface-2')}>
                     <span className={cx('grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold',
                       st === 'done' && 'bg-ok text-white', st === 'error' && 'bg-err text-white',
                       st === 'current' && 'bg-navy text-white', st === 'todo' && 'border border-border-strong text-text-2')}>
