@@ -268,7 +268,7 @@ export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, 
         <div className="fixed inset-0 z-[60] grid place-items-center bg-text/40 p-4" role="dialog" aria-modal="true" aria-labelledby="edit-sc-title" onClick={() => setEditing(false)}>
           <div className="rise flex h-[min(92dvh,940px)] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-background shadow-2xl" onClick={e => e.stopPropagation()}>
             <header className="flex items-center justify-between gap-3 border-b border-border bg-surface px-6 py-3.5">
-              <div><h2 id="edit-sc-title" className="text-[17px] font-semibold">Edit scenario</h2><p className="text-[12.5px] text-text-2">Events, adjustments and overrides for the selected scenario.</p></div>
+              <div><h2 id="edit-sc-title" className="text-[17px] font-semibold">Edit scenario</h2></div>
               <div className="flex items-center gap-2"><Btn onClick={() => setEditing(false)}>Done</Btn><Btn variant="ghost" onClick={() => setEditing(false)} icon={<X size={16} />} title="Close" /></div>
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{renderPart('editor')}</div>
@@ -320,8 +320,7 @@ export function ScenarioBuilder({ scenarios, calc, events, model, year, base, on
       <aside role="dialog" aria-modal="true" aria-labelledby="sb-title" className="relative flex h-full w-full max-w-[880px] flex-col bg-surface shadow-2xl">
         <header className="flex items-start justify-between gap-3 border-b border-border px-6 py-4">
           <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand"><Sparkles size={12} />Scenario builder</p>
-            <h3 id="sb-title" className="mt-0.5 text-[18px] font-semibold">Build a new scenario</h3>
-            <p className="mt-0.5 text-[13px] text-text-2">The preview updates as you go.</p></div>
+            <h3 id="sb-title" className="mt-0.5 text-[18px] font-semibold">Build a new scenario</h3></div>
           <Btn variant="ghost" onClick={onClose} icon={<X size={16} />} title="Close" />
         </header>
 

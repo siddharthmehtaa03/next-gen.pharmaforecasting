@@ -204,7 +204,6 @@ function DeleteDialog({
         onClick={e => e.stopPropagation()}
       >
         <h3 className="text-base font-semibold text-err">Delete {name}?</h3>
-        <p className="mt-1.5 text-sm text-text-2">This will remove it from your forecasts. This action cannot be undone.</p>
         <div className="mt-5 flex justify-end gap-2">
           <Btn variant="secondary" size="sm" onClick={onClose}>Cancel</Btn>
           <Btn variant="danger" size="sm" onClick={() => { onConfirm(); onClose() }}>Delete</Btn>

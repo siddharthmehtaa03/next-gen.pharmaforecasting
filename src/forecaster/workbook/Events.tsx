@@ -76,7 +76,6 @@ export default function Events() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
             <div>
               <h2 className="font-display text-[17px] font-semibold">Event register</h2>
-              <p className="text-sm text-text-2">Switch an event into the current scenario and set how likely it is.</p>
             </div>
             <div className="flex flex-wrap gap-1.5">{d.regBtns.map(b => <ProxyButton key={eid(b)} el={b} />)}</div>
           </div>

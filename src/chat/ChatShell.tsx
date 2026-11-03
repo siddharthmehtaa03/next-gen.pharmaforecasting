@@ -299,7 +299,7 @@ export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
   }
 
   const composer = (big: boolean, up: boolean) => (
-    <form onSubmit={e => { e.preventDefault(); send(q) }} className="relative rounded-2xl border border-[#0095ff]/30 bg-surface p-3 shadow-[0_0_0_4px_rgb(47_158_115/0.07)] transition-shadow focus-within:border-[#0095ff]/60 focus-within:shadow-[0_0_0_4px_rgb(47_158_115/0.14)]">
+    <form onSubmit={e => { e.preventDefault(); send(q) }} className="relative rounded-2xl border border-[#7a5cff]/30 bg-surface p-3 shadow-[0_0_0_4px_rgb(122_92_255/0.08)] transition-shadow focus-within:border-[#7a5cff]/60 focus-within:shadow-[0_0_0_4px_rgb(47_158_115/0.14)]">
       {voice === 'idle' ? (
         <textarea rows={big ? 3 : 1} value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(q) } }}
           placeholder={p.placeholder} aria-label={`Message ${AI}`}

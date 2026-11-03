@@ -17,17 +17,17 @@ export function Btn({ children, variant = 'primary', onClick, icon, disabled, si
 export function Card({ title, sub, right, children, className, pad = true, fill }: { title?: ReactNode; sub?: string; right?: ReactNode; children: ReactNode; className?: string; pad?: boolean; fill?: boolean }) {
   return (
     <section className={cx('min-w-0 rounded-2xl border border-border bg-surface shadow-card', fill && 'flex h-full flex-col', className)}>
-      {title && <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-6 py-4"><div className="min-w-0"><h3 className="font-display text-base font-semibold">{title}</h3>{sub && <p className="mt-0.5 text-[13px] text-text-2">{sub}</p>}</div>{right}</header>}
+      {title && <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-6 py-4"><div className="min-w-0"><h3 className="font-display text-base font-semibold">{title}</h3></div>{right}</header>}
       <div className={cx(pad && 'p-6', fill && 'flex flex-1 flex-col')}>{children}</div>
     </section>
   )
 }
 export function Tag({ tone = 'neutral', children }: { tone?: 'neutral' | 'brand' | 'ok' | 'warn' | 'err'; children: ReactNode }) {
-  return <span className={cx('inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide', tone === 'neutral' && 'bg-surface-2 text-text-2', tone === 'brand' && 'bg-brand-soft text-brand', tone === 'ok' && 'bg-ok-soft text-ok', tone === 'warn' && 'bg-warn-soft text-warn', tone === 'err' && 'bg-err-soft text-err')}>{children}</span>
+  return <span className={cx('inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide', tone === 'neutral' && 'bg-surface-2 text-text-2', tone === 'brand' && 'bg-surface-2 text-text', tone === 'ok' && 'bg-ok-soft text-ok', tone === 'warn' && 'bg-warn-soft text-warn', tone === 'err' && 'bg-err-soft text-err')}>{children}</span>
 }
 export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
-    <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className={cx('relative h-5 w-9 shrink-0 rounded-full transition-colors', on ? 'bg-brand' : 'bg-border-strong')}>
+    <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className={cx('relative h-5 w-9 shrink-0 rounded-full transition-colors', on ? 'bg-text' : 'bg-border-strong')}>
       <span className={cx('absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all', on ? 'left-[18px]' : 'left-0.5')} />
     </button>
   )
@@ -35,7 +35,7 @@ export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boo
 export function Seg<T extends string>({ value, options, onChange, label }: { value: T; options: { id: T; label: ReactNode }[]; onChange: (v: T) => void; label: string }) {
   return (
     <div role="radiogroup" aria-label={label} className="inline-flex flex-wrap gap-0.5 rounded-full border border-border bg-surface-2 p-1">
-      {options.map(o => <button key={o.id} type="button" role="radio" aria-checked={value === o.id} onClick={() => onChange(o.id)} className={cx('rounded-full px-3.5 py-1 text-[13px] font-medium transition-all', value === o.id ? 'bg-brand text-white shadow-sm' : 'text-text-2 hover:bg-white hover:text-brand')}>{o.label}</button>)}
+      {options.map(o => <button key={o.id} type="button" role="radio" aria-checked={value === o.id} onClick={() => onChange(o.id)} className={cx('rounded-full px-3.5 py-1 text-[13px] font-medium transition-all', value === o.id ? 'bg-text text-white shadow-sm' : 'text-text-2 hover:bg-white hover:text-text')}>{o.label}</button>)}
     </div>
   )
 }
@@ -44,7 +44,7 @@ export function Label({ children, hint, className }: { children: ReactNode; hint
 }
 export function Stat({ k, v, sub, tone }: { k: string; v: ReactNode; sub?: ReactNode; tone?: 'ok' | 'err' | 'brand' }) {
   return (
-    <div className="rounded-xl border border-border bg-surface-2 px-4 py-3.5">
+    <div className="rounded-xl border border-border bg-surface px-4 py-3.5">
       <p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">{k}</p>
       <p className={cx('mt-0.5 font-display text-[22px] font-semibold', tone === 'ok' && 'text-ok', tone === 'err' && 'text-err', tone === 'brand' && 'text-brand')}>{v}</p>
       {sub && <p className="mt-0.5 text-[12px] text-text-2">{sub}</p>}

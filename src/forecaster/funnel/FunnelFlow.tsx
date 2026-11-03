@@ -215,7 +215,6 @@ function ModelsHome({ onOpen, onLegacy }: { onOpen: (id: string) => void; onLega
       <main className="mx-auto max-w-[1100px] px-5 py-10 sm:px-8">
         <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Forecaster</p>
         <h1 className="mt-1 text-[28px] font-semibold tracking-tight">My models</h1>
-        <p className="mt-1 max-w-2xl text-sm text-text-2">Models are the organising object. Cycle and version are attributes. The flow and governance tier for each model are set by the CoE in the configurator.</p>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           {MODELS.map(m => (
             <button key={m.id} type="button" onClick={() => onOpen(m.id)} className="group rounded-2xl border border-border bg-surface shadow-card p-5 text-left transition-shadow hover:border-brand/50 hover:shadow-md">
@@ -363,7 +362,6 @@ function Orient({ model, devs, tier, gran, saved, published, onGo, onPick }: { m
     <>
       <div>
         <h1 className="text-[24px] font-semibold tracking-tight">Model home</h1>
-        <p className="mt-1 text-sm text-text-2">What changed, where the forecast sits against its trend, and which funnel metrics have moved off it.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
         {[{ k: `FY${FY} net revenue`, v: fmt('rev', rev), d: `${((rev / ly - 1) * 100).toFixed(1)}% vs FY26` }, { k: 'Deviation from baseline', v: `${rev >= revB ? '+' : '−'}${fmt('rev', Math.abs(rev - revB))}`, d: `${devs.length} logged deviations` }, { k: 'Last published', v: published.at(-1)!.name.split(' · ').at(-1)!, d: `${published.at(-1)!.at} · ${saved.length} working scenario${saved.length === 1 ? '' : 's'}` }].map(x => (
@@ -497,7 +495,7 @@ function Deviations({ model, devs, tier, filter, setFilter, add, patch, remove }
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h1 className="text-[24px] font-semibold tracking-tight">Deviations</h1><p className="mt-1 text-sm text-text-2">Every move away from the baseline: events, targets, grid edits and goal seek. Each one carries its rationale.</p></div>
+        <div><h1 className="text-[24px] font-semibold tracking-tight">Deviations</h1></div>
         <Btn icon={<Plus size={15} />} onClick={() => setForm({ label: '', node: filter && NODE[filter].kind === 'input' ? filter : 'brand', start: idxOf(2027, 0), end: null, value: '-5' })}>Add event</Btn>
       </div>
 
@@ -558,7 +556,7 @@ function Scenarios({ model, devs, setup, saved, scale, gran, onSave, onLoad }: {
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h1 className="text-[24px] font-semibold tracking-tight">Scenarios</h1><p className="mt-1 text-sm text-text-2">Save working versions as you go and compare them. Saving never publishes.</p></div>
+        <div><h1 className="text-[24px] font-semibold tracking-tight">Scenarios</h1></div>
         <div className="flex gap-2"><input aria-label="Scenario name" value={name} onChange={e => setName(e.target.value)} className={cx(field, 'w-52')} /><Btn icon={<Save size={15} />} disabled={!name.trim()} onClick={() => { onSave(name.trim()); setName(`Working ${saved.length + 1}`) }}>Save working scenario</Btn></div>
       </div>
       <Card title="Compare net revenue" right={<div className="flex flex-wrap gap-1.5">{saved.map(s => <button key={s.id} type="button" aria-pressed={cmp.includes(s.id)} onClick={() => setCmp(c => c.includes(s.id) ? c.filter(x => x !== s.id) : [...c, s.id].slice(-3))} className={cx('rounded-md border px-2 py-1 text-[12px] font-medium', cmp.includes(s.id) ? 'border-brand bg-brand-soft text-brand' : 'border-border text-text-2 hover:border-border-strong')}>{s.name}</button>)}</div>}>
@@ -620,7 +618,7 @@ function Publish({ row, model, devs, tier, saved, published, onFix, onPublish }:
   const blocked = checks.some(c => !c.ok && !c.soft)
   return (
     <>
-      <div><h1 className="text-[24px] font-semibold tracking-tight">Publish</h1><p className="mt-1 text-sm text-text-2">Publishing releases a named version to finance and the PBF team. It is separate from saving a working scenario.</p></div>
+      <div><h1 className="text-[24px] font-semibold tracking-tight">Publish</h1></div>
       <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
         <Card title="Completeness check" sub={`${TIERS[tier].label} governance · ${TIERS[tier].rule}`}>
           <ul className="space-y-2.5">{checks.map(c => <li key={c.label} className="flex items-start gap-2.5 text-[13.5px]">{c.ok ? <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-ok" /> : <CircleAlert size={16} className={cx('mt-0.5 shrink-0', c.soft ? 'text-text-3' : 'text-warn')} />}<span className={cx(!c.ok && !c.soft && 'font-medium')}>{c.label}{!c.ok && c.soft && <span className="text-text-3"> · optional</span>}</span></li>)}</ul>

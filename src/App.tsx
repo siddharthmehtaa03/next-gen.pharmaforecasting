@@ -1008,7 +1008,7 @@ type NavItem = { id: string; label: string; icon: typeof House; go: () => void; 
 /** Shared shell for every flow: a light gray rail that keeps the page breathable. Collapsed shows the Pfizer motif and icons; expanded shows the full logo and labels. */
 function AppFrame({ onHome, items, active, flow, header, collab, onCollab, footer, children, dock = 'float' }: { header: ReactNode; collab: boolean; onCollab: (v: boolean) => void; footer: ReactNode; onHome: () => void; items: NavItem[]; active: string; flow: string; children: ReactNode; dock?: 'float' | 'split' }) {
   // Labelled navigation by default on desktop so testers don't have to guess what the icons mean.
-  const [open, setOpen] = useState(() => window.innerWidth >= 1100)
+  const [open, setOpen] = useState(false)
   const [slot, setSlot] = useState<HTMLElement | null>(null)
   const [size, setSize] = useState<ChatSize>('md')
   // Split-screen panel width, adjustable by dragging the divider or with arrow keys.
@@ -1941,9 +1941,9 @@ function notesFor(models: ModelRow[]): Note[] {
 
 function Notifications({ models, onResume, fixtures }: { models: ModelRow[]; onResume: (m: ModelRow) => void; fixtures?: boolean }) {
   const [open, setOpen] = useState(false)
-  const [tab, setTab] = useState<'notes' | 'activity'>('notes')
   const [read, setRead] = useState<Set<string>>(new Set())
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
+  const [cleared, setCleared] = useState(false)
   const ref = useDismiss(open, () => setOpen(false))
   const notes = notesFor(models).filter(n => !dismissed.has(n.id)).sort((a, b) => Number(!!b.cta) - Number(!!a.cta))
   const unread = notes.filter(n => n.cta && !read.has(n.id)).length
@@ -1960,31 +1960,12 @@ function Notifications({ models, onResume, fixtures }: { models: ModelRow[]; onR
       </button>
       {open && (
         <div className="rise absolute right-0 top-11 z-40 w-[400px] max-w-[calc(100vw-24px)] overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
-          <div className="flex items-center justify-between border-b border-border px-4 pt-2">
-            <div role="tablist" aria-label="Notifications and activity" className="flex gap-1">
-              <button type="button" role="tab" aria-selected={tab === 'notes'} onClick={() => setTab('notes')}
-                className={cx('-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-[13px] font-semibold transition-colors', tab === 'notes' ? 'border-brand text-brand' : 'border-transparent text-text-2 hover:text-text')}>
-                Notifications
-                {unread > 0 && <span className="grid h-4 min-w-4 place-items-center rounded-full bg-err px-1 text-[10px] font-bold text-white">{unread}</span>}
-              </button>
-              <button type="button" role="tab" aria-selected={tab === 'activity'} onClick={() => setTab('activity')}
-                className={cx('-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-[13px] font-semibold transition-colors', tab === 'activity' ? 'border-brand text-brand' : 'border-transparent text-text-2 hover:text-text')}>
-                Recent activity
-              </button>
-            </div>
-            {tab === 'notes' && notes.length > 0 && (
-              <button type="button" onClick={() => setRead(new Set(notes.map(n => n.id)))} className="text-xs font-semibold text-brand hover:underline">Mark all read</button>
-            )}
+          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+            <p className="text-[13px] font-semibold">Notifications</p>
+            {!cleared && <button type="button" onClick={() => { setCleared(true); setRead(new Set(notes.map(n => n.id))) }} className="text-xs font-semibold text-brand hover:underline">Mark all read</button>}
           </div>
-          {tab === 'notes' ? (
-            notes.length === 0 ? (
-            <div className="px-6 py-10 text-center">
-              <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-ok-soft text-ok"><Check size={18} /></div>
-              <p className="mt-3 text-sm font-semibold">You’re all caught up</p>
-              <p className="mt-1 text-xs text-text-2">Drafts, finalised versions and availability events show up here.</p>
-            </div>
-          ) : (
-            <ul className="max-h-[420px] divide-y divide-border overflow-y-auto">
+          <div className="max-h-[460px] overflow-y-auto">
+            {cleared ? <div className="px-6 py-12 text-center"><div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-surface-2 text-text-2"><Check size={18} /></div><p className="mt-3 text-sm font-semibold">You’re all caught up</p></div> : <ul className="divide-y divide-border">
               {notes.map(n => {
                 const isUnread = !!n.cta && !read.has(n.id)
                 return (
@@ -2005,24 +1986,17 @@ function Notifications({ models, onResume, fixtures }: { models: ModelRow[]; onR
                   </li>
                 )
               })}
-            </ul>
-            )
-          ) : (
-            <div className="flex flex-col">
-              <p className="border-b border-border bg-surface-2 px-4 py-2 text-xs text-text-3">Who changed, finalised or made models available.</p>
-              <ol className="max-h-[420px] divide-y divide-border overflow-y-auto">
-                {activities.map((a, k) => (
-                  <li key={`${a.when}-${k}`} className="flex gap-3 px-4 py-3 text-sm hover:bg-background">
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-2 text-text-2"><a.icon size={14} /></span>
-                    <div className="min-w-0 flex-1">
-                      <p className="text-[13px] leading-snug"><b>{a.who}</b> <span className="text-text-2">{a.what}</span></p>
-                      <span className="mt-0.5 block text-[11px] text-text-3">{a.when}</span>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
+              {activities.map((a, k) => (
+                <li key={`${a.when}-${k}`} className="flex gap-3 px-4 py-3 text-sm hover:bg-background">
+                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-2 text-text-2"><a.icon size={14} /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] leading-snug"><b>{a.who}</b> <span className="text-text-2">{a.what}</span></p>
+                    <span className="mt-0.5 block text-[11px] text-text-3">{a.when}</span>
+                  </div>
+                </li>
+              ))}
+            </ul>}
+          </div>
         </div>
       )}
     </div>
@@ -2144,7 +2118,7 @@ function Charles({ context, chips, respond, greeting, extra, busy, busyLabel = '
             <span className={cx('ai-orb h-9 w-9 shrink-0 rounded-full', busy && 'ai-orb-busy')} aria-hidden />
             <div className="min-w-0 flex-1">
               <p title={E.label} className="flex items-center gap-1.5 text-sm font-semibold leading-tight"><E.icon size={14} className="shrink-0 text-brand" /><span className="truncate">{E.short}</span></p>
-              <p className="flex items-center gap-1.5 text-xs text-text-3"><span className={cx('h-1.5 w-1.5 shrink-0 rounded-full', busy ? 'animate-pulse bg-[#0095ff]' : 'bg-ok')} /><span className="truncate">{busy ? busyLabel : E.mode}</span></p>
+              <p className="flex items-center gap-1.5 text-xs text-text-3"><span className={cx('h-1.5 w-1.5 shrink-0 rounded-full', busy ? 'animate-pulse bg-[#7a5cff]' : 'bg-ok')} /><span className="truncate">{busy ? busyLabel : E.mode}</span></p>
             </div>
             <div className="flex shrink-0 items-center">
               {dock === 'float' && !min && <button type="button" onClick={() => setSize(size === 'lg' ? 'md' : 'lg')} title={size === 'lg' ? 'Smaller' : 'Larger'} aria-label={size === 'lg' ? 'Make the chat smaller' : 'Make the chat larger'} className="hidden h-8 w-8 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text sm:grid">{size === 'lg' ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</button>}
@@ -2169,7 +2143,7 @@ function Charles({ context, chips, respond, greeting, extra, busy, busyLabel = '
           <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">
             {chips.map(c => <button type="button" key={c} onClick={() => send(c)} className="shrink-0 rounded-full border border-border px-2.5 py-1 text-xs text-text-2 hover:border-brand hover:text-brand">{c}</button>)}
           </div>
-          <form onSubmit={e => { e.preventDefault(); send(q) }} className="relative rounded-2xl border border-[#0095ff]/30 bg-surface p-3 shadow-[0_0_0_4px_rgb(47_158_115/0.07)] transition-shadow focus-within:border-[#0095ff]/60 focus-within:shadow-[0_0_0_4px_rgb(47_158_115/0.14)]">
+          <form onSubmit={e => { e.preventDefault(); send(q) }} className="relative rounded-2xl border border-[#7a5cff]/30 bg-surface p-3 shadow-[0_0_0_4px_rgb(122_92_255/0.08)] transition-shadow focus-within:border-[#7a5cff]/60 focus-within:shadow-[0_0_0_4px_rgb(47_158_115/0.14)]">
             <textarea rows={1} value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(q) } }}
               placeholder={E.placeholder} aria-label={`Message ${E.label}`}
               className="block max-h-40 min-h-[32px] w-full resize-none bg-transparent px-1 py-1 text-[15px] outline-none placeholder:text-text-3" />
@@ -2507,7 +2481,6 @@ function ModelsHome({ fixtures, models, setModels, onOpen, onResume, notify, ai,
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight">Model workspace</h1>
-          <p className="mt-1 text-text-2">Models you created or have been given access to. Open one to continue configuring it.</p>
         </div>
         <Btn icon={<Plus size={16} />} className="shrink-0" onClick={() => setCreating(true)}>New model</Btn>
       </header>
@@ -2551,7 +2524,6 @@ function ModelsHome({ fixtures, models, setModels, onOpen, onResume, notify, ai,
                       return (
                         <th key={k} className={cx('px-3 py-2.5 font-semibold', wCls)} aria-sort={on ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
                           <button type="button" onClick={() => toggleSort(k)} className={cx('inline-flex items-center gap-1 uppercase tracking-wide outline-none hover:text-text focus-visible:text-brand', on && 'text-text')}>
-                            {k === 'updated' && <Clock size={11} className="mr-0.5 text-text-3 shrink-0" />}
                             {h}<Icon size={12} className={on ? 'text-brand' : 'opacity-60'} />
                           </button>
                         </th>
@@ -2569,8 +2541,7 @@ function ModelsHome({ fixtures, models, setModels, onOpen, onResume, notify, ai,
                   ) : (
                     <tr key={m.id} onClick={() => onResume(m)} title={`${m.status === 'Draft' ? 'Resume' : 'Open'} ${modelName(m)}`} className="group cursor-pointer border-b border-border align-middle last:border-0 hover:bg-brand-soft/30 transition-colors">
                       <td className="px-3 py-2.5">
-                        <span className="font-semibold text-text group-hover:text-brand">{modelName(m)}</span>
-                        <span className="ml-1 text-xs text-text-3">({GEO_NAME(m.market)})</span>
+                        <span className="font-semibold text-text group-hover:text-brand">{modelName(m).replace(new RegExp('\\s*\\b' + m.market + '\\b'), '')}</span>
                       </td>
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-1.5 overflow-hidden">
@@ -2589,7 +2560,6 @@ function ModelsHome({ fixtures, models, setModels, onOpen, onResume, notify, ai,
                       </td>
                       <td className="px-3 py-2.5 text-xs text-text-2 whitespace-nowrap">
                         <span className="inline-flex items-center gap-1">
-                          <Clock size={11} className="text-text-3 shrink-0" />
                           <span>{m.updated}</span>
                           <span className="text-text-3">·</span>
                           <span className="truncate max-w-[70px]">{m.by}</span>
@@ -2691,8 +2661,6 @@ function NewModelDialog({ models, onClose, onStart }: { models: ModelRow[]; onCl
             </button>
           ))}
         </div>
-        {mode === 'blank' && <p className="rounded-lg bg-surface-2 px-3.5 py-3 text-[13px] text-text-2">You’ll choose the archetype, modes, modules and data configuration yourself in the steps that follow.</p>}
-        {mode === 'copy' && <p className="rounded-lg bg-surface-2 px-3.5 py-3 text-[13px] text-text-2">Templates are models previously saved in the library. Copying one keeps its archetypes, modes and modules as your starting point, and you can change anything in the steps that follow.</p>}
         {mode === 'copy' && models.length > 0 && (
           <div>
             <Field label="Template" hint={src ? `${src.inds.length} indication${src.inds.length > 1 ? 's' : ''} · ${Array.from(new Set(src.inds.map(i => i.arch))).join(' + ')} · ${src.version}` : undefined}>
@@ -4845,34 +4813,34 @@ function useWidth<T extends HTMLElement>() {
   return [ref, w] as const
 }
 
-function FlowSankey({ rows, onPick, go, hov, setHov, id }: { rows: FlowRow[]; onPick: (id: string) => void; go: (n: number) => void; hov: string | null; setHov: (id: string | null) => void; id: string }) {
-  const [ref, cw] = useWidth<HTMLDivElement>()
-  const W = Math.max(200, cw || 280)
-  const { nodes, links, H, by, rowsShown } = useMemo(() => layoutFlow(rows, W), [rows, W])
-  const dim = (s?: string) => !!hov && !!s && s !== hov
+function FlowSankey({ rows, onPick, go, hov, setHov }: { rows: FlowRow[]; onPick: (id: string) => void; go: (n: number) => void; hov: string | null; setHov: (id: string | null) => void; id: string }) {
+  const groups = Array.from(new Set(rows.map(r => r.arch ?? 'pending'))).map(g => ({ g, rs: rows.filter(r => (r.arch ?? 'pending') === g) }))
+  const net = rows.filter(r => r.arch && r.net > 0).reduce((a, r) => a + r.net, 0)
+  const Arrow = () => <svg width="12" height="20" viewBox="0 0 12 20" className="mx-auto my-1 text-border-strong" aria-hidden><path d="M6 0v16M1.5 11.5 6 17l4.5-5.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
   return (
-    <div ref={ref} className="w-full">
-      <svg viewBox={`0 0 ${W} ${H}`} className="block w-full overflow-visible" role="img" aria-label={`Flow: ${rows.map(r => `${r.name}${r.arch ? ` on ${archName(r.arch)}` : ', no archetype yet'}`).join('; ')}`}>
-        <defs><pattern id={`${id}-hatch`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#eef5fb" /><line x1="0" y1="0" x2="0" y2="6" stroke="#a9c4e4" strokeWidth="1.5" /></pattern></defs>
-        {FLOW_ROWS.slice(0, rowsShown).map((t, r) => <text key={t} x={0} y={by(r) - 20} className="fill-text-3 font-mono" fontSize={9} fontWeight={600} letterSpacing={0.8} style={HALO}>{t.toUpperCase()}</text>)}
-        {links.map(l => <path key={l.key} d={l.d} onMouseEnter={() => setHov(l.stream)} onMouseLeave={() => setHov(null)} fill={l.pending ? `url(#${id}-hatch)` : l.hue} fillOpacity={dim(l.stream) ? 0.08 : l.pending ? 0.9 : hov === l.stream ? 0.4 : 0.22} style={{ transition: 'd .45s ease, fill-opacity .2s ease' }} />)}
-        {nodes.map(n => {
-          const y = by(n.row), chars = Math.floor(n.w / 6)
-          const fill = n.tone === 'total' ? '#000067' : n.pending ? '#ffffff' : n.tone === 'engine' ? '#3d4580' : n.hue!
-          const click = n.tone === 'stream' ? () => onPick(n.stream!) : n.pending ? () => go(2) : undefined
-          return (
-            <g key={n.key} onClick={click} onMouseEnter={() => n.stream && setHov(n.stream)} onMouseLeave={() => setHov(null)} className={click ? 'cursor-pointer' : undefined} opacity={dim(n.stream) ? 0.35 : 1}>
-              <title>{n.pending ? 'Choose an archetype in step 2' : n.label}</title>
-              <rect x={n.x} y={y} width={Math.max(2, n.w)} height={SK.BH} rx={3} fill={fill} stroke={n.pending ? '#767676' : 'none'} strokeDasharray={n.pending ? '3 2' : undefined} style={{ transition: 'x .45s ease, width .45s ease' }} />
-              {chars >= 4 && <text x={n.x + n.w / 2} y={y - 6} textAnchor="middle" fontSize={n.tone === 'total' ? 12 : 11} fontWeight={600} className={n.pending ? 'fill-warn' : 'fill-text'} style={HALO}>{clipText(n.label, chars)}</text>}
-            </g>
-          )
-        })}
-      </svg>
+    <div className="flex flex-col items-stretch" role="img" aria-label={`Flow: ${rows.map(r => `${r.name}${r.arch ? ` on ${archName(r.arch)}` : ', no archetype yet'}`).join('; ')}`}>
+      <div className="flex flex-wrap items-start justify-center gap-4">
+        {groups.map(({ g, rs }) => (
+          <div key={g} className="flex min-w-[120px] flex-1 flex-col">
+            <div className="space-y-1.5">
+              {rs.map(r => (
+                <button key={r.id} type="button" onClick={() => onPick(r.id)} onMouseEnter={() => setHov(r.id)} onMouseLeave={() => setHov(null)}
+                  className={cx('flex w-full items-center gap-2 rounded-lg border bg-surface px-2.5 py-2 text-left text-[12.5px] font-semibold', hov === r.id ? 'border-text' : 'border-border')}>
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: r.hue }} /><span className="truncate">{r.name}</span>
+                </button>
+              ))}
+            </div>
+            <Arrow />
+            {g === 'pending'
+              ? <button type="button" onClick={() => go(2)} className="rounded-lg border border-dashed border-border-strong bg-surface px-2.5 py-2 text-center text-[12.5px] font-semibold text-warn">Choose archetype</button>
+              : <div className="rounded-lg bg-surface-2 px-2.5 py-2 text-center text-[12.5px] font-semibold">{archName(g as ArchId)}</div>}
+          </div>
+        ))}
+      </div>
+      {net > 0 && <><Arrow /><div className="rounded-lg bg-text px-3 py-2.5 text-center text-[13px] font-semibold text-white">Total net revenue · {fmtFunnel(net, '$')}</div></>}
     </div>
   )
 }
-
 function ForecastFlowPanel({ c, stage, go, onPick, open, aiOpen, onOpen, onClose }: {
   c: Config; stage: number; go: (n: number) => void; canGo: (n: number) => boolean; onPick: (id: string) => void
   open: boolean; aiOpen: boolean; onOpen: () => void; onClose: () => void
@@ -4907,12 +4875,10 @@ function ForecastFlowPanel({ c, stage, go, onPick, open, aiOpen, onOpen, onClose
       {inBuild ? (
         <>
           <p className="mt-0.5 text-[15px] font-medium italic text-text-3">Not yet calculated</p>
-          <p className="mt-0.5 text-[11.5px] text-text-3">Structure is prioritised in build mode. Revenue calculates in Step 6 (Review).</p>
         </>
       ) : (
         <>
           <p className="mt-0.5 font-mono text-[26px] font-semibold leading-tight tracking-tight text-brand-dark">{net > 0 ? fmtFunnel(net, '$') : '—'}</p>
-          <p className="text-[11.5px] text-text-3">{net > 0 ? 'Annual at peak · calculated' : 'Appears once streams have archetypes'}</p>
         </>
       )}
     </div>
@@ -4943,7 +4909,7 @@ function ForecastFlowPanel({ c, stage, go, onPick, open, aiOpen, onOpen, onClose
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <div className="min-w-0"><p className="text-[13px] font-semibold">Full flow preview</p><p className="text-[11.5px] text-text-3">Updates as you configure</p></div>
+        <div className="min-w-0"><p className="text-[13px] font-semibold">Full flow preview</p></div>
         <div className="flex shrink-0 items-center gap-0.5">
           <ChartActions target="export-flow-side" title="Full flow preview" subtitle={c.brand || 'Untitled model'} />
           <button type="button" onClick={() => setBig(true)} aria-label="Expand the flow" title="Expand" className="grid h-7 w-7 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><Maximize2 size={14} /></button>

@@ -124,7 +124,7 @@ function EventForm({ initial, onSave, onCancel, model, work, metric }: { initial
       <div className="absolute inset-0 bg-text/30 backdrop-blur-[1px]" onClick={onCancel} aria-hidden />
       <aside role="dialog" aria-modal="true" aria-label={initial.id ? 'Edit event' : 'New event'} className="relative flex h-full w-full max-w-[560px] flex-col bg-surface shadow-2xl">
         <header className="flex items-start justify-between gap-3 border-b border-border px-6 py-4">
-          <div><h3 className="text-[17px] font-semibold">{initial.id ? 'Edit event' : 'New event'}</h3><p className="mt-0.5 text-[13px] text-text-2">Saved events are reusable across scenarios and stay off until you turn them on.</p></div>
+          <div><h3 className="text-[17px] font-semibold">{initial.id ? 'Edit event' : 'New event'}</h3></div>
           <Btn variant="ghost" onClick={onCancel} icon={<X size={16} />} title="Close" />
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
@@ -274,7 +274,6 @@ export function ScenariosStage({ events, scenarios, setScenarios, selId, setSelI
           <div>
             <Tag tone="brand">Scenarios</Tag>
             <h2 className="mt-2 text-[22px] font-semibold tracking-tight">Scenario configuration</h2>
-            <p className="mt-0.5 max-w-2xl text-sm text-text-2">Configure scenarios and understand their posture. Build new scenarios or adjust assumptions below.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <OutputSelect model={model} metric={metric} onChange={setMetric} />
@@ -453,8 +452,7 @@ export function GoalSeekStage({ scenarios, setScenarios, calc, selId, setSelId, 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><Tag tone="brand">Goal seek</Tag><h2 className="mt-2 text-[22px] font-semibold tracking-tight">Set the outcome, see what it takes</h2>
-          <p className="mt-0.5 text-sm text-text-2">Set target ranges in order. Nothing is saved until you apply.</p></div>
+        <div><Tag tone="brand">Goal seek</Tag><h2 className="mt-2 text-[22px] font-semibold tracking-tight">Set the outcome, see what it takes</h2></div>
         <div className="flex items-center gap-2"><Label>Scenario</Label><select aria-label="Scenario" value={sel.id} onChange={e => setSelId(e.target.value)} className={cx(field, 'w-40')}>{scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
           <Btn variant="ghost" onClick={() => setNonce(n => n + 1)} icon={<RotateCcw size={15} />}>Reset</Btn></div>
       </div>

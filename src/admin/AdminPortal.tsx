@@ -232,7 +232,7 @@ export default function AdminPortal({ notify, onBack }: { notify: Notify; onBack
     <div className="mx-auto flex w-full max-w-[1240px] flex-1 flex-col px-6 py-8">
       <button type="button" onClick={onBack} className="mb-3 flex items-center gap-1 self-start text-sm text-text-2 hover:text-text"><ArrowLeft size={14} />Model library</button>
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div><h1 className="text-[28px] font-semibold tracking-tight">Admin Portal</h1><p className="text-[13px] text-text-2">Approve access requests and manage who can use the forecaster.</p></div>
+        <div><h1 className="text-[28px] font-semibold tracking-tight">Admin Portal</h1></div>
       </header>
 
       <nav aria-label="Admin sections" className="mb-6 border-b border-border">

@@ -150,7 +150,7 @@ function RevenueView({ workingLayer, scenarioLayer, scenarioName, model, metric,
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><Tag tone="brand">Outcome · calculated</Tag><h2 className="mt-2 text-[22px] font-semibold tracking-tight">{o.label}</h2><p className="mt-0.5 max-w-2xl text-sm text-text-2">Combines every module in the forecast map. It is not edited directly. Change an assumption, or turn on events in a scenario, to move it. The reference baseline never moves.</p></div>
+        <div><Tag tone="brand">Outcome · calculated</Tag><h2 className="mt-2 text-[22px] font-semibold tracking-tight">{o.label}</h2></div>
         <OutputSelect model={model} metric={metric} onChange={setMetric} />
       </div>
       <Card title={`Monthly ${o.label.toLowerCase()}`} sub={o.unit} right={<Legend s={s} />}><ForecastChart title={`${o.label} forecast`} s={s} fmt={v => o.fmt(v, 1)} dp={0} unit={o.unit} height={320} /></Card>

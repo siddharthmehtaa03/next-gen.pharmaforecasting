@@ -782,7 +782,6 @@ function AgentDock({ onClose, insights, setInsights, addInsight, notify, ctx }: 
       ) : (
         <>
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
-            <p className="rounded-md bg-brand-soft/60 p-3 text-xs text-text-2">{tab === 'Ask Agent' ? 'Ask about this forecast. Answers use the live numbers on screen.' : `Builds what-ifs on ${ctx.scenario}. Nothing changes until you apply it.`}</p>
             {thread.map(m => (
               <div key={m.id} className="space-y-2">
                 <p className="ml-auto w-fit max-w-[85%] rounded-lg bg-text px-3 py-2 text-[13px] text-white">{m.q}</p>
@@ -1442,8 +1441,7 @@ function KnowledgeBank({ kb, setKb, onOpen }: { kb: Insight[]; setKb: SetKb; onO
   return (
     <div className="rise">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0"><h1 className="text-[28px] font-semibold tracking-tight">Knowledge bank</h1>
-          <p className="mt-1 max-w-2xl text-sm text-text-2">Charts and findings pinned from your forecasts, with the graph captured as it looked. Anyone on the brand team can comment on the assumptions behind them.</p></div>
+        <div className="min-w-0"><h1 className="text-[28px] font-semibold tracking-tight">Knowledge bank</h1></div>
         <label className="relative w-full max-w-[280px]"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-3" /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Search" aria-label="Search the knowledge bank" className="h-9 w-full rounded-md border border-border-strong bg-surface pl-8 pr-3 text-sm" /></label>
       </div>
       {!shown.length ? (
@@ -1564,7 +1562,7 @@ export function LegacyForecaster({ onHome, notify }: { onHome: () => void; notif
           {section === 'forecasts' && (
             <div className="rise">
               <div className="flex flex-wrap items-end justify-between gap-4">
-                <div><h1 className="text-[28px] font-semibold tracking-tight">My forecasts</h1><p className="mt-1 text-sm text-text-2">Brand, then forecast cycle, then scenarios. Open a cycle to summarise and compare, or a scenario to adjust it.</p></div>
+                <div><h1 className="text-[28px] font-semibold tracking-tight">My forecasts</h1></div>
                 <button type="button" onClick={() => setOpen(open.size ? new Set() : new Set([...brands.map(b => b.id), ...brands.flatMap(b => b.cycles.map(c => c.id))]))} className="text-sm font-medium text-brand">{open.size ? 'Collapse all' : 'Expand all'}</button>
               </div>
 
@@ -1655,7 +1653,6 @@ export function LegacyForecaster({ onHome, notify }: { onHome: () => void; notif
           {section === 'sources' && (
             <div className="rise">
               <h1 className="text-[28px] font-semibold tracking-tight">Data sources</h1>
-              <p className="mt-1 text-sm text-text-2">Feeds behind your forecasts and how fresh they are.</p>
               <ul className="mt-6 divide-y divide-border rounded-lg border border-border bg-surface">
                 {FEEDS.map(f => (
                   <li key={f.name} className="flex flex-wrap items-center gap-x-6 gap-y-1 px-5 py-3.5">

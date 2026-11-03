@@ -28,7 +28,6 @@ export default function Menu() {
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div>
               <h2 className="font-display text-[17px] font-semibold">Choose what you're forecasting</h2>
-              <p className="mt-0.5 text-sm text-text-2">Pick the submission, then the scenario. Every tab recalculates for your choice.</p>
             </div>
             <p className="text-xs text-text-3">{txt(d.subsCard).split('\n').find(l => /custom slots/.test(l))}</p>
           </div>
