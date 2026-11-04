@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, Check, Copy, CalendarClock, GitCompare, Lock, LockOpen, Pencil, Plus, Presentation, RotateCcw, Save, Trash2, X } from 'lucide-react'
 import {
   ACT, ACTUAL_LAYER, CURVE_LABEL, DRIVERS, DRV, EVENT_CURVE_LABEL, EVENT_SUBTYPES, EVENT_TYPES, MFN_SUB, FY, METHOD_LABEL, N, OUTPUTS, REPEAT_LABEL, UNBIASED,
@@ -56,8 +56,7 @@ export function EventsStage({ events, setEvents, scenarios, setScenarios, calc, 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><Tag tone="brand">Events</Tag><h2 className="mt-2 text-[22px] font-semibold tracking-tight">Scenario events</h2>
-          <p className="mt-0.5 max-w-2xl text-sm text-text-2">Create an event once, then add it to as many scenarios as you like. The chart shows <b className="text-text">{sel.name}</b>; each event lists the scenarios it is in.</p></div>
+        <div><h2 className="text-[26px] font-semibold tracking-tight">Scenario events</h2><p className="mt-1 text-[15px] text-text-2">Create an event once, then add it to any scenario.</p></div>
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm font-semibold">Chart scenario
             <select value={sel.id} onChange={e => setSelId(e.target.value)} aria-label="Selected scenario for events" className={cx(field, 'w-44 font-medium text-text')}>{scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
@@ -294,8 +293,7 @@ export function ScenariosStage({ events, scenarios, setScenarios, selId, setSelI
       {part === 'editor' && (
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <Tag tone="brand">Scenarios</Tag>
-            <h2 className="mt-2 text-[22px] font-semibold tracking-tight">Scenario configuration</h2>
+            <h2 className="text-[26px] font-semibold tracking-tight">Scenario configuration</h2>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <OutputSelect model={model} metric={metric} onChange={setMetric} />
@@ -474,7 +472,7 @@ export function GoalSeekStage({ scenarios, setScenarios, calc, selId, setSelId, 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><Tag tone="brand">Goal seek</Tag><h2 className="mt-2 text-[22px] font-semibold tracking-tight">Set the outcome, see what it takes</h2></div>
+        <div><h2 className="text-[26px] font-semibold tracking-tight">Set the outcome, see what it takes</h2><p className="mt-1 text-[15px] text-text-2">Set a target and see which assumption has to move.</p></div>
         <div className="flex items-center gap-2"><Label>Scenario</Label><select aria-label="Scenario" value={sel.id} onChange={e => setSelId(e.target.value)} className={cx(field, 'w-40')}>{scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
           <Btn variant="ghost" onClick={() => setNonce(n => n + 1)} icon={<RotateCcw size={15} />}>Reset</Btn></div>
       </div>
@@ -516,8 +514,7 @@ export function ReviewStage({ scenarios, selId, setSelId, calc, events, edits, w
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><Tag tone="brand">Review &amp; finalise</Tag><h2 className="mt-2 text-[22px] font-semibold tracking-tight">Why the forecast differs from the baseline</h2>
-          <p className="mt-0.5 max-w-2xl text-sm text-text-2">FY{FY} net revenue, traced from the reference baseline to the selected scenario.</p></div>
+        <div><h2 className="text-[26px] font-semibold tracking-tight">Why the forecast differs from the baseline</h2><p className="mt-1 text-[15px] text-text-2">FY{FY} net revenue, from the reference baseline to the selected scenario.</p></div>
         <div className="flex flex-wrap items-center gap-2">
           <Seg label="Scenario" value={sel.id} onChange={setSelId} options={scenarios.map(s => ({ id: s.id, label: s.name }))} />
           {sel.locked ? <Tag tone="ok"><Lock size={11} />Final · locked</Tag> : <Tag tone="neutral">Draft</Tag>}

@@ -1,4 +1,4 @@
-﻿import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import type { ScenarioPart } from './Stages'
@@ -170,8 +170,7 @@ export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><Tag tone="brand">Scenario summary</Tag><h2 className="mt-2 text-[22px] font-semibold tracking-tight">All scenarios side by side</h2>
-          <p className="mt-0.5 text-sm text-text-2">Every scenario’s funnel and figures, compared against <b className="font-semibold text-text">{base.name}</b>.</p></div>
+        <div><h2 className="text-[26px] font-semibold tracking-tight">All scenarios side by side</h2><p className="mt-1 text-[15px] text-text-2">Compared against <b className="font-semibold text-text">{base.name}</b>.</p></div>
         <div className="flex flex-wrap items-center gap-2">
             <Seg label="Year" value={String(year)} onChange={v => setYear(+v)} options={FC_YEARS.map(y => ({ id: String(y), label: `FY${y}` }))} />
             <select aria-label="Compare against" title="Scenario the others are compared against" value={base.id} onChange={e => setBaseId(e.target.value)} className={cx(field, 'h-8 w-auto max-w-[170px] pr-7 text-[13px]')}>{scenarios.map(s => <option key={s.id} value={s.id}>vs {s.name}</option>)}</select>

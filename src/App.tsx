@@ -3190,7 +3190,7 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
                 <li key={s.id} data-tour={s.id === LAST ? 'coe-review' : undefined} className="shrink-0">
                   <button type="button" onClick={() => go(s.id)} disabled={locked} aria-current={s.id === stage ? 'step' : undefined}
                     title={locked ? `Complete ${STAGES[firstOpen - 1].title} first` : undefined}
-                    className={cx('flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed', s.id === stage ? 'bg-brand-soft text-navy' : locked ? 'opacity-55' : 'text-text hover:bg-surface-2')}>
+                    className={cx('flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed', s.id === stage ? 'bg-surface text-navy ring-2 ring-navy' : locked ? 'opacity-55' : 'text-text hover:bg-surface-2')}>
                     <span className={cx('grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold',
                       st === 'done' && 'bg-ok text-white', st === 'error' && 'bg-err text-white',
                       st === 'current' && 'bg-navy text-white', st === 'todo' && 'border border-border-strong text-text-2')}>

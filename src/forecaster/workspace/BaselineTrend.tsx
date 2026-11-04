@@ -64,10 +64,7 @@ export function BaselineTrend({ onWorkspace, onEvents }: { onWorkspace: () => vo
   return (
     <div className="space-y-5">
       <header>
-        <div className="flex flex-wrap items-center gap-2">
-          <Tag tone="brand">Statistical trend</Tag><Tag tone="neutral"><Lock size={10} />Read-only · no human intervention</Tag><Tag tone="ok">Source: Doppler / Crucible</Tag>
-        </div>
-        <h2 className="mt-2 text-[26px] font-semibold tracking-tight">Baseline trend <span className="font-normal text-text-2">— what the latest trends say the full year looks like</span></h2>
+        <h2 className="text-[26px] font-semibold tracking-tight">Baseline trend</h2><p className="mt-1 text-[15px] text-text-2">What the latest trends say the full year looks like.</p>
       </header>
 
       <div className="grid divide-x divide-border overflow-hidden rounded-lg border border-border sm:grid-cols-3" role="list" aria-label="How the baseline becomes a forecast">

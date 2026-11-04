@@ -178,7 +178,7 @@ function RevenueView({ workingLayer, scenarioLayer, scenarioName, model, metric,
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><Tag tone="brand">Outcome · calculated</Tag><h2 className="mt-2 text-[22px] font-semibold tracking-tight">{o.label}</h2></div>
+        <div><h2 className="text-[26px] font-semibold tracking-tight">{o.label}</h2></div>
         <OutputSelect model={model} metric={metric} onChange={setMetric} />
       </div>
       <Card title={`Monthly ${o.label.toLowerCase()}`} sub={o.unit} right={<Legend s={s} />}>{compare?.header && <div className="mb-3 space-y-3">{compare.header}</div>}<ForecastChart title={`${o.label} forecast`} s={s} fmt={v => o.fmt(v, 1)} dp={0} unit={o.unit} height={320} range={compare?.range} /></Card>
@@ -259,13 +259,8 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2">
-            <Tag tone="brand">{d.step}</Tag>
-            {locked ? <Tag tone="neutral"><Lock size={11} />System-fed</Tag> : applied ? <Tag tone="warn"><PencilLine size={11} />Overridden</Tag> : <Tag tone="ok"><Check size={11} />System value</Tag>}
-            <Tag tone="neutral"><Lock size={11} />Formula locked</Tag>
-          </div>
-          <h2 className="mt-2 text-[22px] font-semibold tracking-tight">{d.label}</h2>
-          <p className="mt-0.5 max-w-2xl text-sm text-text-2">{d.desc} <span className="text-text-3">Source: Data Science baseline · monthly · brand level.</span></p>
+          <h2 className="text-[26px] font-semibold tracking-tight">{d.label}</h2>
+          <p className="mt-0.5 max-w-2xl text-sm text-text-2">{d.desc}</p>
         </div>
         {mode === 'overview' && !locked && <Btn onClick={onOpenAssumptions} icon={<PencilLine size={15} />}>Open in Forecast workspace</Btn>}
       </div>

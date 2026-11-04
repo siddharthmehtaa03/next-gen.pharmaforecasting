@@ -90,9 +90,8 @@ export function ScenarioDriverView({ id, scenario, setScenarios, work, layer, ev
   return (
     <div className="space-y-5">
       <div className="min-w-0">
-        <div className="flex flex-wrap items-center gap-2"><Tag tone="brand">{scenario.name}</Tag><Tag tone="neutral">{d.step}</Tag>{v !== 0 || (scenario.ovr ?? []).some(o => o.driver === id) ? <Tag tone="warn">Changed in this scenario</Tag> : <Tag tone="ok">Inherited from the forecast</Tag>}</div>
-        <h2 className="mt-2 text-[22px] font-semibold tracking-tight">{d.label}</h2>
-        <p className="mt-0.5 max-w-2xl text-sm text-text-2">{d.desc} The scenario starts from the active forecast; the line below shows how far it moves.</p>
+        <h2 className="text-[26px] font-semibold tracking-tight">{d.label}</h2>
+        <p className="mt-0.5 max-w-2xl text-sm text-text-2">{d.desc}</p>
       </div>
       <Card title={`${d.label} · ${scenario.name}`} sub={d.unit === '%' ? 'Percent' : d.unit} right={<Legend s={series} />}>
         {compare?.header && <div className="mb-3 space-y-3">{compare.header}</div>}

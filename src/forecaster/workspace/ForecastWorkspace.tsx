@@ -9,8 +9,8 @@ import type { DriverId, EventDef, Layer, ModelCfg, OutputId, Override, Scenario 
 import { Btn, COLOR, Seg, Tag, cx } from './ui'
 import { DriverWorkspace, ForecastMap } from './Drivers'
 import type { CompareProps, DriverActions, Edits, Notify, Sel } from './Drivers'
-import { LRF_SEED, LrfSummary, LrfTab } from './Lrf'
-import type { LrfState } from './Lrf'
+import { LRF_SEED, LrfEventsPanel, LrfSummary, LrfTab } from './Lrf'
+import type { LrfMetric, LrfState } from './Lrf'
 import { FullModelGrid, PeriodGrowth, ScenarioChips, defaultRange, scColor } from './WorkspaceModel'
 import { EventsStage, GoalSeekStage, ReviewStage, ScenariosStage } from './Stages'
 import { SensitivityStage } from './Analysis'
@@ -46,6 +46,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
   onPublished?: (brandId: string, scenario: string) => void }) {
   const [view, setView] = useState<View>('Overview')
   const [an, setAn] = useState<string | null>(null)
+  const [lrfStart, setLrfStart] = useState<{ metric: LrfMetric; n: number } | null>(null)
   const [anOpen, setAnOpen] = useState(false)
   const anRef = useRef<HTMLDivElement>(null)
   useEffect(() => { if (!anOpen) return; const h = (e: MouseEvent) => { if (!anRef.current?.contains(e.target as Node)) setAnOpen(false) }; document.addEventListener('mousedown', h); return () => document.removeEventListener('mousedown', h) }, [anOpen])
@@ -309,8 +310,15 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
               onPick={(sid, did) => { if (!leaveOk()) return; setScopeState(sid); if (sid !== FORECAST) setSelId(sid); if (did) selDriver(did) }} />
           </div>
         )}
-        {view === 'LRF' && <div data-tour="lrf"><LrfTab scenarios={scenarios} calc={calc} selId={selId} setSelId={setSelId} lrf={lrf} setLrf={setLrf} notify={notify} /></div>}
-        {view === 'Events' && <EventsStage events={events} setEvents={setEvents} scenarios={scenarios} setScenarios={setScenarios} calc={calc} selId={selId} setSelId={setSelId} model={model} metric={metric} setMetric={setMetric} modified={modified} notify={notify} onNext={() => go('Summary')} />}
+        {view === 'LRF' && <div data-tour="lrf"><LrfTab scenarios={scenarios} calc={calc} selId={selId} setSelId={setSelId} lrf={lrf} setLrf={setLrf} notify={notify} onEvents={m => { setLrfStart({ metric: m, n: Date.now() }); go('Events') }} /></div>}
+        {view === 'Events' && <div className="space-y-10">
+          <EventsStage events={events} setEvents={setEvents} scenarios={scenarios} setScenarios={setScenarios} calc={calc} selId={selId} setSelId={setSelId} model={model} metric={metric} setMetric={setMetric} modified={modified} notify={notify} onNext={() => go('Summary')} />
+          <section aria-labelledby="lre-title" className="space-y-3">
+            <div><h2 id="lre-title" className="font-display text-[20px] font-semibold">Long-range events</h2>
+              <p className="mt-0.5 text-[13.5px] text-text-2">Dated in Years 2–10 (FY2028–FY2036) for {(scenarios.find(s => s.id === selId) ?? scenarios[0]!).name}. They sit with the other events and feed the LRF plan.</p></div>
+            <LrfEventsPanel scenarios={scenarios} calc={calc} selId={selId} lrf={lrf} setLrf={setLrf} notify={notify} start={lrfStart} />
+          </section>
+        </div>}
         {view === 'Summary' && <div className="space-y-8">
           <ScenarioSummary uePct={ueFy(ue)} woh={woh} scenarios={scenarios} setScenarios={setScenarios} calc={calc} events={events} selId={selId} setSelId={setSelId} model={model} notify={notify} renderPart={part => <ScenariosStage events={events} scenarios={scenarios} setScenarios={setScenarios} selId={selId} setSelId={setSelId} calc={calc} workFy={work.fy} model={model} metric={metric} setMetric={setMetric} toggleFinal={toggleFinal} notify={notify} part={part} />} />
           <LrfSummary scenarios={scenarios} calc={calc} selId={selId} setSelId={setSelId} lrf={lrf} />

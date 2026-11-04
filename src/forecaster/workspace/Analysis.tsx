@@ -328,7 +328,7 @@ export function SensitivityStage({ scenarios, setScenarios, calc, selId, setSelI
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><Tag tone="brand">Sensitivity</Tag><h2 className="mt-2 text-[22px] font-semibold tracking-tight">What if assumptions were different?</h2></div>
+        <div><h2 className="text-[26px] font-semibold tracking-tight">What if assumptions were different?</h2><p className="mt-1 text-[15px] text-text-2">Test a change on a scenario before keeping it.</p></div>
         {yearSeg}
       </div>
 

@@ -250,9 +250,8 @@ export function NetSalesPriceView({ gross, trend, scenarioName }: { gross: numbe
   return (
     <div className="space-y-5">
       <div>
-        <div className="flex flex-wrap items-center gap-2"><Tag tone="brand">Net sales price</Tag><Tag tone="neutral"><Lock size={10} />View only</Tag><Tag tone="neutral">Calculated · not forecast</Tag></div>
-        <h2 className="mt-2 text-[22px] font-semibold tracking-tight">Net sales price</h2>
-        <p className="mt-0.5 max-w-2xl text-sm text-text-2">We do not forecast net sales. Net sales price is shown as a calculation from the weighted gross price and the gross-to-net (GtN) module, so leadership can see the net view without it driving the forecast.{scenarioName ? ` Showing ${scenarioName}.` : ''}</p>
+        <h2 className="text-[26px] font-semibold tracking-tight">Net sales price</h2>
+        <p className="mt-0.5 max-w-2xl text-sm text-text-2">Calculated from weighted gross price and gross-to-net. Not forecast.{scenarioName ? ` Showing ${scenarioName}.` : ''}</p>
       </div>
       <div className="grid items-center gap-3 md:grid-cols-[1fr_auto_1fr_auto_1fr]">
         <div className="rounded-lg border border-border bg-surface px-4 py-3.5"><p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Weighted gross price</p><p className="mt-0.5 font-mono text-[24px] font-semibold">{usd(gross)}</p><p className="text-[12px] text-text-3">/ pack · forecast (set in Weighted gross price)</p></div>
@@ -284,8 +283,7 @@ export function ModuleView({ id, net, ue, setUe, woh, setWoh, editable, onEdit, 
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2"><Tag tone="brand">Default module</Tag><Tag tone={m.edit ? 'warn' : 'neutral'}>{m.edit ? 'Editable' : <><Lock size={10} />{m.kind}</>}</Tag></div>
-          <h2 className="mt-2 text-[22px] font-semibold tracking-tight">{m.label}</h2>
+          <h2 className="text-[26px] font-semibold tracking-tight">{m.label}</h2>
           <p className="mt-0.5 max-w-2xl text-sm text-text-2">{DESC[id]}</p>
         </div>
         {m.edit && !editable && <Btn onClick={onEdit}>Edit in Forecast workspace</Btn>}

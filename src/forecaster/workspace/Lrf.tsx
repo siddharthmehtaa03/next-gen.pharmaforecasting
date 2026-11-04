@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
 import { FY, GTN, POP, fyAvg, fySum } from './engine'
@@ -272,15 +272,13 @@ function EventDetail({ ev, base, plan, form, setForm }: { ev: Draft; base: LrfBa
 }
 
 /* ── LRF tab ── */
-type Screen = 'assumptions' | 'funnel' | 'events'
-const SCREENS: { id: Screen; label: string }[] = [{ id: 'assumptions', label: 'LRF assumptions' }, { id: 'funnel', label: 'Patient funnel by year' }, { id: 'events', label: 'LRF events' }]
+type Screen = 'assumptions' | 'funnel'
+const SCREENS: { id: Screen; label: string }[] = [{ id: 'assumptions', label: 'LRF assumptions' }, { id: 'funnel', label: 'Patient funnel by year' }]
 
-export function LrfTab({ scenarios, calc, selId, setSelId, lrf, setLrf, notify }: { scenarios: Scenario[]; calc: Calc; selId: string; setSelId: (id: string) => void; lrf: LrfState; setLrf: (f: (s: LrfState) => LrfState) => void; notify: Notify }) {
+export function LrfTab({ scenarios, calc, selId, setSelId, lrf, setLrf, notify, onEvents }: { scenarios: Scenario[]; calc: Calc; selId: string; setSelId: (id: string) => void; lrf: LrfState; setLrf: (f: (s: LrfState) => LrfState) => void; notify: Notify; onEvents: (m: LrfMetric) => void }) {
   const [screen, setScreen] = useState<Screen>('assumptions')
   const [exp, setExp] = useState(false)
   const [range, setRange] = useState<'1-3' | '4-10' | 'all'>('1-3')
-  const [form, setForm] = useState<Draft | null>(null)
-  const [selEv, setSelEv] = useState<string | null>(null)
   const sc = scenarios.find(s => s.id === selId) ?? scenarios[0]
   const sid = sc?.id ?? selId
   const plan = lrfPlanFor(lrf, sid), base = useMemo(() => lrfBase(calc, sid), [calc, sid])
@@ -291,17 +289,7 @@ export function LrfTab({ scenarios, calc, selId, setSelId, lrf, setLrf, notify }
   const setMode = (mode: LrfPlan['mode']) => update(p => mode === 'peryear' && !p.gyEdited
     ? { ...p, mode, gy: Object.fromEntries(METRICS.map(m => [m.id, Object.fromEntries(YEARS_L.slice(1).map(y => [y, p.g[m.id]]))])) as LrfPlan['gy'] }
     : { ...p, mode })
-  const openEvent = (m: LrfMetric) => { setScreen('events'); setForm(newDraft(m)) }
-  const saveEvent = () => {
-    if (!form) return
-    const d = { ...form, name: form.name.trim() || 'LRF event' }
-    const id = d.id ?? `lev${Date.now()}`
-    update(p => ({ ...p, ev: d.id ? p.ev.map(e => e.id === id ? { ...d, id } : e) : [...p.ev, { ...d, id }] }))
-    setSelEv(id); setForm(null)
-    notify({ tone: 'ok', text: `${d.name} saved to ${sc?.name ?? 'the scenario'}. It applies ${signed(lrfGap(d, P.rate[d.metric]![Math.max(1, d.year - FY)]!).applied)} to ${MET[d.metric].label.toLowerCase()} from ${fy(d.year)}, with the carryover guard.` })
-  }
-  const events = plan.ev
-  const shown = form ?? events.find(e => e.id === selEv) ?? events[0] ?? null
+  const openEvent = (m: LrfMetric) => onEvents(m)
   const cols = (r: typeof range) => rangeYears(r).map(y => yearVals(P, y - FY))
   const vis = exp ? YEARS_L.slice(1) : YEARS_L.slice(1, 3)
   const derived = (P.net[1]! / P.net[0]! - 1) * 100
@@ -309,15 +297,8 @@ export function LrfTab({ scenarios, calc, selId, setSelId, lrf, setLrf, notify }
   return (
     <div className="space-y-6">
       <div>
-        <div className="flex flex-wrap items-center gap-2"><Tag tone="brand">LRF</Tag><Tag tone="ok">Annual</Tag><Tag>Long-range forecast</Tag>{plan.mode === 'peryear' && <Tag>Per-year %G</Tag>}</div>
-        <h2 className="mt-2 text-[24px] font-semibold tracking-tight">{screen === 'assumptions' ? (plan.mode === 'peryear' ? 'LRF assumptions — per-year growth %' : 'LRF assumptions') : screen === 'funnel' ? 'Patient funnel — by year' : 'LRF events — Years 2–10'}</h2>
-        <p className="mt-1 max-w-3xl text-[14px] text-text-2">
-          {screen === 'assumptions' ? (plan.mode === 'peryear'
-            ? 'The default holds one growth rate per metric constant across all years. Toggle to Per-year %G to set a different growth rate for each metric in each year — the whole grid becomes editable, prefilled from the constant default.'
-            : 'The long-range forecast (LRF) — the same patient funnel as Assumptions, but set annually. Each metric defaults to its year-over-year growth rate, held constant across all years. Override any rate, or layer an event.')
-            : screen === 'funnel' ? 'The full funnel for each planning year, side by side, so you can see how the plan builds: prevalent → diagnosed → treated → covered → on brand, ending in net revenue.'
-            : 'An event dated in Years 2–10 flows through every later year on its own. Because the plan already grows each metric at a constant rate, the event resolves two things against that default: how much it actually adds (carryover), and how it behaves afterward (persistence).'}
-        </p>
+        <h2 className="text-[26px] font-semibold tracking-tight">{screen === 'assumptions' ? (plan.mode === 'peryear' ? 'LRF assumptions — per-year growth %' : 'LRF assumptions') : 'Patient funnel — by year'}</h2>
+        <p className="mt-1 text-[15px] text-text-2">{screen === 'assumptions' ? (plan.mode === 'peryear' ? 'Set a growth rate for each metric in each year.' : 'The same funnel as Assumptions, set annually. Each metric holds its growth rate.') : 'Each planning year side by side, from prevalent patients to net revenue.'}</p>
       </div>
 
       <div className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-surface px-4 py-3">
@@ -407,7 +388,31 @@ export function LrfTab({ scenarios, calc, selId, setSelId, lrf, setLrf, notify }
         </Card>
       )}
 
-      {screen === 'events' && (
+    </div>
+  )
+}
+
+/* ── LRF events panel: lives in the Events tab beside the monthly events ── */
+export function LrfEventsPanel({ scenarios, calc, selId, lrf, setLrf, notify, start }: { scenarios: Scenario[]; calc: Calc; selId: string; lrf: LrfState; setLrf: (f: (s: LrfState) => LrfState) => void; notify: Notify; start?: { metric: LrfMetric; n: number } | null }) {
+  const [form, setForm] = useState<Draft | null>(null)
+  const [selEv, setSelEv] = useState<string | null>(null)
+  const sc = scenarios.find(s => s.id === selId) ?? scenarios[0]
+  const sid = sc?.id ?? selId
+  const plan = lrfPlanFor(lrf, sid), base = useMemo(() => lrfBase(calc, sid), [calc, sid])
+  const P = useMemo(() => lrfPaths(base, plan), [base, plan])
+  const update = (f: (p: LrfPlan) => LrfPlan) => setLrf(s => ({ ...s, [sid]: f(lrfPlanFor(s, sid)) }))
+  useEffect(() => { if (start) setForm(newDraft(start.metric)) }, [start?.n])
+  const saveEvent = () => {
+    if (!form) return
+    const d = { ...form, name: form.name.trim() || 'LRF event' }
+    const id = d.id ?? `lev${Date.now()}`
+    update(p => ({ ...p, ev: d.id ? p.ev.map(e => e.id === id ? { ...d, id } : e) : [...p.ev, { ...d, id }] }))
+    setSelEv(id); setForm(null)
+    notify({ tone: 'ok', text: `${d.name} saved to ${sc?.name ?? 'the scenario'}. It applies ${signed(lrfGap(d, P.rate[d.metric]![Math.max(1, d.year - FY)]!).applied)} to ${MET[d.metric].label.toLowerCase()} from ${fy(d.year)}, with the carryover guard.` })
+  }
+  const events = plan.ev
+  const shown = form ?? events.find(e => e.id === selEv) ?? events[0] ?? null
+  return (
         <div className="space-y-5">
           {!form && (
             <Card title={`LRF events · ${sc?.name ?? ''}`} sub="Dated in Years 2–10 and layered on the default growth. Each event declares how it persists." right={<Btn icon={<Plus size={14} />} onClick={() => setForm(newDraft())}>Add LRF event</Btn>} pad={false}>
@@ -451,8 +456,6 @@ export function LrfTab({ scenarios, calc, selId, setSelId, lrf, setLrf, notify }
           {form && <div className="sticky bottom-14 z-10 flex justify-end gap-2 rounded-lg border border-border bg-surface/95 px-4 py-3 backdrop-blur">
             <Btn variant="ghost" onClick={() => setForm(null)}>Cancel</Btn><Btn onClick={saveEvent}>{form.id ? 'Save event' : 'Add event'}</Btn></div>}
         </div>
-      )}
-    </div>
   )
 }
 
@@ -526,9 +529,8 @@ export function LrfSummary({ scenarios, calc, selId, setSelId, lrf }: { scenario
   return (
     <div className="space-y-5">
       <div>
-        <div className="flex flex-wrap items-center gap-2"><Tag tone="brand">Summary · patient funnel</Tag><Tag tone="ok">{rLabel} by scenario</Tag><NewBadge /></div>
-        <h2 className="mt-2 text-[22px] font-semibold tracking-tight">Patient funnel — {rLabel} by scenario</h2>
-        <p className="mt-1 max-w-3xl text-[14px] text-text-2">The same patient funnel as the LRF tab, for the long-range years side by side. Pick a scenario to see its funnels; the net-revenue outcome is shown across all scenarios so the spread is visible at a glance.</p>
+        <h2 className="text-[26px] font-semibold tracking-tight">Patient funnel — {rLabel} by scenario</h2>
+        <p className="mt-1 text-[15px] text-text-2">The long-range funnel by scenario, side by side.</p>
       </div>
       <div className="flex flex-wrap items-center gap-3">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Scenario</span>
