@@ -1,3 +1,4 @@
+import { PeakCurve } from './Extras'
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react'
@@ -359,6 +360,7 @@ export function LrfTab({ scenarios, calc, selId, setSelId, lrf, setLrf, notify, 
               </table>
             </div>
           </Card>
+          <PeakCurve years={YEARS_L} share={P.val.share} net={P.net} />
           <p className="text-[12px] text-text-3">Net revenue is computed from the rates — it is never entered. Every metric row is editable{plan.mode === 'peryear' ? ' per year' : ''}. {fy(FY)} is the base: {sc?.name ?? 'the scenario'}’s monthly forecast, so the plan starts exactly where the Forecast workspace ends.</p>
           {plan.mode === 'peryear' && <Note><b className="text-text">Per-year %G:</b> a growth rate per metric per year, prefilled from the constant so nothing is lost on toggle. Brand share can ramp +3.0% → +3.5% → +4.0% and net price step down +3.0% → +2.5% → +2.0% — impossible in constant mode. Overrides and events still apply on top; net revenue stays the computed outcome.</Note>}
           {plan.mode === 'const' && <Note><b className="text-text">Annual-only assumptions on the patient funnel.</b> The default reads each metric’s YoY growth and holds it flat for every year, so a plan exists with zero typing. Override a rate (yellow) or add a dated <b className="text-text">event</b> for a step change. Every funnel metric is editable; net revenue stays the computed outcome.</Note>}

@@ -1,7 +1,9 @@
 import { useMemo, useState } from 'react'
 import { Card, Seg, Tag, cx, field } from './ui'
-import { YEARS, fmtRev, funnelOf, fySum, revenue } from './engine'
+import { ACT, DRIVERS, FY, GTN, N, POP, YEARS, bridge, fmtDelta, fmtRev, fmtV, funnelOf, fyAvg, fySum, revenue } from './engine'
+import type { Layer } from './engine'
 import type { Calc } from './Stages'
+import { AlertTriangle, CheckCircle2 } from 'lucide-react'
 import type { Scenario } from './engine'
 
 const num = (v: number, u: string) => u === '$M' ? fmtRev(v) : u === 'Rx' ? `${(v / 1e6).toFixed(2)}M` : v >= 1e6 ? `${(v / 1e6).toFixed(2)}M` : v >= 1e3 ? `${(v / 1e3).toFixed(0)}K` : v.toFixed(0)
@@ -124,5 +126,69 @@ export function PipelineView() {
         </div>
       </Card>
     </div>
+  )
+}
+
+/** F-11: the maths behind net revenue, one row per assumption, with what each adds against the active forecast. */
+export function RevenueMath({ layer, reference, year, name }: { layer: Layer; reference: Layer; year: number; name: string }) {
+  const net = fySum(revenue(layer), year)
+  const parts = bridge(reference, layer, 'rev', year)
+  const moved = parts.some(p => Math.abs(p.d) > 0.05)
+  return (
+    <Card title={`How the revenue line is built · FY${year}`}>
+      <p className="text-[13px] text-text-2">Net revenue = prevalent × diagnosed × treated × covered × on brand × prescriptions per patient × gross price × (1 − gross-to-net)</p>
+      <div className="mt-4 overflow-x-auto">
+        <table className="w-full min-w-[520px] border-collapse">
+          <thead><tr className="border-b border-border"><th className="px-3 py-2 text-left text-[12px] font-semibold text-text-2">Assumption</th><th className={th}>FY average</th><th className={th}>Adds vs active forecast</th></tr></thead>
+          <tbody>
+            <tr className="border-b border-border/60"><td className="px-3 py-2 text-[13px] font-medium">Prevalent patients</td><td className={td}>{(POP / 1e6).toFixed(1)}M</td><td className={td}>—</td></tr>
+            {DRIVERS.map(d => { const c = parts.find(x => x.id === d.id)!.d; return (
+              <tr key={d.id} className="border-b border-border/60 hover:bg-surface-2/60"><td className="px-3 py-2 text-[13px] font-medium">{d.label}</td><td className={td}>{fmtV(d.id, fyAvg(layer[d.id], year))}</td><td className={td}>{Math.abs(c) > 0.05 ? fmtDelta(c) : '—'}</td></tr>) })}
+            <tr className="border-b border-border/60"><td className="px-3 py-2 text-[13px] font-medium">Gross-to-net</td><td className={td}>{(GTN * 100).toFixed(1)}%</td><td className={td}>—</td></tr>
+            <tr className="bg-surface-2 font-semibold"><td className="px-3 py-2 text-[13px]">Net revenue</td><td className={td}>{fmtRev(net)}</td><td className={td}>{moved ? fmtDelta(parts.reduce((a, x) => a + x.d, 0)) : '—'}</td></tr>
+          </tbody>
+        </table>
+      </div>
+      {!moved && <p className="mt-3 text-[12.5px] text-text-3">Pick a scenario to see what each of its assumptions adds.</p>}
+    </Card>
+  )
+}
+
+/** F-07: checks that compare the assumptions with each other and with last year, not just range limits. */
+export function Guardrails({ layer }: { layer: Layer }) {
+  const warns: { tone: 'err' | 'warn'; text: string }[] = []
+  for (const d of DRIVERS.filter(x => x.pct)) {
+    const s = layer[d.id]
+    if (s.some(v => v > 100 || v < 0)) warns.push({ tone: 'err', text: `${d.label} is outside 0–100% in at least one month.` })
+    let jump = 0; for (let i = ACT; i < N; i++) jump = Math.max(jump, Math.abs(s[i]! - s[i - 1]!))
+    if (jump > 3) warns.push({ tone: 'warn', text: `${d.label} moves ${jump.toFixed(1)} pts in a single month. Check the override or event behind it.` })
+  }
+  const price = FY - 1 >= 2025 ? fyAvg(layer.price, FY) / fyAvg(layer.price, FY - 1) - 1 : 0
+  if (Math.abs(price) > 0.15) warns.push({ tone: 'warn', text: `Gross price changes ${(price * 100).toFixed(1)}% year on year. Above 15% is rarely realistic.` })
+  const rev = fySum(revenue(layer), FY) / fySum(revenue(layer), FY - 1) - 1
+  if (Math.abs(rev) > 0.4) warns.push({ tone: 'warn', text: `Net revenue changes ${(rev * 100).toFixed(0)}% year on year. Check the assumptions that drive it.` })
+  if (fyAvg(layer.rx, FY) > 1.5) warns.push({ tone: 'warn', text: 'Prescriptions per patient is above 1.5 a month.' })
+  if (!warns.length) return <p className="flex items-center gap-2 text-[13px] text-text-2"><CheckCircle2 size={16} className="text-ok" />No inconsistent assumptions found.</p>
+  return (
+    <ul className="space-y-2" aria-label="Assumption checks">
+      {warns.map((w, k) => <li key={k} className={cx('flex items-start gap-2 rounded-xl border px-4 py-2.5 text-[13px]', w.tone === 'err' ? 'border-err/30 bg-err-soft text-err' : 'border-warn/30 bg-warn-soft text-warn')}><AlertTriangle size={15} className="mt-0.5 shrink-0" />{w.text}</li>)}
+    </ul>
+  )
+}
+
+/** F-03: peak year and launch curve from the annual plan. */
+export function PeakCurve({ years, share, net }: { years: number[]; share: number[]; net: number[] }) {
+  const pk = share.indexOf(Math.max(...share)), pn = net.indexOf(Math.max(...net)), top = Math.max(...share)
+  return (
+    <Card title="Peak year and launch curve">
+      <div className="grid gap-4 sm:grid-cols-3">
+        <div><p className="text-[12px] font-semibold text-text-2">Peak share</p><p className="font-display text-[22px] font-semibold">{share[pk]!.toFixed(1)}%</p><p className="text-[12.5px] text-text-3">FY{years[pk]}</p></div>
+        <div><p className="text-[12px] font-semibold text-text-2">Peak net revenue</p><p className="font-display text-[22px] font-semibold">{fmtRev(net[pn]!)}</p><p className="text-[12.5px] text-text-3">FY{years[pn]}</p></div>
+        <div><p className="text-[12px] font-semibold text-text-2">Years to peak share</p><p className="font-display text-[22px] font-semibold">{pk + 1}</p><p className="text-[12.5px] text-text-3">from FY{years[0]}</p></div>
+      </div>
+      <div className="mt-5 flex h-28 items-end gap-2" role="img" aria-label="Brand share by year">
+        {share.map((v, k) => <div key={years[k]} className="flex flex-1 flex-col items-center gap-1"><div className={cx('w-full rounded-t-md', k === pk ? 'bg-brand' : 'bg-text/25')} style={{ height: `${(v / top) * 100}%` }} title={`FY${years[k]} · ${v.toFixed(1)}%`} /><span className="text-[11px] text-text-3">{String(years[k]).slice(2)}</span></div>)}
+      </div>
+    </Card>
   )
 }

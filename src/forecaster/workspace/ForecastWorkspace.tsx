@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import type { ComponentType } from 'react'
 import { scrollFrameTop } from '../../frame'
 import { ArrowLeft, ArrowRight, Check, ChevronDown, Lock, Maximize2, Minimize2, Save } from 'lucide-react'
-import { CountryCompare, FunnelTable } from './Extras'
+import { CountryCompare, FunnelTable, Guardrails, RevenueMath } from './Extras'
 import { ACT, ACTUALS, DEFAULT_MODEL, DRIVERS, DRV, FY, GTN, N, OUTPUTS, SEED_EVENTS, SEED_SCENARIOS, UNBIASED, defaultEdit, fmtV, fyAvg, fySum, measure, mLong, revenue, scenarioLayer, workingLayer } from './engine'
 import type { DriverId, EventDef, Layer, ModelCfg, OutputId, Override, Scenario } from './engine'
 import { Btn, COLOR, Seg, Tag, cx } from './ui'
@@ -274,6 +274,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
         {view === 'Assumptions' && (
           <div className="space-y-6">
             <ScenarioBar scenarios={scenarios} setScenarios={setScenarios} scope={scenario ? scenario.id : FORECAST} setScope={setScope} year={year} setYear={setYear} calc={calc} notify={notify} />
+            <Guardrails layer={scopeCalc.layer} />
             <div className={cx('grid gap-6', !presenting && 'lg:grid-cols-[minmax(0,1fr)_320px]')}>
               <aside className="lg:sticky lg:top-[112px] lg:order-last lg:self-start">
                 <ForecastMap sel={sel} metric={metric} onSel={pick} mod={mod} onMod={m => { if (m !== mod && leaveOk()) setMod(m) }} onOutcome={m => { if (leaveOk()) { setMod(null); setSel('rev'); setMetric(m) } }}
@@ -306,6 +307,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
             </div>
             <FullModelGrid layer={scopeCalc.layer} reference={scenario ? work.layer : UNBIASED} year={year} title={scenario ? scenario.name : 'Active forecast'} editable={editableIds} locked={scenario?.locked}
               ue={ue} woh={woh} selected={gridSel} onRow={openRow} onCell={onCell} />
+            <RevenueMath layer={scopeCalc.layer} reference={work.layer} year={year} name={scenario ? scenario.name : 'Active forecast'} />
             <ScenarioChanges scenarios={scenarios} calc={calc} events={events} model={model} scope={scenario ? scenario.id : FORECAST} year={year}
               onPick={(sid, did) => { if (!leaveOk()) return; setScopeState(sid); if (sid !== FORECAST) setSelId(sid); if (did) selDriver(did) }} />
           </div>
