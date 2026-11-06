@@ -17,6 +17,7 @@ import { AgentBanner, AgentButton, AgentDemoCard } from './chat/Agent'
 import type { CopilotProps } from './forecaster/workspace/agent'
 import { FRAME_ID, scrollFrameTop } from './frame'
 import { ChartActions } from './chart/ChartActions'
+import { SnowflakeSources } from './ConfigInputs'
 import pfizerMark from './assets/pfizer-mark-color.png'
 import pfizerLogo from './assets/pfizer-logo-color.png'
 import {
@@ -184,7 +185,7 @@ const customTimeErr = (m: Record<string, string>) => {
 }
 const modeDefault = (a: ArchId, m: ModeDef) => (a === 'D-03' && m.id === 'persist') ? 'Aggregate Churn' : m.def ?? m.options[0]
 const ALL: ArchId[] = ['D-01', 'D-02', 'D-03', 'D-04', 'D-05', 'D-06', 'D-07']
-type Mod = { id: string; code: string; name: string; cat: string; desc: string; ev: string[]; required?: ArchId[]; rec?: ArchId[]; data?: string; patients?: boolean; needs?: string; demo?: boolean; val?: string }
+type Mod = { id: string; code: string; name: string; cat: string; desc: string; ev: string[]; required?: ArchId[]; rec?: ArchId[]; data?: string; patients?: boolean; needs?: string; demo?: boolean; val?: string; inp?: string }
 const RAW: [string, string, string, string[], Partial<Mod>?][] = [
   ['Population & top-of-funnel', 'Epi funnel builder', 'Population → incidence/prevalence → staged filters → eligible; arbitrary filter steps.', ['A-15', 'A-26'], { rec: ['D-01', 'D-03'], data: 'epi', patients: true }],
   ['Population & top-of-funnel', 'Age-structured cohorts', 'Single-year-of-age stocks with aging in/out and mortality survival.', ['A-1', 'A-4'], { rec: ['D-05'], data: 'age', patients: true }],
@@ -253,40 +254,40 @@ const RAW: [string, string, string, string[], Partial<Mod>?][] = [
   ['Share machinery', 'Competitor & market-share tracking', 'Tracks named competitor products and market share from script data, feeding share-based forecasts.', ['A-21', 'A-31']],
 ]
 /** Cibinqo US forecast demo cards, in the order of the model-mapping list. Lane = the library family each card sits under; value = Oct 2026 from the workbook. */
-const CIBINQO_CARDS: [string, string, string, string][] = [
-  ['Population & top-of-funnel', 'Addressable patients', 'AD advanced systemic patients, taken from the workbook.', '435,507'],
-  ['Share machinery', 'Class share', 'JAK class share, taken from the workbook.', '9.14%'],
-  ['Share machinery', 'Class patients', 'Addressable patients × class share.', '39,805.34'],
-  ['Share machinery', 'Share within class', 'Cibinqo share within the JAK class, taken from the workbook.', '17.38%'],
-  ['Share machinery', 'Brand patients', 'Addressable patients × class share × share within class.', '6,918.17'],
-  ['Persistence, dosing & regimen', 'Prescriptions per patient', 'Prescriptions per patient, taken from the workbook.', '1.01'],
-  ['Persistence, dosing & regimen', 'Prescriptions before compliance', 'Brand patients × prescriptions per patient.', '6,987.35'],
-  ['Persistence, dosing & regimen', 'Compliance rate', 'Compliance rate, taken from the workbook.', '70.58%'],
-  ['Persistence, dosing & regimen', 'Total prescriptions', 'Prescriptions before compliance × compliance rate.', '4,931.67'],
-  ['Conversion, financial & integration', 'Pack share, {sku}', 'Share of the prescription mix for each SKU (100 mg, 200 mg, 50 mg).', '63% / 32% / 5%'],
-  ['Conversion, financial & integration', 'Prescriptions, {sku}', 'Total prescriptions × pack share.', '3,106.95 / 1,578.13 / 246.58'],
-  ['Conversion, financial & integration', 'Units per prescription', 'Pills per prescription, taken from the workbook.', '30'],
-  ['Conversion, financial & integration', 'Units, {sku}', 'Prescriptions × units per prescription.', '93,208.59 / 47,344.05 / 7,397.51'],
-  ['Conversion, financial & integration', 'Price per unit, {sku}', 'Price per pill for each SKU, taken from the workbook.', '$206.00 / $206.00 / $206.00'],
-  ['Conversion, financial & integration', 'Audited demand, {sku}', 'Units × price per unit.', '19,200,969.60 / 9,752,873.45 / 1,523,886.48'],
-  ['Conversion, financial & integration', 'Total audited demand', 'Sum of the audited demand across SKUs.', '30,477,729.53'],
-  ['Actuals, calibration & reconciliation', 'Unaudited demand rate', 'Unaudited demand rate, taken from the workbook.', '9.00%'],
-  ['Actuals, calibration & reconciliation', 'Unaudited demand', 'Audited demand × rate ÷ (1 − rate).', '3,014,280.94'],
-  ['Conversion, financial & integration', 'Underlying demand', 'Audited demand + unaudited demand.', '33,492,010.47'],
-  ['Actuals, calibration & reconciliation', 'Calendar days', 'Calendar days in the month, taken from the workbook.', '31'],
-  ['Actuals, calibration & reconciliation', 'Days kept (4-4-5)', '4-4-5 days kept in the month, taken from the workbook.', '26'],
-  ['Actuals, calibration & reconciliation', 'Prior-month carry', 'Prior-month daily demand × leftover days.', '2,175,924.72'],
-  ['Actuals, calibration & reconciliation', 'Calendar-adjusted demand', 'Days kept this month + prior-month carry.', '30,265,998.02'],
-  ['Actuals, calibration & reconciliation', 'Inventory change', 'Change in inventory, taken from the workbook.', '0.00'],
-  ['Actuals, calibration & reconciliation', 'Gross revenue before unexplained difference', 'Calendar-adjusted demand + inventory change.', '30,265,998.02'],
-  ['Actuals, calibration & reconciliation', 'Unexplained difference rate', 'Unexplained difference rate, taken from the workbook.', '7.00%'],
-  ['Actuals, calibration & reconciliation', 'Unexplained difference', 'Gross revenue before the difference × rate.', '2,118,619.86'],
-  ['Conversion, financial & integration', 'Gross revenue', 'Gross revenue before the difference + unexplained difference.', '32,384,617.88'],
-  ['Conversion, financial & integration', 'Price kept after gross-to-net', 'Share of price kept after discounts, taken from the workbook.', '43.20%'],
-  ['Conversion, financial & integration', 'Net revenue', 'Gross revenue × price kept after gross-to-net.', '13,990,154.93'],
+const CIBINQO_CARDS: [string, string, string, string, string][] = [
+  ['Population & top-of-funnel', 'Addressable patients', 'AD advanced systemic patients, taken from the workbook.', '435,507', 'prev'],
+  ['Share machinery', 'Class share', 'JAK class share, taken from the workbook.', '9.14%', 'share'],
+  ['Share machinery', 'Class patients', 'Addressable patients × class share.', '39,805.34', ''],
+  ['Share machinery', 'Share within class', 'Cibinqo share within the JAK class, taken from the workbook.', '17.38%', 'share'],
+  ['Share machinery', 'Brand patients', 'Addressable patients × class share × share within class.', '6,918.17', ''],
+  ['Persistence, dosing & regimen', 'Prescriptions per patient', 'Prescriptions per patient, taken from the workbook.', '1.01', 'rx'],
+  ['Persistence, dosing & regimen', 'Prescriptions before compliance', 'Brand patients × prescriptions per patient.', '6,987.35', ''],
+  ['Persistence, dosing & regimen', 'Compliance rate', 'Compliance rate, taken from the workbook.', '70.58%', 'rx'],
+  ['Persistence, dosing & regimen', 'Total prescriptions', 'Prescriptions before compliance × compliance rate.', '4,931.67', 'rx'],
+  ['Conversion, financial & integration', 'Pack share, {sku}', 'Share of the prescription mix for each SKU (100 mg, 200 mg, 50 mg).', '63% / 32% / 5%', ''],
+  ['Conversion, financial & integration', 'Prescriptions, {sku}', 'Total prescriptions × pack share.', '3,106.95 / 1,578.13 / 246.58', ''],
+  ['Conversion, financial & integration', 'Units per prescription', 'Pills per prescription, taken from the workbook.', '30', ''],
+  ['Conversion, financial & integration', 'Units, {sku}', 'Prescriptions × units per prescription.', '93,208.59 / 47,344.05 / 7,397.51', ''],
+  ['Conversion, financial & integration', 'Price per unit, {sku}', 'Price per pill for each SKU, taken from the workbook.', '$206.00 / $206.00 / $206.00', 'price'],
+  ['Conversion, financial & integration', 'Audited demand, {sku}', 'Units × price per unit.', '19,200,969.60 / 9,752,873.45 / 1,523,886.48', ''],
+  ['Conversion, financial & integration', 'Total audited demand', 'Sum of the audited demand across SKUs.', '30,477,729.53', ''],
+  ['Actuals, calibration & reconciliation', 'Unaudited demand rate', 'Unaudited demand rate, taken from the workbook.', '9.00%', 'tud'],
+  ['Actuals, calibration & reconciliation', 'Unaudited demand', 'Audited demand × rate ÷ (1 − rate).', '3,014,280.94', 'tud'],
+  ['Conversion, financial & integration', 'Underlying demand', 'Audited demand + unaudited demand.', '33,492,010.47', 'tud'],
+  ['Actuals, calibration & reconciliation', 'Calendar days', 'Calendar days in the month, taken from the workbook.', '31', ''],
+  ['Actuals, calibration & reconciliation', 'Days kept (4-4-5)', '4-4-5 days kept in the month, taken from the workbook.', '26', ''],
+  ['Actuals, calibration & reconciliation', 'Prior-month carry', 'Prior-month daily demand × leftover days.', '2,175,924.72', ''],
+  ['Actuals, calibration & reconciliation', 'Calendar-adjusted demand', 'Days kept this month + prior-month carry.', '30,265,998.02', ''],
+  ['Actuals, calibration & reconciliation', 'Inventory change', 'Change in inventory, taken from the workbook.', '0.00', 'inv'],
+  ['Actuals, calibration & reconciliation', 'Gross revenue before unexplained difference', 'Calendar-adjusted demand + inventory change.', '30,265,998.02', ''],
+  ['Actuals, calibration & reconciliation', 'Unexplained difference rate', 'Unexplained difference rate, taken from the workbook.', '7.00%', 'ue'],
+  ['Actuals, calibration & reconciliation', 'Unexplained difference', 'Gross revenue before the difference × rate.', '2,118,619.86', 'ue'],
+  ['Conversion, financial & integration', 'Gross revenue', 'Gross revenue before the difference + unexplained difference.', '32,384,617.88', 'sales'],
+  ['Conversion, financial & integration', 'Price kept after gross-to-net', 'Share of price kept after discounts, taken from the workbook.', '43.20%', 'sales'],
+  ['Conversion, financial & integration', 'Net revenue', 'Gross revenue × price kept after gross-to-net.', '13,990,154.93', 'sales'],
 ]
 const MODULES: Mod[] = [...RAW.map(([cat, name, desc, ev, extra], i) => ({ id: `m${i + 1}`, code: String(i + 1).padStart(2, '0'), cat, name, desc, ev, ...extra })),
-  ...CIBINQO_CARDS.map(([cat, name, desc, val], i): Mod => ({ id: `c${i + 1}`, code: `C${i + 1}`, cat, name, desc, val, ev: [], demo: true }))]
+  ...CIBINQO_CARDS.map(([cat, name, desc, val, inp], i): Mod => ({ id: `c${i + 1}`, code: `C${i + 1}`, cat, name, desc, val, inp, ev: [], demo: true }))]
 const CATS = ['All', ...Array.from(new Set(MODULES.map(m => m.cat)))]
 // Vaccine-only machinery, and patient-carrying modules can't attach to Rx-Share (no patient state).
 const VACCINE_ONLY = new Set(['Dose-sequence chains', 'Booster due-pool queues', 'Waning-immunity re-entry', 'Anti-vaccination carve-out', 'Stock-reconciliation bridges'])
@@ -4541,6 +4542,11 @@ const exposeOf = (b?: Binding): Exposure => b?.expose ?? (pathOf(b) === 'Manual'
 
 function StageData({ c, ind, update, updInd, go }: Ctx) {
   const live = useContext(AgentCtx).field
+  if (c.realData) {
+    // View-only: the sources of the inputs behind the modules chosen in the Module map.
+    const only = new Set(MODULES.filter(m => m.inp && c.inds.some(i => i.modules.includes(m.id))).map(m => m.inp!))
+    return only.size ? <SnowflakeSources map={undefined} only={only} /> : <EmptyState icon={<Database size={18} />} title="No inputs to show yet" action={<Btn size="sm" onClick={() => go(4)}>Go to Module map</Btn>}>Data sources appear for the modules you add in the Module map.</EmptyState>
+  }
   const ins = inputsFor(c)
   if (!ins.length) return <EmptyState icon={<Database size={18} />} title="No inputs to configure yet" action={<Btn size="sm" onClick={() => go(2)}>Choose archetypes</Btn>}>Inputs appear once each revenue stream has an archetype and modules.</EmptyState>
   const groups = Array.from(new Set(ins.map(b => b.scope))).map(scope => ({

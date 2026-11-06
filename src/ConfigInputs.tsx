@@ -128,7 +128,7 @@ export function InputMapBoard({ lanes, map: saved, setMap, onAddModule, onRemove
 
 const TH = 'whitespace-nowrap px-3 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wide text-text-3'
 /** Each input and the Snowflake table and schema it is read from. Nothing is chosen here: the sources are fixed by the governed data ecosystem. */
-export function SnowflakeSources({ map: saved }: { map: Record<string, string> | undefined }) {
+export function SnowflakeSources({ map: saved, only }: { map: Record<string, string> | undefined; only?: Set<string> }) {
   const map = mapOf(saved)
   const mono = 'px-3 py-2.5 align-top font-mono text-[12px]'
   return (
@@ -142,10 +142,10 @@ export function SnowflakeSources({ map: saved }: { map: Record<string, string> |
           <thead><tr className="border-b border-border bg-background/60">
             <th scope="col" className={TH}>Input</th><th scope="col" className={TH}>Database</th><th scope="col" className={TH}>Schema</th><th scope="col" className={TH}>Table</th><th scope="col" className={TH}>Columns</th><th scope="col" className={TH}>Filter</th>
           </tr></thead>
-          {GROUP_ORDER.map(g => (
+          {GROUP_ORDER.filter(g => FLOW_INPUTS.some(i => i.group === g && (!only || only.has(i.id)))).map(g => (
             <tbody key={g}>
               <tr className="border-b border-border bg-surface-2/60"><th scope="rowgroup" colSpan={6} className="px-4 py-2 text-left text-xs font-semibold text-text">{g}</th></tr>
-              {FLOW_INPUTS.filter(i => i.group === g).map(i => {
+              {FLOW_INPUTS.filter(i => i.group === g && (!only || only.has(i.id))).map(i => {
                 const rows = i.sources.length ? i.sources : [null]
                 return rows.map((s, k) => (
                   <tr key={`${i.id}-${k}`} className={cx('border-b border-border last:border-0', k > 0 && 'border-t-0')}>
