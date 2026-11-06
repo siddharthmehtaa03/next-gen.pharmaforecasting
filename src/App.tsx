@@ -17,12 +17,8 @@ import { AgentBanner, AgentButton, AgentDemoCard } from './chat/Agent'
 import type { CopilotProps } from './forecaster/workspace/agent'
 import { FRAME_ID, scrollFrameTop } from './frame'
 import { ChartActions } from './chart/ChartActions'
-import { FLOW_INPUTS, mapOf } from './configCatalog'
-import { FlowSteps, InputMapBoard, SnowflakeSources } from './ConfigInputs'
-import type { LaneView, StepView, StreamFlow } from './ConfigInputs'
 import pfizerMark from './assets/pfizer-mark-color.png'
 import pfizerLogo from './assets/pfizer-logo-color.png'
-import pfizerLogoWhite from './assets/pfizer-logo.png'
 import {
   AlertCircle, AlertTriangle, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, ArrowRight, BarChart3, Bell, Boxes, Check, CheckCircle2, ChevronDown, ChevronRight,
   Clock, Copy, Database, FileText, GitBranch, History, Info, Layers, Loader2, Lock, LockOpen, Plus, PanelRightClose, PanelRightOpen, Maximize2, Minimize2,
@@ -463,10 +459,10 @@ function Btn({ children, variant = 'primary', size = 'md', disabled, onClick, ic
     <button
       type="button" title={title} disabled={disabled} onClick={onClick}
       className={cx(
-        'inline-flex items-center justify-center gap-2 rounded-full font-semibold transition-all focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed',
-        size === 'sm' ? 'h-8 px-3.5 text-xs' : 'h-10 px-5 text-sm',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed',
+        size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-[13px]',
         variant === 'primary' && 'bg-brand text-white hover:bg-brand-dark disabled:bg-border-strong',
-        variant === 'secondary' && 'border border-border-strong bg-surface text-brand hover:border-brand hover:bg-brand-soft disabled:text-text-3',
+        variant === 'secondary' && 'border border-border bg-surface text-text shadow-[0_1px_1px_rgba(16,24,40,0.04)] hover:bg-surface-2 disabled:text-text-3',
         variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text disabled:text-text-3',
         variant === 'danger' && 'text-err hover:bg-err-soft',
         className,
@@ -480,9 +476,9 @@ function Btn({ children, variant = 'primary', size = 'md', disabled, onClick, ic
 function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'brand' | 'ok' | 'warn' | 'err'; children: ReactNode }) {
   return (
     <span className={cx(
-      'inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide',
+      'inline-flex items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[12px] font-medium',
       tone === 'neutral' && 'bg-surface-2 text-text-2',
-      tone === 'brand' && 'bg-surface-2 text-text ring-1 ring-border',
+      tone === 'brand' && 'bg-brand-soft text-brand',
       tone === 'ok' && 'bg-ok-soft text-ok',
       tone === 'warn' && 'bg-warn-soft text-warn',
       tone === 'err' && 'bg-err-soft text-err',
@@ -513,7 +509,7 @@ function Field({ label, hint, error, children, required, ai, className, agent }:
     <label className={cx('block min-w-0', live && 'agent-field', className)} data-agent={agent}>
       <span className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-text">
         <span>{label}{required && <span className="text-err"> *</span>}</span>
-        {live ? <span className="inline-flex items-center gap-1 rounded bg-[#0095ff]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#0000c9]"><Loader2 size={10} className="animate-spin" />{ASSISTANT} is typing</span>
+        {live ? <span className="inline-flex items-center gap-1 rounded bg-[#2f9e73]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#0f5a43]"><Loader2 size={10} className="animate-spin" />{ASSISTANT} is typing</span>
           : null}
       </span>
       {children}
@@ -525,16 +521,16 @@ function Field({ label, hint, error, children, required, ai, className, agent }:
 }
 
 const inputCls = (err?: boolean) => cx(
-  'h-10 w-full rounded-md border bg-surface px-3 text-sm text-text outline-none transition-colors placeholder:text-text-3 focus:border-brand focus:ring-2 focus:ring-brand/15',
-  err ? 'border-err' : 'border-border-strong',
+  'h-9 w-full rounded-lg border bg-surface px-3 text-[13px] text-text shadow-[0_1px_1px_rgba(16,24,40,0.04)] outline-none transition-colors placeholder:text-text-3 focus:border-brand focus:ring-2 focus:ring-brand/15',
+  err ? 'border-err' : 'border-border',
 )
 
 function Segmented({ value, options, onChange }: { value: string; options: string[]; onChange: (v: string) => void }) {
   return (
-    <div className="inline-flex flex-wrap gap-0.5 rounded-full border border-border bg-surface-2 p-1" role="radiogroup">
+    <div className="inline-flex flex-wrap rounded-md border border-border-strong bg-surface p-0.5" role="radiogroup">
       {options.map(o => (
         <button key={o} type="button" role="radio" aria-checked={value === o} onClick={() => onChange(o)}
-          className={cx('rounded-full px-3.5 py-1.5 text-[13px] font-medium transition-all', value === o ? 'bg-brand text-white shadow-sm' : 'text-text-2 hover:text-text')}>
+          className={cx('rounded px-3 py-1.5 text-[13px] font-medium transition-colors', value === o ? 'bg-text text-white' : 'text-text-2 hover:text-text')}>
           {o}
         </button>
       ))}
@@ -555,9 +551,9 @@ function Banner({ tone, title, children, action }: { tone: 'info' | 'ok' | 'warn
   const Icon = tone === 'ok' ? CheckCircle2 : tone === 'err' ? AlertCircle : tone === 'warn' ? AlertTriangle : Info
   return (
     <div role={tone === 'err' ? 'alert' : 'status'} className={cx('rise flex gap-3 rounded-lg border p-3.5',
-      tone === 'info' && 'border-border bg-surface-2', tone === 'ok' && 'border-ok/25 bg-ok-soft',
+      tone === 'info' && 'border-brand/20 bg-brand-soft/60', tone === 'ok' && 'border-ok/25 bg-ok-soft',
       tone === 'warn' && 'border-warn/25 bg-warn-soft', tone === 'err' && 'border-err/25 bg-err-soft')}>
-      <Icon size={18} className={cx('mt-px shrink-0', tone === 'info' && 'text-text-2', tone === 'ok' && 'text-ok', tone === 'warn' && 'text-warn', tone === 'err' && 'text-err')} />
+      <Icon size={18} className={cx('mt-px shrink-0', tone === 'info' && 'text-brand', tone === 'ok' && 'text-ok', tone === 'warn' && 'text-warn', tone === 'err' && 'text-err')} />
       <div className="min-w-0 flex-1 text-sm">
         <p className="font-semibold text-text">{title}</p>
         {children && <div className="mt-0.5 text-text-2">{children}</div>}
@@ -569,10 +565,10 @@ function Banner({ tone, title, children, action }: { tone: 'info' | 'ok' | 'warn
 
 function Card({ title, sub, right, children, className }: { title?: ReactNode; sub?: string; right?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={cx('rounded-2xl border border-border bg-surface shadow-card', className)}>
+    <section className={cx('rounded-xl border border-border bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.04)]', className)}>
       {title && (
-        <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 border-b border-border px-5 py-4">
-          <div className="min-w-0 flex-1"><h3 className="font-display text-base font-semibold text-text">{title}</h3>{sub && <p className="mt-0.5 text-[13px] text-text-2">{sub}</p>}</div>
+        <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5 pb-1 pt-4">
+          <div className="min-w-0 flex-1"><h3 className="text-[14px] font-semibold text-text">{title}</h3>{sub && <p className="mt-0.5 text-[12.5px] text-text-3">{sub}</p>}</div>
           {right && <div className="shrink-0">{right}</div>}
         </header>
       )}
@@ -593,12 +589,12 @@ function EmptyState({ icon, title, children, action }: { icon: ReactNode; title:
 }
 
 
-function Logo({ name = 'NextGen Forecasting', dark }: { name?: string; dark?: boolean }) {
+function Logo({ name = 'NextGen Forecasting' }: { name?: string }) {
   return (
     <div className="flex items-center gap-2.5">
-      <img src={dark ? pfizerLogoWhite : pfizerLogo} alt="Pfizer" className="h-8 w-auto select-none" draggable={false} />
-      <span aria-hidden className={cx('h-6 w-px', dark ? 'bg-white/30' : 'bg-border-strong')} />
-      <span className={cx('text-[17px] font-semibold tracking-tight', dark ? 'text-white' : 'text-text')}>{name}</span>
+      <img src={pfizerLogo} alt="Pfizer" className="h-8 w-auto select-none" draggable={false} />
+      <span aria-hidden className="h-6 w-px bg-border-strong" />
+      <span className="text-[17px] font-semibold tracking-tight text-text">{name}</span>
     </div>
   )
 }
@@ -622,8 +618,7 @@ type Perm = { open: boolean; min: number; max: number; owner: string; source: st
 type BaseRow = { id: string; name: string; eng: string; v: number[] }
 type Baseline = { n: number; at: string; sig: string; rows: BaseRow[] }
 type Level = { id: string; kind: string; items: string[] }
-/** `inputMap`: which group class each patient-flow input is mapped to (module map); an empty string is unmapped. Defaults come from configCatalog. */
-type Ind = { inputMap?: Record<string, string>; stype?: string; levels?: Level[]; auto?: boolean; sep?: string; snap?: string[][]; id: string; name: string; desc?: string; dim?: string; dimOther?: string; parent?: string; arch: ArchId | null; engine: string; sliceArch: Record<string, string>; modes: Record<string, string>; modules: string[]; perms: Record<string, Perm> }
+type Ind = { stype?: string; levels?: Level[]; auto?: boolean; sep?: string; snap?: string[][]; id: string; name: string; desc?: string; dim?: string; dimOther?: string; parent?: string; arch: ArchId | null; engine: string; sliceArch: Record<string, string>; modes: Record<string, string>; modules: string[]; perms: Record<string, Perm> }
 type Config = {
   brand: string; asset: string; subjectType: string; therapyArea: string; lifecycle: string; subnational: boolean; context: string; competing: boolean; market: string; cycle: string; start: string; end: string; granularity: string; grade: string; slices: Slice[]
   shared: { price: boolean; g2n: boolean }; inds: Ind[]; active: string; bindings: Record<string, Binding>
@@ -795,7 +790,6 @@ function warningsFor(c: Config): { msg: string; stage: number }[] {
   const out: { msg: string; stage: number }[] = []
   const open = inputsFor(c).filter(b => !dataReady(c.bindings[b.key]))
   if (open.length) out.push({ stage: 5, msg: `${open.length} input${open.length > 1 ? 's are' : ' is'} not configured yet. They will reach the Forecaster without a data source.` })
-  c.inds.forEach(i => { const n = i.arch ? FLOW_INPUTS.filter(x => !mapOf(i.inputMap)[x.id]).length : 0; if (n) out.push({ stage: 4, msg: `${indLabel(c, i)}${n} patient-flow input${n > 1 ? 's are' : ' is'} not mapped to a group class.` }) })
   if (c.inds.length && c.inds.every(i => i.arch === 'D-06')) out.push({ stage: 2, msg: 'Every indication uses Trend / Extrapolation — a component method is standing in for the whole brand forecast.' })
   if (c.inds.some(i => i.arch === 'D-06' && i.modes.role === 'Blend') && c.inds.every(i => i.arch === 'D-06')) out.push({ stage: 3, msg: 'Trend role is “Blend” but there is no structural archetype to blend into.' })
   c.inds.forEach(i => {
@@ -929,6 +923,11 @@ export default function App() {
   // Assistant hidden for now: no top-bar button or Ctrl/⌘ + / shortcut, so `ai` stays false
 
   const open = (s: Seed) => { setSeed(s); setRun(r => r + 1); setView('config'); toTop() }
+  // Full view: browser full screen where allowed, and the top bar hidden either way (the preview iframe may block full screen).
+  const [full, setFull] = useState(false)
+  const enterFull = () => { setFull(true); document.documentElement.requestFullscreen?.().catch(() => {}) }
+  const exitFull = () => { setFull(false); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}) }
+  useEffect(() => { const h = () => { if (!document.fullscreenElement) setFull(false) }; document.addEventListener('fullscreenchange', h); return () => document.removeEventListener('fullscreenchange', h) }, [])
   const resume = (m: ModelRow) => open(m.id === 'a' ? {} : { from: m })
 
   /** A finalised model gets a workspace row straight away; making it available only flips its status. */
@@ -946,21 +945,19 @@ export default function App() {
     <AppFrame dock="split" collab={collab && (view === 'config' || (view === 'forecast' && fcSection === 'forecasts' && fcWs))} onCollab={setCollab}
       footer={<ProfileMenu placement="rail" onAdmin={() => { setView('admin'); toTop() }} onLogout={() => { setView('landing'); setToast({ tone: 'info', text: 'You’ve been logged out.' }) }} />} onHome={() => setView('landing')}
       items={view === 'forecast'
-        ? [{ id: 'home', label: 'Home', icon: House, go: () => setView('landing') },
-           { id: 'forecasts', label: 'My forecasts', icon: LineChart, go: () => { setFcSection('forecasts'); setFcKey(k => k + 1); toTop() } },
+        ? [{ id: 'forecasts', label: 'My forecasts', icon: LineChart, go: () => { setFcSection('forecasts'); setFcKey(k => k + 1); toTop() } },
            { id: 'fchat', label: 'Ask & Understand', icon: MessagesSquare, go: () => { setFcSection('chat'); toTop() },
              sub: { onNew: () => { setFcCur(null); setFcSection('chat') }, items: fcThreads.map(t => ({ id: t.id, label: t.title, active: fcSection === 'chat' && fcCur === t.id, go: () => { setFcCur(t.id); setFcSection('chat'); toTop() },
                dup: () => { const id = Date.now(); setFcThreads(ts => { const i = ts.findIndex(x => x.id === t.id); const c = { ...t, id, title: t.title + ' (copy)' }; return [...ts.slice(0, i + 1), c, ...ts.slice(i + 1)] }); setFcCur(id); setFcSection('chat') },
                del: () => { setFcThreads(ts => ts.filter(x => x.id !== t.id)); if (fcCur === t.id) setFcCur(null) } })) } }]
-        : [{ id: 'home', label: 'Home', icon: House, go: () => setView('landing') },
-           { id: 'models', label: 'Model workspace', icon: Boxes, go: () => { setView('models'); toTop() } },
+        : [{ id: 'models', label: 'Model workspace', icon: Boxes, go: () => { setView('models'); toTop() } },
            { id: 'chat', label: 'Build & Configure', icon: Workflow, go: () => { setView('chat'); toTop() },
              sub: { onNew: () => { setCurThread(null); setView('chat') }, items: threads.map(t => ({ id: t.id, label: t.title, active: view === 'chat' && curThread === t.id, go: () => { setCurThread(t.id); setView('chat'); toTop() },
                dup: () => { const id = Date.now(); setThreads(ts => { const i = ts.findIndex(x => x.id === t.id); const c = { ...t, id, title: t.title + ' (copy)' }; return [...ts.slice(0, i + 1), c, ...ts.slice(i + 1)] }); setCurThread(id); setView('chat') },
                del: () => { setThreads(ts => ts.filter(x => x.id !== t.id)); if (curThread === t.id) setCurThread(null) } })) } }]}
       active={view === 'config' ? 'models' : view === 'forecast' ? ({ forecasts: 'forecasts', chat: 'fchat' } as const)[fcSection] : view}
       flow={view === 'forecast' ? 'Forecaster' : 'Forecasting CoE'}
-      header={<TopBar collab={view === 'config' || (view === 'forecast' && fcSection === 'forecasts' && fcWs) ? { on: collab, toggle: () => setCollab(v => !v), label: view === 'forecast' ? 'Forecast AI' : 'COE AI' } : undefined} crumbs={view === 'forecast' && fcSection === 'forecasts' ? [] : [view === 'forecast' ? 'Forecaster' : 'Forecasting CoE', ({ models: 'Model workspace', config: 'Configure model', admin: 'Admin portal', forecast: ({ forecasts: 'My forecasts', chat: AI_EXP.ask.label } as const)[fcSection], chat: AI_EXP.build.label, landing: '' } as const)[view]]} onHome={() => setView('landing')} onAdmin={() => { setView('admin'); toTop() }} onLogout={() => { setView('landing'); setToast({ tone: 'info', text: 'You’ve been logged out.' }) }} models={models} onResume={resume} ai={ai} onAI={() => setAi(v => !v)} notify={setToast} fixtures={fixtures} onFixtures={toggleFixtures} />}>
+      header={full ? <button type="button" onClick={exitFull} aria-label="Exit full view" title="Exit full view" className="fixed right-4 top-4 z-[55] inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface/95 px-2.5 text-[12.5px] font-medium text-text-2 shadow-sm backdrop-blur hover:text-text"><Minimize2 size={14} />Exit full view</button> : <TopBar onFull={enterFull} collab={view === 'config' || (view === 'forecast' && fcSection === 'forecasts' && fcWs) ? { on: collab, toggle: () => setCollab(v => !v), label: view === 'forecast' ? 'Forecast AI' : 'COE AI' } : undefined} crumbs={[view === 'forecast' ? 'Forecaster' : 'Forecasting CoE', ({ models: 'Model workspace', config: 'Configure model', admin: 'Admin portal', forecast: ({ forecasts: 'My forecasts', chat: AI_EXP.ask.label } as const)[fcSection], chat: AI_EXP.build.label, landing: '' } as const)[view]]} onHome={() => setView('landing')} onAdmin={() => { setView('admin'); toTop() }} onLogout={() => { setView('landing'); setToast({ tone: 'info', text: 'You’ve been logged out.' }) }} models={models} onResume={resume} ai={ai} onAI={() => setAi(v => !v)} notify={setToast} fixtures={fixtures} onFixtures={toggleFixtures} />}>
       {view === 'forecast' && fcSection === 'forecasts' && !fcWs && <Charles persona="ask" busy={false} greeting={`Hi ${ME.split(' ')[0]}, ask about any submitted forecast. I show sources and don’t change anything.`} context={['Forecaster', 'My forecasts']}
         chips={['What are the key risks?', 'Explain what moved Nurtec', 'Compare Optimistic and Pessimistic']}
         respond={q => { const named = FC_BRANDS.find(x => q.toLowerCase().includes(x.brand.toLowerCase())); const r = forecastAnswer(q, named?.id ?? fcChatBrand, fcInsights, { blocked: fcBlocked, published: fcPublished }); const o = r.out.map(x => x.text ?? '').filter(Boolean).join('\n\n').replace(/^## (.*)$/gm, '**$1**'); return { kind: 'text', title: r.title ?? 'Forecast AI', cites: r.out.flatMap(x => x.sources ?? []).map(s => s.name), body: <div className="space-y-2 whitespace-pre-line">{o.split('\n\n').map((p, i) => <p key={i}><Md text={p} /></p>)}</div> } }} />}
@@ -974,7 +971,7 @@ export default function App() {
             onPublished={c => setModels(ms => upsertRow(ms, c, 'Published'))} />}
       {toast && (
         <div role="status" className="rise fixed bottom-24 left-1/2 z-[60] flex -translate-x-1/2 items-center gap-2 rounded-md bg-text px-4 py-2.5 text-sm text-white shadow-lg">
-          {toast.tone === 'ok' ? <CheckCircle2 size={16} className="text-[#68d1ff]" /> : toast.tone === 'err' ? <AlertCircle size={16} className="text-[#fda4af]" /> : <Info size={16} />}
+          {toast.tone === 'ok' ? <CheckCircle2 size={16} className="text-[#6ee7b7]" /> : toast.tone === 'err' ? <AlertCircle size={16} className="text-[#fda4af]" /> : <Info size={16} />}
           {toast.text}
         </div>
       )}
@@ -988,11 +985,10 @@ const CollabCtx = createContext<CollabState>({ open: false, slot: null, close: (
 
 /* ───────────────────────── App frame: side rail + rounded content panel ───────────────────────── */
 
-
 type NavItem = { id: string; label: string; icon: typeof House; go: () => void; sub?: { onNew: () => void; items: { id: number; label: string; active: boolean; go: () => void; dup: () => void; del: () => void }[] } }
 /** Shared shell for every flow: a light gray rail that keeps the page breathable. Collapsed shows the Pfizer motif and icons; expanded shows the full logo and labels. */
 function AppFrame({ onHome, items, active, flow, header, collab, onCollab, footer, children, dock = 'float' }: { header: ReactNode; collab: boolean; onCollab: (v: boolean) => void; footer: ReactNode; onHome: () => void; items: NavItem[]; active: string; flow: string; children: ReactNode; dock?: 'float' | 'split' }) {
-  // Labelled navigation by default on desktop so testers don't have to guess what the icons mean.
+  // Collapsed by default; opens only from the expand control.
   const [open, setOpen] = useState(false)
   const [slot, setSlot] = useState<HTMLElement | null>(null)
   const [size, setSize] = useState<ChatSize>('md')
@@ -1008,36 +1004,34 @@ function AppFrame({ onHome, items, active, flow, header, collab, onCollab, foote
     window.addEventListener('pointermove', move); window.addEventListener('pointerup', up)
   }
   useEffect(() => { if (collab) setSize('md') }, [collab])
-  const w = open ? 244 : 76
+  const w = open ? 236 : 72
   return (
-    <div className="h-dvh overflow-hidden bg-navy">
+    <div className="h-dvh overflow-hidden bg-background">
+      {/* The rail sits on the canvas; the workspace is a separate rounded, raised panel beside it. */}
       <nav aria-label={`${flow} navigation`}
-        className={'fixed inset-y-0 left-0 z-50 flex flex-col py-4 transition-[width] duration-200'} style={{ width: w }}>
-        <button type="button" onClick={onHome} aria-label="Pfizer · Go to home" className={cx('mb-6 flex shrink-0 flex-col justify-center rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-white', open ? 'mx-4 items-start gap-1.5 px-1.5' : 'mx-auto h-10 items-center px-0')}>
-          {open
-            ? <><img src={pfizerLogo} alt="" className="h-9 w-auto select-none brightness-0 invert" draggable={false} />
-                <span className="min-w-0 text-left leading-tight"><span className="block truncate text-[13px] font-semibold tracking-tight text-white">NextGen Forecasting</span><span className="block text-[11px] text-white/70">{flow}</span></span></>
-            : <img src={pfizerMark} alt="" className="h-8 w-8 select-none brightness-0 invert" draggable={false} />}
+        className="fixed inset-y-0 left-0 z-50 flex flex-col py-4 transition-[width] duration-200" style={{ width: w }}>
+        <button type="button" onClick={onHome} aria-label="Pfizer · Go to home" className={cx('mb-6 flex shrink-0 items-center gap-2 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-brand', open ? 'mx-4 px-1.5' : 'mx-auto h-10 justify-center')}>
+          <img src={pfizerMark} alt="" className="h-8 w-8 shrink-0 select-none" draggable={false} />
+          {open && <span className="min-w-0 text-left leading-tight"><span className="block truncate text-[13px] font-semibold tracking-tight text-text">NextGen Forecasting</span><span className="block truncate text-[11px] text-text-3">{flow}</span></span>}
         </button>
         <ul className={cx('flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto', open ? 'px-3' : 'items-center px-0')}>
           {items.map((it, k) => {
             const on = active === it.id
             return (
               <Fragment key={it.id}>
-                {k === 1 && <li aria-hidden className={cx('my-1.5 h-px bg-white/25', open ? 'mx-2' : 'w-8')} />}
                 <li className={open ? '' : 'w-full flex justify-center'}>
                   <button type="button" onClick={it.go} aria-current={on ? 'page' : undefined} title={open ? undefined : it.label}
-                    className={cx('flex h-11 items-center gap-3 rounded-xl text-[13.5px] font-medium outline-none transition-colors focus-visible:ring-2 focus-visible:ring-white', open ? 'w-full px-3' : 'w-11 justify-center', on ? 'bg-white font-semibold text-navy' : 'text-white/85 hover:bg-white/10 hover:text-white')}>
+                    className={cx('flex items-center gap-3 rounded-xl text-[13.5px] font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-brand', open ? 'h-10 w-full px-3' : 'h-11 w-11 justify-center', on ? 'bg-surface text-brand shadow-[0_1px_3px_rgba(16,24,40,0.08)] ring-1 ring-black/[0.05]' : 'text-text-2 hover:bg-black/[0.05] hover:text-text')}>
                     <it.icon size={18} className="shrink-0" />{open && <span className="truncate">{it.label}</span>}
                   </button>
                   {open && it.sub && (
-                    <div className="ml-[22px] mt-1 border-l border-white/25 pl-2.5">
-                      <button type="button" onClick={it.sub.onNew} className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-[12.5px] font-medium text-white hover:bg-white/10"><SquarePen size={13} />New chat</button>
+                    <div className="ml-[22px] mt-1 border-l border-border-strong/70 pl-2.5">
+                      <button type="button" onClick={it.sub.onNew} className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-[12.5px] font-medium text-text hover:bg-black/[0.05]"><SquarePen size={13} />New chat</button>
                       {it.sub.items.length > 0 && <ul className="max-h-[40dvh] space-y-0.5 overflow-y-auto">{it.sub.items.map(t => (
-                        <li key={t.id} className={cx('group/t relative flex h-8 items-center rounded-lg', t.active ? 'bg-white/15' : 'hover:bg-white/10')}>
-                          <button type="button" onClick={t.go} aria-current={t.active ? 'page' : undefined} title={t.label} className={cx('flex h-8 min-w-0 flex-1 items-center rounded-lg px-2 text-left text-[12.5px]', t.active ? 'font-semibold text-white' : 'text-white/80 hover:text-white')}><span className="truncate">{t.label}</span></button>
-                          <span className={cx('absolute inset-y-0 right-0 hidden items-center gap-0.5 rounded-r-lg bg-gradient-to-l to-transparent pl-4 pr-1 group-focus-within/t:flex group-hover/t:flex', 'from-navy via-navy')}>
-                            <button type="button" onClick={t.dup} aria-label={`Duplicate ${t.label}`} title="Duplicate" className="grid h-6 w-6 place-items-center rounded-md text-white/70 hover:bg-white/15 hover:text-white"><Copy size={12} /></button>
+                        <li key={t.id} className={cx('group/t relative flex h-8 items-center rounded-lg', t.active ? 'bg-surface' : 'hover:bg-[#e2e5ec]')}>
+                          <button type="button" onClick={t.go} aria-current={t.active ? 'page' : undefined} title={t.label} className={cx('flex h-8 min-w-0 flex-1 items-center rounded-lg px-2 text-left text-[12.5px]', t.active ? 'font-medium text-brand' : 'text-text-2 hover:text-text')}><span className="truncate">{t.label}</span></button>
+                          <span className={cx('absolute inset-y-0 right-0 hidden items-center gap-0.5 rounded-r-lg bg-gradient-to-l to-transparent pl-4 pr-1 group-focus-within/t:flex group-hover/t:flex', t.active ? 'from-surface via-surface' : 'from-[#e2e5ec] via-[#e2e5ec]')}>
+                            <button type="button" onClick={t.dup} aria-label={`Duplicate ${t.label}`} title="Duplicate" className="grid h-6 w-6 place-items-center rounded-md text-text-3 hover:bg-black/[0.06] hover:text-text"><Copy size={12} /></button>
                             <button type="button" onClick={t.del} aria-label={`Delete ${t.label}`} title="Delete" className="grid h-6 w-6 place-items-center rounded-md text-text-3 hover:bg-err-soft hover:text-err"><Trash2 size={12} /></button>
                           </span></li>))}</ul>}
                     </div>
@@ -1049,12 +1043,12 @@ function AppFrame({ onHome, items, active, flow, header, collab, onCollab, foote
         </ul>
         <div className={cx('mt-2 flex shrink-0', open ? 'px-3' : 'justify-center')}>
           <button data-tour="rail-toggle" type="button" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-label={open ? 'Collapse navigation' : 'Expand navigation'} title={open ? 'Collapse' : 'Expand'}
-            className="grid h-9 w-9 place-items-center rounded-lg text-white/85 outline-none hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white">{open ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}</button>
+            className="grid h-10 w-10 place-items-center rounded-xl text-text-2 outline-none hover:bg-black/[0.05] hover:text-text focus-visible:ring-2 focus-visible:ring-brand">{open ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}</button>
         </div>
-        <div className={cx('mt-2 flex shrink-0 items-center gap-3', open ? 'px-5' : 'justify-center')}>{footer}{open && <span className="min-w-0 leading-tight"><span className="block truncate text-[13px] font-medium text-white">{ME}</span><span className="block text-[11px] text-white/70">Super Admin</span></span>}</div>
+        <div className={cx('mt-3 flex shrink-0 items-center gap-3', open ? 'px-5' : 'justify-center')}>{footer}{open && <span className="min-w-0 leading-tight"><span className="block truncate text-[12.5px] font-medium text-text">{ME}</span><span className="block text-[11px] text-text-3">Super Admin</span></span>}</div>
       </nav>
-      <div className="flex h-full transition-[padding] duration-200" style={{ paddingLeft: w }}>
-        <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden bg-surface">
+      <div className="flex h-full gap-2 py-2 pr-2 transition-[padding] duration-200" style={{ paddingLeft: w }}>
+        <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-black/[0.05] bg-surface shadow-[0_1px_3px_rgba(16,24,40,0.06),0_8px_24px_-12px_rgba(16,24,40,0.10)]">
           {header}
           <div id={FRAME_ID} className="relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
             <CollabCtx.Provider value={{ open: collab, slot, close: () => onCollab(false), size, setSize, dock }}>{children}</CollabCtx.Provider>
@@ -1070,7 +1064,7 @@ function AppFrame({ onHome, items, active, flow, header, collab, onCollab, foote
             <span className="absolute left-1/2 top-1/2 h-10 w-1 -translate-x-1/2 -translate-y-1/2 rounded-full bg-border-strong transition-colors group-hover:bg-brand group-focus-visible:bg-brand" />
           </div>
           <aside ref={setSlot} aria-label={ASSISTANT} style={{ width: panelW }}
-            className="rise flex h-full shrink-0 flex-col overflow-hidden border-l border-border bg-surface max-sm:fixed max-sm:inset-2 max-sm:z-[56] max-sm:!w-auto" />
+            className="rise flex h-full shrink-0 flex-col overflow-hidden rounded-2xl border border-black/[0.06] bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.05),0_16px_40px_-20px_rgba(16,24,40,0.22)] max-sm:fixed max-sm:inset-2 max-sm:z-[56] max-sm:!w-auto" />
         </>}
         {collab && dock === 'float' && (
           <aside ref={setSlot} aria-label={ASSISTANT}
@@ -1809,7 +1803,7 @@ function ForecastBackdrop() {
   // Faint dot grid, fading toward the edges
   return (
     <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-      <div className="absolute inset-0 [background-image:radial-gradient(circle,rgba(104,209,255,0.35)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_75%)] opacity-60" />
+      <div className="absolute inset-0 [background-image:radial-gradient(circle,var(--color-border-strong)_1px,transparent_1px)] [background-size:22px_22px] [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_75%)] opacity-60" />
     </div>
   )
 }
@@ -1822,47 +1816,59 @@ const ROLE_ENTRIES: { id: string; title: string; who: string; desc: string; live
 
 function Landing({ onCoE, onForecast }: { onCoE: () => void; onForecast: () => void }) {
   const [note, setNote] = useState('')
+  const downloadCode = () => {
+    const link = document.createElement('a')
+    link.href = '/figma-make-app-code.zip'
+    link.download = 'figma-make-app-code.zip'
+    link.click()
+  }
   return (
-    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-navy text-white selection:bg-cyan selection:text-white">
+    <div className="relative flex min-h-dvh flex-col overflow-hidden bg-background selection:bg-brand selection:text-white">
       <ForecastBackdrop />
       <header className="relative z-10 flex h-16 items-center justify-between px-8">
-        <Logo dark />
-        <span className="hidden text-xs text-white/70 md:inline">Signed in as <strong className="font-semibold text-white">{ME}</strong></span>
+        <Logo />
+        <span className="hidden text-xs text-text-3 md:inline">Signed in as <strong className="font-semibold text-text">{ME}</strong></span>
       </header>
 
       <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-6 pb-16">
         <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-white/70">Integrated Forecasting</p>
-          <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-xs font-semibold tracking-wide text-white">MVP prototype</span>
+          <p className="font-mono text-xs uppercase tracking-[0.22em] text-text-3">Integrated Forecasting</p>
+          <Badge tone="warn">MVP prototype</Badge>
         </div>
-        <h1 className="mt-4 text-center font-display text-4xl font-bold tracking-tight text-white sm:text-5xl">
-          Build the model once. <span className="text-[#68d1ff]">Forecast inside it.</span>
+        <h1 className="mt-3 text-center text-3xl font-bold tracking-tight text-text sm:text-4xl">
+          Build the model once. <span className="text-brand">Forecast inside it.</span>
         </h1>
-        <p className="mt-3 max-w-xl text-center text-sm text-white/75">Pick where you want to start.</p>
+        <p className="mt-3 max-w-xl text-center text-sm text-text-2">Pick where you want to start.</p>
 
 
-        <div className="mt-12 grid w-full gap-6 md:grid-cols-3">
-          {ROLE_ENTRIES.map((r, i) => {
-            const go = r.id === 'forecast' ? onForecast : onCoE
-            const soon = () => setNote(`${r.title} is a concept in this prototype and is not built yet. Its scope is awaiting forecasting SME validation.`)
-            return (
-              <div key={r.id} onClick={r.live ? go : soon} style={{ animationDelay: `${i * 70}ms` }} className={cx('rise group flex cursor-pointer flex-col rounded-2xl border p-7 transition-all duration-200 hover:-translate-y-1', r.live ? 'border-white/15 bg-white/[0.07] hover:border-[#68d1ff]/70 hover:bg-white/[0.12] hover:shadow-[0_24px_48px_-20px_rgba(0,0,0,0.6)]' : 'border-dashed border-white/25 bg-white/[0.03] hover:bg-white/[0.07]')}>
-                <div className="flex items-start justify-between gap-2">
-                  <span className={cx('grid h-11 w-11 place-items-center rounded-xl font-display text-lg font-bold transition-transform duration-200 group-hover:scale-105', r.live ? 'bg-white text-navy' : 'bg-white/10 text-white')}>{i + 1}</span>
-                  <span className={cx('rounded-full px-2.5 py-0.5 text-xs font-semibold tracking-wide', r.live ? 'bg-[#68d1ff]/20 text-[#aee3ff]' : 'bg-white/15 text-white')}>{r.live ? 'Available' : 'Concept'}</span>
-                </div>
-                <p className="mt-5 text-xs font-semibold uppercase tracking-wider text-white/75">{r.who}</p>
-                <h2 className="mt-1.5 text-xl font-bold tracking-tight text-white">{r.title}</h2>
-                <p className="mt-2 flex-1 text-[15px] leading-relaxed text-white/85">{r.desc}</p>
-                {r.live
-                  ? <button type="button" onClick={e => { e.stopPropagation(); go() }} className="mt-6 inline-flex items-center gap-2 self-start rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-brand hover:bg-brand-soft">Get started <ArrowRight size={16} className="transition-transform group-hover:translate-x-0.5" /></button>
-                  : <button type="button" onClick={e => { e.stopPropagation(); soon() }} className="mt-6 inline-flex items-center gap-2 self-start rounded-full border-2 border-white/40 px-5 py-2.5 text-sm font-semibold text-white hover:border-white hover:bg-white/10">Coming soon <ArrowRight size={16} /></button>}
+        <div className="mt-10 grid w-full gap-5 md:grid-cols-3">
+          {ROLE_ENTRIES.map(r => (
+            <div key={r.id} className={cx('flex flex-col rounded-2xl border bg-surface/95 p-6 backdrop-blur', r.live ? 'border-brand/30 shadow-lg shadow-brand/5' : 'border-dashed border-border-strong')}>
+              <div className="flex items-center justify-between gap-2">
+                <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-text-3">{r.who}</p>
+                <Badge tone={r.live ? 'ok' : 'neutral'}>{r.live ? 'Available' : 'Concept'}</Badge>
               </div>
-            )
-          })}
+              <h2 className="mt-3 text-xl font-bold tracking-tight">{r.title}</h2>
+              <p className="mt-2 flex-1 text-sm text-text-2">{r.desc}</p>
+              {r.live
+                ? <button type="button" onClick={r.id === 'forecast' ? onForecast : onCoE} className="mt-6 inline-flex items-center gap-2 border-t border-border pt-4 text-sm font-bold text-brand hover:underline">Get started <ArrowRight size={16} /></button>
+                : <button type="button" onClick={() => setNote(`${r.title} is a concept in this prototype and is not built yet. Its scope is awaiting forecasting SME validation.`)} className="mt-6 inline-flex items-center gap-2 border-t border-border pt-4 text-sm font-semibold text-text-2 hover:text-brand">Coming soon <ArrowRight size={16} /></button>}
+            </div>
+          ))}
         </div>
-        {note && <p role="status" className="mt-4 max-w-2xl text-center text-sm text-white/80">{note}</p>}
+        {note && <p role="status" className="mt-4 max-w-2xl text-center text-sm text-text-2">{note}</p>}
       </main>
+      <footer className="relative z-10 flex justify-center px-6 pb-6">
+        <Btn
+          variant="secondary"
+          size="sm"
+          icon={<Download size={14} aria-hidden />}
+          onClick={downloadCode}
+          className="bg-surface/80 text-xs text-text-2 shadow-sm backdrop-blur hover:border-brand/40 hover:text-brand"
+        >
+          Download updated code
+        </Btn>
+      </footer>
     </div>
   )
 }
@@ -1893,13 +1899,14 @@ function AiButton({ on, onClick, label }: { on: boolean; onClick: () => void; la
   )
 }
 
-function TopBar({ collab, crumbs, onHome, onAdmin, onLogout, models, onResume, fixtures }: { collab?: { on: boolean; toggle: () => void; label: string }; crumbs: string[]; onHome: () => void; onAdmin: () => void; onLogout: () => void; models: ModelRow[]; onResume: (m: ModelRow) => void; ai: boolean; onAI: () => void; notify: (t: Toast) => void; fixtures: boolean; onFixtures: () => void }) {
+function TopBar({ collab, crumbs, onHome, onAdmin, onLogout, models, onResume, fixtures, onFull }: { onFull?: () => void; collab?: { on: boolean; toggle: () => void; label: string }; crumbs: string[]; onHome: () => void; onAdmin: () => void; onLogout: () => void; models: ModelRow[]; onResume: (m: ModelRow) => void; ai: boolean; onAI: () => void; notify: (t: Toast) => void; fixtures: boolean; onFixtures: () => void }) {
   return (
-    <header data-app-header className="relative z-40 flex h-14 shrink-0 items-center gap-4 border-b border-border bg-surface px-6">
-      {crumbs.length > 0 && <nav aria-label="Breadcrumb"><ol className="flex items-center gap-1.5 text-[13px]">{crumbs.filter(Boolean).map((c, k, a) => <li key={c} className="flex items-center gap-1.5">{k > 0 && <ChevronRight size={13} className="text-text-3" />}{k === a.length - 1 ? <span aria-current="page" className="font-semibold text-text">{c}</span> : <button type="button" onClick={onHome} className="rounded text-text-2 hover:text-text hover:underline">{c}</button>}</li>)}</ol></nav>}
+    <header className="z-40 flex h-12 shrink-0 items-center gap-4 border-b border-border bg-surface px-5">
+      <nav aria-label="Breadcrumb"><ol className="flex items-center gap-1.5 text-[13px]">{crumbs.filter(Boolean).map((c, k, a) => <li key={c} className="flex items-center gap-1.5">{k > 0 && <ChevronRight size={13} className="text-text-3" />}{k === a.length - 1 ? <span aria-current="page" className="font-semibold text-brand">{c}</span> : <button type="button" onClick={onHome} className="rounded text-text-2 hover:text-brand hover:underline">{c}</button>}</li>)}</ol></nav>
       <div id="topbar-ws" className="flex min-w-0 items-center gap-2.5" />
       <div className="ml-auto flex items-center gap-1.5">
         {collab && <AiButton on={collab.on} onClick={collab.toggle} label={collab.label} />}
+        {onFull && <button type="button" onClick={onFull} aria-label="Enter full view" title="Full view" className="grid h-9 w-9 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><Maximize2 size={16} /></button>}
         <Notifications models={models} onResume={onResume} fixtures={fixtures} />
       </div>
     </header>
@@ -1926,9 +1933,9 @@ function notesFor(models: ModelRow[]): Note[] {
 
 function Notifications({ models, onResume, fixtures }: { models: ModelRow[]; onResume: (m: ModelRow) => void; fixtures?: boolean }) {
   const [open, setOpen] = useState(false)
+  const [tab, setTab] = useState<'notes' | 'activity'>('notes')
   const [read, setRead] = useState<Set<string>>(new Set())
   const [dismissed, setDismissed] = useState<Set<string>>(new Set())
-  const [cleared, setCleared] = useState(false)
   const ref = useDismiss(open, () => setOpen(false))
   const notes = notesFor(models).filter(n => !dismissed.has(n.id)).sort((a, b) => Number(!!b.cta) - Number(!!a.cta))
   const unread = notes.filter(n => n.cta && !read.has(n.id)).length
@@ -1945,12 +1952,31 @@ function Notifications({ models, onResume, fixtures }: { models: ModelRow[]; onR
       </button>
       {open && (
         <div className="rise absolute right-0 top-11 z-40 w-[400px] max-w-[calc(100vw-24px)] overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
-            <p className="text-[13px] font-semibold">Notifications</p>
-            {!cleared && <button type="button" onClick={() => { setCleared(true); setRead(new Set(notes.map(n => n.id))) }} className="text-xs font-semibold text-brand hover:underline">Mark all read</button>}
+          <div className="flex items-center justify-between border-b border-border px-4 pt-2">
+            <div role="tablist" aria-label="Notifications and activity" className="flex gap-1">
+              <button type="button" role="tab" aria-selected={tab === 'notes'} onClick={() => setTab('notes')}
+                className={cx('-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-[13px] font-semibold transition-colors', tab === 'notes' ? 'border-brand text-brand' : 'border-transparent text-text-2 hover:text-text')}>
+                Notifications
+                {unread > 0 && <span className="grid h-4 min-w-4 place-items-center rounded-full bg-err px-1 text-[10px] font-bold text-white">{unread}</span>}
+              </button>
+              <button type="button" role="tab" aria-selected={tab === 'activity'} onClick={() => setTab('activity')}
+                className={cx('-mb-px inline-flex items-center gap-1.5 border-b-2 px-3 py-2 text-[13px] font-semibold transition-colors', tab === 'activity' ? 'border-brand text-brand' : 'border-transparent text-text-2 hover:text-text')}>
+                Recent activity
+              </button>
+            </div>
+            {tab === 'notes' && notes.length > 0 && (
+              <button type="button" onClick={() => setRead(new Set(notes.map(n => n.id)))} className="text-xs font-semibold text-brand hover:underline">Mark all read</button>
+            )}
           </div>
-          <div className="max-h-[460px] overflow-y-auto">
-            {cleared ? <div className="px-6 py-12 text-center"><div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-surface-2 text-text-2"><Check size={18} /></div><p className="mt-3 text-sm font-semibold">You’re all caught up</p></div> : <ul className="divide-y divide-border">
+          {tab === 'notes' ? (
+            notes.length === 0 ? (
+            <div className="px-6 py-10 text-center">
+              <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-ok-soft text-ok"><Check size={18} /></div>
+              <p className="mt-3 text-sm font-semibold">You’re all caught up</p>
+              <p className="mt-1 text-xs text-text-2">Drafts, finalised versions and availability events show up here.</p>
+            </div>
+          ) : (
+            <ul className="max-h-[420px] divide-y divide-border overflow-y-auto">
               {notes.map(n => {
                 const isUnread = !!n.cta && !read.has(n.id)
                 return (
@@ -1971,17 +1997,24 @@ function Notifications({ models, onResume, fixtures }: { models: ModelRow[]; onR
                   </li>
                 )
               })}
-              {activities.map((a, k) => (
-                <li key={`${a.when}-${k}`} className="flex gap-3 px-4 py-3 text-sm hover:bg-background">
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-2 text-text-2"><a.icon size={14} /></span>
-                  <div className="min-w-0 flex-1">
-                    <p className="text-[13px] leading-snug"><b>{a.who}</b> <span className="text-text-2">{a.what}</span></p>
-                    <span className="mt-0.5 block text-[11px] text-text-3">{a.when}</span>
-                  </div>
-                </li>
-              ))}
-            </ul>}
-          </div>
+            </ul>
+            )
+          ) : (
+            <div className="flex flex-col">
+              <p className="border-b border-border bg-surface-2 px-4 py-2 text-xs text-text-3">Who changed, finalised or made models available.</p>
+              <ol className="max-h-[420px] divide-y divide-border overflow-y-auto">
+                {activities.map((a, k) => (
+                  <li key={`${a.when}-${k}`} className="flex gap-3 px-4 py-3 text-sm hover:bg-background">
+                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-surface-2 text-text-2"><a.icon size={14} /></span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[13px] leading-snug"><b>{a.who}</b> <span className="text-text-2">{a.what}</span></p>
+                      <span className="mt-0.5 block text-[11px] text-text-3">{a.when}</span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
         </div>
       )}
     </div>
@@ -2103,7 +2136,7 @@ function Charles({ context, chips, respond, greeting, extra, busy, busyLabel = '
             <span className={cx('ai-orb h-9 w-9 shrink-0 rounded-full', busy && 'ai-orb-busy')} aria-hidden />
             <div className="min-w-0 flex-1">
               <p title={E.label} className="flex items-center gap-1.5 text-sm font-semibold leading-tight"><E.icon size={14} className="shrink-0 text-brand" /><span className="truncate">{E.short}</span></p>
-              <p className="flex items-center gap-1.5 text-xs text-text-3"><span className={cx('h-1.5 w-1.5 shrink-0 rounded-full', busy ? 'animate-pulse bg-[#6f6fff]' : 'bg-ok')} /><span className="truncate">{busy ? busyLabel : E.mode}</span></p>
+              <p className="flex items-center gap-1.5 text-xs text-text-3"><span className={cx('h-1.5 w-1.5 shrink-0 rounded-full', busy ? 'animate-pulse bg-[#2f9e73]' : 'bg-ok')} /><span className="truncate">{busy ? busyLabel : E.mode}</span></p>
             </div>
             <div className="flex shrink-0 items-center">
               {dock === 'float' && !min && <button type="button" onClick={() => setSize(size === 'lg' ? 'md' : 'lg')} title={size === 'lg' ? 'Smaller' : 'Larger'} aria-label={size === 'lg' ? 'Make the chat smaller' : 'Make the chat larger'} className="hidden h-8 w-8 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text sm:grid">{size === 'lg' ? <Minimize2 size={14} /> : <Maximize2 size={14} />}</button>}
@@ -2128,7 +2161,7 @@ function Charles({ context, chips, respond, greeting, extra, busy, busyLabel = '
           <div className="mb-2 flex gap-1.5 overflow-x-auto pb-1">
             {chips.map(c => <button type="button" key={c} onClick={() => send(c)} className="shrink-0 rounded-full border border-border px-2.5 py-1 text-xs text-text-2 hover:border-brand hover:text-brand">{c}</button>)}
           </div>
-          <form onSubmit={e => { e.preventDefault(); send(q) }} className="relative rounded-2xl border border-[#6f6fff]/30 bg-surface p-3 shadow-[0_0_0_4px_rgb(111_111_255/0.08)] transition-shadow focus-within:border-[#6f6fff]/60 focus-within:shadow-[0_0_0_4px_rgb(47_158_115/0.14)]">
+          <form onSubmit={e => { e.preventDefault(); send(q) }} className="relative rounded-2xl border border-[#2f9e73]/30 bg-surface p-3 shadow-[0_0_0_4px_rgb(47_158_115/0.07)] transition-shadow focus-within:border-[#2f9e73]/60 focus-within:shadow-[0_0_0_4px_rgb(47_158_115/0.14)]">
             <textarea rows={1} value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(q) } }}
               placeholder={E.placeholder} aria-label={`Message ${E.label}`}
               className="block max-h-40 min-h-[32px] w-full resize-none bg-transparent px-1 py-1 text-[15px] outline-none placeholder:text-text-3" />
@@ -2466,6 +2499,7 @@ function ModelsHome({ fixtures, models, setModels, onOpen, onResume, notify, ai,
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-[28px] font-semibold tracking-tight">Model workspace</h1>
+          <p className="mt-1 text-text-2">Models you created or have been given access to. Open one to continue configuring it.</p>
         </div>
         <Btn icon={<Plus size={16} />} className="shrink-0" onClick={() => setCreating(true)}>New model</Btn>
       </header>
@@ -2502,13 +2536,14 @@ function ModelsHome({ fixtures, models, setModels, onOpen, onResume, notify, ai,
             ) : (
               <table className="w-full text-[13px]">
                 <thead>
-                  <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-3">
+                  <tr className="border-b border-border bg-surface text-left text-[12px] font-medium text-text-3">
                     {([['name', 'Model name', 'w-[20%]'], ['brand', 'Brand & streams', 'w-[23%]'], ['arch', 'Archetype', 'w-[15%]'], ['version', 'Version', 'w-[8%]'], ['status', 'Status', 'w-[10%]'], ['updated', 'Updated', 'w-[12%]']] as const).map(([k, h, wCls]) => {
                       const on = sort?.k === k
                       const Icon = !on ? ArrowUpDown : sort.dir === 1 ? ArrowUp : ArrowDown
                       return (
-                        <th key={k} className={cx('px-3 py-2.5 font-semibold', wCls)} aria-sort={on ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
-                          <button type="button" onClick={() => toggleSort(k)} className={cx('inline-flex items-center gap-1 uppercase tracking-wide outline-none hover:text-text focus-visible:text-brand', on && 'text-text')}>
+                        <th key={k} className={cx('px-3 py-2 font-medium', wCls)} aria-sort={on ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
+                          <button type="button" onClick={() => toggleSort(k)} className={cx('inline-flex items-center gap-1 outline-none hover:text-text focus-visible:text-brand', on && 'text-text')}>
+                            {k === 'updated' && <Clock size={11} className="mr-0.5 text-text-3 shrink-0" />}
                             {h}<Icon size={12} className={on ? 'text-brand' : 'opacity-60'} />
                           </button>
                         </th>
@@ -2524,9 +2559,10 @@ function ModelsHome({ fixtures, models, setModels, onOpen, onResume, notify, ai,
                       <td className="px-4 py-3.5 text-right"><Btn variant="ghost" size="sm" onClick={() => notify({ tone: 'info', text: 'Access request sent to the model creator.' })}>Request access</Btn></td>
                     </tr>
                   ) : (
-                    <tr key={m.id} onClick={() => onResume(m)} title={`${m.status === 'Draft' ? 'Resume' : 'Open'} ${modelName(m)}`} className="group cursor-pointer border-b border-border align-middle last:border-0 hover:bg-brand-soft/30 transition-colors">
+                    <tr key={m.id} onClick={() => onResume(m)} title={`${m.status === 'Draft' ? 'Resume' : 'Open'} ${modelName(m)}`} className="group cursor-pointer border-b border-border align-middle last:border-0 hover:bg-[#f8f8fa] transition-colors">
                       <td className="px-3 py-2.5">
-                        <span className="font-semibold text-text group-hover:text-brand">{modelName(m).replace(new RegExp('\\s*\\b' + m.market + '\\b'), '')}</span>
+                        <span className="font-semibold text-text group-hover:text-brand">{modelName(m)}</span>
+                        <span className="ml-1 text-xs text-text-3">({GEO_NAME(m.market)})</span>
                       </td>
                       <td className="px-3 py-2.5">
                         <div className="flex items-center gap-1.5 overflow-hidden">
@@ -2545,6 +2581,7 @@ function ModelsHome({ fixtures, models, setModels, onOpen, onResume, notify, ai,
                       </td>
                       <td className="px-3 py-2.5 text-xs text-text-2 whitespace-nowrap">
                         <span className="inline-flex items-center gap-1">
+                          <Clock size={11} className="text-text-3 shrink-0" />
                           <span>{m.updated}</span>
                           <span className="text-text-3">·</span>
                           <span className="truncate max-w-[70px]">{m.by}</span>
@@ -2630,26 +2667,26 @@ function NewModelDialog({ models, onClose, onStart }: { models: ModelRow[]; onCl
   const src = models.find(m => m.id === from)
   return (
     <div className="fixed inset-0 z-50 grid place-items-center bg-brand-dark/50 p-4" role="dialog" aria-modal="true" aria-labelledby="new-title" onClick={onClose}>
-      <div className="rise flex max-h-[92dvh] w-full max-w-3xl flex-col rounded-2xl bg-surface shadow-xl" onClick={e => e.stopPropagation()}>
+      <div className="rise flex max-h-[92dvh] w-full max-w-2xl flex-col rounded-lg bg-surface shadow-xl" onClick={e => e.stopPropagation()}>
         <header className="flex items-start justify-between gap-4 border-b border-border px-6 py-5">
           <div><h2 id="new-title" className="text-lg font-semibold">New brand model</h2>
             <p className="mt-1 text-sm text-text-2">Choose a starting point. Every path uses the same configuration steps.</p></div>
           <button type="button" aria-label="Close" onClick={onClose} className="rounded p-1 text-text-3 hover:bg-surface-2 hover:text-text"><X size={16} /></button>
         </header>
         <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
-        <div role="radiogroup" aria-label="Starting point" className="grid gap-3 sm:grid-cols-3">
-          {([['copy', 'Use a template', 'Start from a previously saved model.', Copy], ['blank', 'Start from scratch', 'Begin with a blank configuration.', Plus], ['import', 'Import a model', 'Exploratory. AI proposes a structure for review.', Upload]] as const).map(([id, t, d, Icon]) => (
-            <button type="button" role="radio" key={id} aria-checked={mode === id} disabled={id === 'copy' && !models.length} onClick={() => setMode(id)}
-              className={cx('relative flex min-h-[116px] flex-col items-start gap-1.5 rounded-xl border bg-surface p-4 text-left transition-colors disabled:opacity-40', mode === id ? 'border-brand ring-1 ring-brand' : 'border-border hover:border-border-strong')}>
-              <span className="flex w-full items-center justify-between gap-2"><Icon size={18} className={mode === id ? 'text-brand' : 'text-text-2'} />
-                <span aria-hidden className={cx('grid h-5 w-5 place-items-center rounded-full border', mode === id ? 'border-brand bg-brand text-white' : 'border-border-strong')}>{mode === id && <Check size={12} />}</span></span>
-              <span className="mt-1 block text-[14px] font-semibold leading-snug">{t}</span>
-              <span className="block text-[12.5px] leading-snug text-text-2">{d}</span>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {([['copy', 'Use a template', 'Start from a previously saved model', Copy], ['blank', 'Start from scratch', 'Blank configuration', Plus], ['import', 'Import a model · exploratory', 'Future scope — AI proposes a structure for review', Upload]] as const).map(([id, t, d, Icon]) => (
+            <button type="button" key={id} aria-pressed={mode === id} disabled={id === 'copy' && !models.length} onClick={() => setMode(id)}
+              className={cx('flex h-full items-start gap-3 rounded-md border p-3.5 text-left transition-colors disabled:opacity-40', mode === id ? 'border-brand bg-brand-soft/50 ring-1 ring-brand' : 'border-border-strong hover:border-text')}>
+              <span className={cx('grid h-8 w-8 shrink-0 place-items-center rounded-md', mode === id ? 'bg-brand text-white' : 'bg-surface-2 text-brand')}><Icon size={15} /></span>
+              <span className="min-w-0"><span className="block whitespace-nowrap text-[13px] font-semibold">{t}</span><span className="mt-0.5 block text-xs text-text-2">{d}</span></span>
             </button>
           ))}
         </div>
+        {mode === 'blank' && <p className="rounded-md bg-surface-2 px-3.5 py-3 text-[13px] text-text-2">You’ll choose the archetype, modes, modules and data configuration yourself in the steps that follow.</p>}
+        {mode === 'copy' && <p className="rounded-md bg-surface-2 px-3.5 py-3 text-[13px] text-text-2">Templates are models previously saved in the library. Copying one keeps its archetypes, modes and modules as your starting point, and you can change anything in the steps that follow.</p>}
         {mode === 'copy' && models.length > 0 && (
-          <div className="max-w-sm">
+          <div>
             <Field label="Template" hint={src ? `${src.inds.length} indication${src.inds.length > 1 ? 's' : ''} · ${Array.from(new Set(src.inds.map(i => i.arch))).join(' + ')} · ${src.version}` : undefined}>
               <select className={inputCls()} value={from} onChange={e => setFrom(e.target.value)}>
                 {models.map(m => <option key={m.id} value={m.id}>{m.brand} {m.market} · {m.version}</option>)}
@@ -3177,7 +3214,7 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
           <div className="p-5">
             <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Configuration</p>
             <div className="mt-3 flex items-center gap-3">
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border"><div className="h-full rounded-full bg-navy transition-all" style={{ width: `${(doneCount / (LAST - 1)) * 100}%` }} /></div>
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-border"><div className="h-full rounded-full bg-brand transition-all" style={{ width: `${(doneCount / (LAST - 1)) * 100}%` }} /></div>
               <span className="font-mono text-xs text-text-2">{doneCount}/{LAST - 1}</span>
             </div>
           </div>
@@ -3190,10 +3227,10 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
                 <li key={s.id} data-tour={s.id === LAST ? 'coe-review' : undefined} className="shrink-0">
                   <button type="button" onClick={() => go(s.id)} disabled={locked} aria-current={s.id === stage ? 'step' : undefined}
                     title={locked ? `Complete ${STAGES[firstOpen - 1].title} first` : undefined}
-                    className={cx('flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed', s.id === stage ? 'bg-surface text-navy ring-2 ring-navy' : locked ? 'opacity-55' : 'text-text hover:bg-surface-2')}>
+                    className={cx('flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left outline-none transition-colors focus-visible:ring-2 focus-visible:ring-brand disabled:cursor-not-allowed', s.id === stage ? 'bg-surface text-brand shadow-sm ring-1 ring-border' : locked ? 'opacity-55' : 'text-text hover:bg-surface-2')}>
                     <span className={cx('grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold',
                       st === 'done' && 'bg-ok text-white', st === 'error' && 'bg-err text-white',
-                      st === 'current' && 'bg-navy text-white', st === 'todo' && 'border border-border-strong text-text-2')}>
+                      st === 'current' && 'bg-brand text-white', st === 'todo' && 'border border-border-strong text-text-2')}>
                       {st === 'done' ? <Check size={13} strokeWidth={3} /> : st === 'error' ? '!' : locked ? <Lock size={11} /> : s.id}
                     </span>
                     <span className="min-w-0">
@@ -3324,7 +3361,7 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
             <span className={cx('absolute inset-y-0 left-1.5 w-px transition-colors group-hover:bg-brand/60 group-focus-visible:bg-brand', flowDrag && 'bg-brand')} />
             <span className="absolute left-0.5 top-1/2 h-8 w-1 -translate-y-1/2 rounded-full bg-border-strong opacity-0 transition-opacity group-hover:opacity-100" />
           </div>}
-          <ForecastFlowPanel c={c} stage={stage} reached={Math.max(stage, ...Array.from(visited))} go={go} canGo={canGo} onPick={id => update({ active: id })} open={flowOpen} aiOpen={collab.open}
+          <ForecastFlowPanel c={c} stage={stage} go={go} canGo={canGo} onPick={id => update({ active: id })} open={flowOpen} aiOpen={collab.open}
             onOpen={() => { if (collab.open) collab.close(); setFlowPref(true) }} onClose={() => setFlowPref(false)} />
         </aside>
         {sharing && <ShareDialog c={c} update={update} notify={notify} onClose={() => setSharing(false)} />}
@@ -4256,7 +4293,7 @@ function ModuleLanes({ c, ind, updInd, readOnly, go, dragging, inspect: inspectP
           const st = modState(insp, ind, seq), isReq = req.includes(insp.id)
           const usedBy = MODULES.filter(m => m.needs === insp.name && seq.includes(m.id))
           return (
-            <div className="rounded-2xl border border-border bg-surface shadow-card p-4">
+            <div className="rounded-lg border border-border bg-surface p-4">
               <div className="flex items-start justify-between gap-2"><div><p className="text-[11px] text-text-3">{insp.cat}</p><p className="font-semibold">{insp.name}</p></div><button type="button" onClick={() => setInspect(null)} aria-label="Close details" className="text-text-3 hover:text-text"><X size={15} /></button></div>
               <div className="mt-2 flex flex-wrap gap-1"><Badge tone={STATE_UI[st].tone}>{STATE_UI[st].label}</Badge>{isReq ? <Badge>Core · required</Badge> : <Badge>Optional</Badge>}</div>
               <p className="mt-3 text-[12.5px] text-text-2">{insp.desc}</p>
@@ -4376,16 +4413,6 @@ function StageModules({ c, ind, update, updInd, go, errs, fix }: Ctx & { errs?: 
   const onCount = valid.filter(isOn).length
 
   if (!arch) return <div className="space-y-4"><StreamArchSummary c={c} ind={ind} update={update} go={go} /><EmptyState icon={<Layers size={18} />} title={`No archetype for ${ind.name || 'this stream'}`} action={<Btn size="sm" onClick={() => go(2)}>Choose an archetype</Btn>}>Stages and modules come from the archetype.</EmptyState></div>
-  // Group classes in calculation order. Modules sit in their class; the patient-flow inputs are mapped onto the same classes.
-  const seqNow = Array.from(new Set([...ind.modules, ...req]))
-  const insp = MODULES.find(m => m.id === inspect)
-  const lanes: LaneView[] = LANE_ORDER.map(cat => cat === '__engine'
-    ? { name: `Archetype engine · ${archName(arch)}`, mods: [], addable: [], engine: true }
-    : {
-      name: cat,
-      mods: seqNow.map(id => MODULES.find(m => m.id === id)).filter((m): m is Mod => !!m && m.cat === cat).map(m => { const st = modState(m, ind, seqNow); return { id: m.id, name: m.name, desc: m.desc, required: req.includes(m.id), dot: st === 'ok' ? undefined : STATE_UI[st].dot } }),
-      addable: valid.filter(m => m.cat === cat && !isOn(m)).map(m => ({ id: m.id, name: m.name })),
-    })
   return (
     <div className="@container space-y-4">
       <StreamArchSummary c={c} ind={ind} update={update} go={go} />
@@ -4397,19 +4424,54 @@ function StageModules({ c, ind, update, updInd, go, errs, fix }: Ctx & { errs?: 
         </Banner>
       )}
 
-      <InputMapBoard streamName={ind.name} engine={`${archName(arch)} (${ind.engine})`} lanes={lanes} map={ind.inputMap} setMap={m => updInd(ind.id, { inputMap: m })}
-        onAddModule={id => { const m = MODULES.find(x => x.id === id); if (m) add(m) }} onRemoveModule={remove} onInspect={id => setInspect(inspect === id ? null : id)} />
-      {insp && (() => {
-        const st = modState(insp, ind, seqNow), isReq = req.includes(insp.id)
-        return (
-          <div className="rounded-2xl border border-border bg-surface shadow-card p-4">
-            <div className="flex items-start justify-between gap-2"><div><p className="text-[11px] text-text-3">{insp.cat}</p><p className="font-semibold">{insp.name}</p></div><button type="button" onClick={() => setInspect(null)} aria-label="Close details" className="text-text-3 hover:text-text"><X size={15} /></button></div>
-            <div className="mt-2 flex flex-wrap gap-1"><Badge tone={STATE_UI[st].tone}>{STATE_UI[st].label}</Badge>{isReq ? <Badge>Core · required</Badge> : <Badge>Optional</Badge>}</div>
-            <p className="mt-2 text-[12.5px] text-text-2">{insp.desc}</p>
-            <p className="mt-2 text-[12px] text-text-3">Runs at position {seqNow.indexOf(insp.id) + 1} of {seqNow.length} · Depends on {insp.needs ?? 'nothing'}</p>
+      <div className="grid items-start gap-4 @3xl:grid-cols-[minmax(0,1fr)_330px]">
+        <section className="min-w-0 rounded-lg border border-border bg-surface p-4" aria-label="Model canvas">
+          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+            <div><h3 className="flex items-center gap-2 text-sm font-semibold"><Workflow size={15} className="text-brand" />Canvas · {ind.name || 'Stream'}</h3><p className="text-xs text-text-2">{archName(arch)} <span className="text-text-3">({ind.engine})</span> · {onCount} modules</p></div>
+            <span className="text-[11px] text-text-3">Click a card to inspect · drag to the library to remove</span>
           </div>
-        )
-      })()}
+          <ModuleLanes c={c} ind={ind} updInd={updInd} dragging={dragging} inspect={inspect} onInspect={setInspect} />
+        </section>
+
+        <aside aria-label="Module library"
+          onDragOver={e => { if (e.dataTransfer.types.includes(DRAG_ON)) { e.preventDefault(); setBinOver(true) } }} onDragLeave={() => setBinOver(false)}
+          onDrop={e => { e.preventDefault(); setBinOver(false); const id = e.dataTransfer.getData(DRAG_ON); if (id) remove(id) }}
+          className={cx('relative flex max-h-[calc(100dvh-140px)] min-w-0 flex-col overflow-hidden rounded-lg border bg-surface @3xl:sticky @3xl:top-4', binOver ? 'border-2 border-dashed border-err' : 'border-border')}>
+          {binOver && <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-err-soft/85 text-sm font-semibold text-err"><span className="flex items-center gap-2"><X size={16} />Drop to remove from canvas</span></div>}
+          <div className="border-b border-border p-3">
+            <div className="flex items-center justify-between"><h3 className="text-sm font-semibold">Module library</h3><span className="font-mono text-[11px] text-text-3">{valid.length} compatible</span></div>
+            <div className="relative mt-2">
+              <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-3" />
+              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search modules" aria-label="Search modules" className={cx(inputCls(), 'h-8! pl-8 text-[13px]')} />
+            </div>
+            <div className="mt-2 flex gap-1" role="radiogroup" aria-label="Show">
+              {(['All', 'Available', 'On canvas'] as ModFilter[]).map(f => <button key={f} type="button" role="radio" aria-checked={filter === f} onClick={() => setFilter(f)} className={cx('flex-1 rounded px-2 py-1 text-[12px] font-medium', filter === f ? 'bg-text text-white' : 'bg-surface-2 text-text-2 hover:text-text')}>{f}</button>)}
+            </div>
+          </div>
+          <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
+            {LANE_ORDER.filter(l => l !== '__engine').map(fam => {
+              const list = valid.filter(m => m.cat === fam && shown(m))
+              if (!list.length) return null
+              const open = !!term || openB.has(fam)
+              return (
+                <section key={fam}>
+                  <button type="button" aria-expanded={open} onClick={() => setOpenB(p => { const n = new Set(p); n.has(fam) ? n.delete(fam) : n.add(fam); return n })}
+                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[11px] font-bold uppercase tracking-wider text-text-2 hover:bg-surface-2">
+                    <ChevronDown size={13} className={cx('shrink-0 transition-transform', !open && '-rotate-90')} /><span className="min-w-0 flex-1 truncate">{fam}</span><span className="font-mono font-normal">{list.filter(isOn).length}/{list.length}</span>
+                  </button>
+                  {open && <ul className="space-y-1.5 px-1 pb-2 pt-1">
+                    {list.map(m => <LibraryCard key={m.id} m={m} on={isOn(m)} core={req.includes(m.id)} govd={GOVERNED.has(m.name)} shared={shared(m)}
+                      missing={!!m.needs && isOn(m) && !isOn(byName(m.needs))} onAdd={() => add(m)} onDrag={setDragging} onLock={() => setLockInfo(m)} onPick={() => setInspect(m.id)} />)}
+                  </ul>}
+                </section>
+              )
+            })}
+            {!valid.some(shown) && <p className="p-4 text-center text-[13px] text-text-3">No modules match. <button type="button" className="font-semibold text-brand hover:underline" onClick={() => { setQ(''); setFilter('All') }}>Clear</button></p>}
+          </div>
+          <p className="border-t border-border px-3 py-2 text-[11px] text-text-3">{hidden} modules not compatible with {archName(arch)} are hidden. New modules are version requests to the platform team.</p>
+        </aside>
+      </div>
+
       {lockInfo && (
         <div className="fixed inset-0 z-50 grid place-items-center bg-brand-dark/50 p-4" role="dialog" aria-modal="true" aria-labelledby="lock-title" onClick={() => setLockInfo(null)}>
           <div className="rise w-full max-w-md rounded-lg bg-surface p-6 shadow-xl" onClick={e => e.stopPropagation()}>
@@ -4438,16 +4500,98 @@ const EXPOSURE: { id: Exposure; label: string }[] = [{ id: 'Editable', label: 'F
 const pathOf = (b?: Binding): Pathway => b?.path ?? 'Connected'
 const exposeOf = (b?: Binding): Exposure => b?.expose ?? (pathOf(b) === 'Manual' ? 'Editable' : 'Visible')
 
-/** Data configuration is read-only: it only shows which Snowflake table and schema each input of the patient flow is read from. */
-function StageData({ c, ind, update, go }: Ctx) {
-  if (!c.inds.some(i => i.arch)) return <EmptyState icon={<Database size={18} />} title="No inputs to show yet" action={<Btn size="sm" onClick={() => go(2)}>Choose archetypes</Btn>}>Inputs appear once each revenue stream has an archetype.</EmptyState>
+function StageData({ c, ind, update, updInd, go }: Ctx) {
+  const live = useContext(AgentCtx).field
+  const ins = inputsFor(c)
+  if (!ins.length) return <EmptyState icon={<Database size={18} />} title="No inputs to configure yet" action={<Btn size="sm" onClick={() => go(2)}>Choose archetypes</Btn>}>Inputs appear once each revenue stream has an archetype and modules.</EmptyState>
+  const groups = Array.from(new Set(ins.map(b => b.scope))).map(scope => ({
+    scope, label: scope === 'brand' ? 'Shared across all streams' : c.inds.find(i => i.id === scope)?.name || 'Untitled stream',
+    rows: ins.filter(b => b.scope === scope),
+  }))
+  const setB = (key: string, p: Partial<Binding>) => update({ bindings: { ...c.bindings, [key]: { ...c.bindings[key]!, ...p } } })
+  const n = (pw: Pathway) => ins.filter(b => pathOf(c.bindings[b.key]) === pw).length
+  const perms = ind.arch ? assumptionsFor(ind.arch).filter(a => ind.perms[a.id]) : []
+  const setP = (id: string, p: Partial<Perm>) => updInd(ind.id, { perms: { ...ind.perms, [id]: { ...ind.perms[id], ...p } } })
+  const exposed = perms.filter(a => ind.perms[a.id].open).length
   return (
-    <div className="@container space-y-4">
-      {c.inds.length > 1 && <IndTabs c={c} stage={5} issues={[]} onPick={id => update({ active: id })} />}
-      <SnowflakeSources map={ind.inputMap} />
-    </div>
+    <>
+      <div className="grid gap-3 @xl:grid-cols-3">
+        {PATHWAYS.map(pw => <div key={pw.id} className="flex items-start gap-3 rounded-lg border border-border bg-surface p-3.5"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-surface-2 text-text-2"><pw.icon size={15} /></span><span className="min-w-0"><span className="block text-[13px] font-semibold">{pw.label} <span className="font-mono text-text-3">{n(pw.id)}</span></span><span className="block text-[11px] text-text-3">{pw.hint}</span></span></div>)}
+      </div>
+      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
+        <table className="w-full min-w-[820px] text-sm">
+          <thead>
+            <tr className="border-b border-border bg-background/60 text-left text-xs uppercase tracking-wide text-text-3">
+              <th scope="col" className="px-4 py-3 font-semibold">Input · feeds</th>
+              <th scope="col" className="px-3 py-3 font-semibold">Pathway</th>
+              <th scope="col" className="px-3 py-3 font-semibold">Source · mapping</th>
+              <th scope="col" className="px-3 py-3 font-semibold">In the Forecaster</th>
+            </tr>
+          </thead>
+          {groups.map(g => (
+            <tbody key={g.scope}>
+              {groups.length > 1 && (
+                <tr className="border-b border-border bg-surface-2/60">
+                  <th scope="rowgroup" colSpan={4} className="px-4 py-2 text-left text-xs font-semibold text-text">{g.label}<span className="ml-2 font-normal text-text-3">{g.scope === 'brand' ? 'Shared across every revenue stream' : `${g.rows.length} input${g.rows.length > 1 ? 's' : ''}`}</span></th>
+                </tr>
+              )}
+              {g.rows.map(b => {
+                const x = c.bindings[b.key], pw = pathOf(x)
+                return (
+                  <tr key={b.key} data-agent={`bind-${b.key}`} className={cx('border-b border-border align-top last:border-0', live === `bind-${b.key}` && 'agent-row')}>
+                    <td className="px-4 py-3"><p className="font-medium text-text">{b.input.name}</p><p className="text-xs text-text-3">Feeds {b.input.feeds}</p></td>
+                    <td className="px-3 py-3"><select aria-label={`Pathway for ${b.input.name}`} className={cx(inputCls(), 'h-8! text-[13px]')} value={pw} onChange={e => setB(b.key, { path: e.target.value as Pathway, expose: e.target.value === 'Manual' ? 'Editable' : x?.expose })}>{PATHWAYS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></td>
+                    <td className="px-3 py-3 text-[13px]">
+                      {pw === 'Connected' && <><select aria-label={`Source for ${b.input.name}`} className={cx(inputCls(), 'h-8! text-[13px]')} value={x?.source || b.input.suggested} onChange={e => setB(b.key, { source: e.target.value })}>{Array.from(new Set([b.input.suggested, ...SOURCE_OPTIONS])).map(o => <option key={o} value={o}>{o}{o === b.input.suggested ? ' (suggested)' : ''}</option>)}</select><p className="mt-1 text-[11px] text-text-3">Already available to the platform</p></>}
+                      {pw === 'File' && <><input aria-label={`Mapped field for ${b.input.name}`} className={cx(inputCls(), 'h-8! text-[13px]')} value={x?.mapField ?? ''} onChange={e => setB(b.key, { mapField: e.target.value })} placeholder="Column in the file, e.g. Px_net" /><p className="mt-1 text-[11px] text-text-3">Maps to {b.input.name.toLowerCase()}</p></>}
+                      {pw === 'Manual' && <p className="text-text-2">Entered in the Forecaster workspace</p>}
+                    </td>
+                    <td className="px-3 py-3"><select aria-label={`Forecaster exposure for ${b.input.name}`} className={cx(inputCls(), 'h-8! text-[13px]')} value={exposeOf(x)} disabled={pw === 'Manual'} onChange={e => setB(b.key, { expose: e.target.value as Exposure })}>{EXPOSURE.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          ))}
+        </table>
+      </div>
+      <section className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface">
+        <div className="border-b border-border px-5 pb-3 pt-4">
+          <h3 className="text-sm font-semibold">Inputs exposed to the Forecaster</h3>
+          <p className="mt-0.5 text-xs text-text-2">What forecasters can change, and within which bounds.</p>
+        </div>
+        <StreamList c={c} ind={ind} update={update} tabs sub={i => i.arch ? [`${Object.values(i.perms).filter(p => p.open).length} editable`, true] : ['No archetype', false]} />
+        <div className="p-5">
+          {!ind.arch ? <EmptyState icon={<Layers size={18} />} title="No archetype yet" action={<Btn size="sm" onClick={() => go(2)}>Choose an archetype</Btn>}>Inputs come from the archetype.</EmptyState> : (
+            <>
+              <p className="mb-3 text-xs text-text-3">{exposed} of {perms.length} editable by the Forecaster · {perms.length - exposed} locked</p>
+              <ul className="divide-y divide-border">
+                {perms.map(a => {
+                  const p = ind.perms[a.id]
+                  const bad = outOfBand(p)
+                  return (
+                    <li key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0">
+                      <div className="min-w-[180px] flex-1"><p className="text-[13px] font-semibold">{a.name}</p><p className="text-xs text-text-3">Base {p.value} {a.unit}</p></div>
+                      {p.open ? (
+                        <div className="flex items-center gap-2 text-xs text-text-2">
+                          <label className="flex items-center gap-1.5">Min<input type="number" aria-label={`${a.name} minimum`} className={cx(inputCls(bad), 'h-8 w-20 px-2')} value={p.min} onChange={e => setP(a.id, { min: Number(e.target.value) })} /></label>
+                          <label className="flex items-center gap-1.5">Max<input type="number" aria-label={`${a.name} maximum`} className={cx(inputCls(bad), 'h-8 w-20 px-2')} value={p.max} onChange={e => setP(a.id, { max: Number(e.target.value) })} /></label>
+                          <span className="text-text-3">{a.unit}</span>
+                        </div>
+                      ) : <span className="flex items-center gap-1.5 text-xs text-text-3"><Lock size={12} />Locked</span>}
+                      <label className="flex items-center gap-2 text-xs text-text-2"><Switch on={p.open} onChange={v => setP(a.id, { open: v })} label={`Forecaster can edit ${a.name}`} />{p.open ? 'Editable' : 'Locked'}</label>
+                      {bad && <p className="w-full text-xs text-err">Bounds must be increasing and contain the base value ({p.value}).</p>}
+                    </li>
+                  )
+                })}
+              </ul>
+            </>
+          )}
+        </div>
+      </section>
+    </>
   )
 }
+
 /* ───────────────────────── Step 6 · Review configuration ───────────────────────── */
 
 /** Visual model flow: setup → archetype → modes → modules → data, per stream, ending at what forecasters will see. */
@@ -4456,7 +4600,7 @@ type FlowView = { title: string; meta: string; streams: FlowStream[]; output: st
 function ModelFlow({ title, meta, streams, output, go }: FlowView & { go?: (n: number) => void }) {
   const node = (stage: number, label: string, value: string, sub?: string) => (
     <button key={stage} type="button" disabled={!go} onClick={() => go?.(stage)} title={go ? `Edit ${STAGES[stage - 1].title}` : undefined}
-      className="flex w-full min-w-0 flex-col rounded-2xl border border-border bg-surface shadow-card px-2.5 py-2 text-left transition-colors enabled:hover:border-brand enabled:hover:bg-brand-soft/40 disabled:cursor-default">
+      className="flex w-full min-w-0 flex-col rounded-lg border border-border bg-surface px-2.5 py-2 text-left transition-colors enabled:hover:border-brand enabled:hover:bg-brand-soft/40 disabled:cursor-default">
       <span className="font-mono text-[10px] uppercase tracking-wide text-text-3">{stage} · {label}</span>
       <span className="truncate text-[12.5px] font-medium" title={value}>{value || '—'}</span>
       {sub && <span className="truncate text-[11px] text-text-3" title={sub}>{sub}</span>}
@@ -4608,7 +4752,7 @@ const fmtFunnel = (v: number, unit: string) => unit === '$'
 /* A Sankey of every stream rolling up to total net revenue, rebuilt from the configuration on each edit:
    streams → archetype engines → modes → modules → data, top to bottom, ending in net revenue and gross-to-net.
    Modules change the funnel values, so band widths move as modules are attached. Values are illustrative, from forecasterFunnel. */
-const FLOW_HUES = ['#0000c9', '#007a6c', '#c2410c', '#a68aff', '#0095ff', '#be185d', '#4d7c0f']
+const FLOW_HUES = ['#0000c9', '#0a7d4f', '#c2410c', '#7c3aed', '#0e7490', '#be185d', '#4d7c0f']
 type FlowRow = { id: string; name: string; hue: string; arch: ArchId | null; gross: number; net: number; steps: boolean[]; modes: [number, number]; mods: number; ins: [number, number] }
 const flowRows = (c: Config): FlowRow[] => c.inds.map((i, k) => {
   const vols = forecasterFunnel(i).nodes.filter((n): n is Extract<FunnelNode, { kind: 'vol' }> => n.kind === 'vol')
@@ -4622,30 +4766,6 @@ const flowRows = (c: Config): FlowRow[] => c.inds.map((i, k) => {
     steps: [!!i.name.trim(), !!i.arch, !!i.arch && modes.every(m => i.modes[m.id]), !!i.arch && orderedModules(i).length > 0, ins.length > 0 && ins.every(b => dataReady(c.bindings[b.key]))],
   }
 })
-
-/** The configuration as a short step-by-step flow for the preview panel: what is complete and what was chosen under each step. */
-const SF_TABLES = new Set(FLOW_INPUTS.flatMap(x => x.sources.map(s => s.table))).size
-function flowView(c: Config, stage: number, reached: number): { setup: StepView; streams: StreamFlow[] } {
-  const state = (n: number, ok: boolean): StepView['state'] => n === stage ? 'current' : ok && n < reached ? 'done' : 'todo'
-  const names = c.inds.map(i => i.name.trim()).filter(Boolean)
-  const setupOk = !!c.brand.trim() && c.inds.length > 0 && c.inds.every(i => i.name.trim())
-  const setup: StepView = { stage: 1, title: 'Model setup', state: state(1, setupOk), lines: [`${c.brand || 'Untitled model'} · ${c.market || 'US'} · ${c.cycle}`, `${c.inds.length} stream${c.inds.length === 1 ? '' : 's'}${names.length ? `: ${names.join(', ')}` : ''}`] }
-  const streams = c.inds.map((i, k): StreamFlow => {
-    const modes = i.arch ? modesFor(i.arch).filter(m => !m.optional && (!m.showIf || m.showIf(i.modes))) : []
-    const mods = i.arch ? orderedModules(i) : [], classes = new Set(mods.map(m => m.cat)).size
-    const mapped = i.arch ? FLOW_INPUTS.filter(x => mapOf(i.inputMap)[x.id]).length : 0
-    return {
-      id: i.id, name: i.name.trim() || `Stream ${k + 1}`, hue: FLOW_HUES[k % FLOW_HUES.length]!,
-      steps: [
-        { stage: 2, title: 'Archetype', state: state(2, !!i.arch), lines: i.arch ? [archName(i.arch), i.engine] : ['Not chosen yet'] },
-        { stage: 3, title: 'Modes', state: state(3, !!i.arch && modes.every(m => !!i.modes[m.id])), lines: modes.length ? modes.slice(0, 3).map(m => `${m.label}: ${i.modes[m.id] || '—'}`) : ['Choose an archetype first'] },
-        { stage: 4, title: 'Module map', state: state(4, !!i.arch && mods.length > 0), lines: i.arch ? [`${mods.length} modules across ${classes} group classes`, `${mapped} of ${FLOW_INPUTS.length} patient-flow inputs on a class`] : ['Choose an archetype first'] },
-        { stage: 5, title: 'Data configuration', state: state(5, !!i.arch), lines: i.arch ? [`${FLOW_INPUTS.filter(x => x.sources.length).length} inputs read from Snowflake`, `${SF_TABLES} tables · read-only`] : ['Choose an archetype first'] },
-      ],
-    }
-  })
-  return { setup, streams }
-}
 
 /* A simple top-to-bottom flow: streams → archetype engines → total net revenue. Streams on the same archetype merge.
    Band widths follow each stream's net revenue (square-root scaled so small streams stay visible). */
@@ -4702,7 +4822,7 @@ function layoutFlow(rows: FlowRow[], W: number) {
 }
 const FLOW_MIN = 280, FLOW_MAX = 680
 const clipText = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
-const HALO = { paintOrder: 'stroke' as const, stroke: '#f3f8fd', strokeWidth: 3, strokeLinejoin: 'round' as const }
+const HALO = { paintOrder: 'stroke' as const, stroke: '#f6f7fb', strokeWidth: 3, strokeLinejoin: 'round' as const }
 
 function useWidth<T extends HTMLElement>() {
   const ref = useRef<T>(null)
@@ -4717,41 +4837,40 @@ function useWidth<T extends HTMLElement>() {
   return [ref, w] as const
 }
 
-function FlowSankey({ rows, onPick, go, hov, setHov }: { rows: FlowRow[]; onPick: (id: string) => void; go: (n: number) => void; hov: string | null; setHov: (id: string | null) => void; id: string }) {
-  const groups = Array.from(new Set(rows.map(r => r.arch ?? 'pending'))).map(g => ({ g, rs: rows.filter(r => (r.arch ?? 'pending') === g) }))
-  const net = rows.filter(r => r.arch && r.net > 0).reduce((a, r) => a + r.net, 0)
-  const Arrow = () => <svg width="12" height="20" viewBox="0 0 12 20" className="mx-auto my-1 text-border-strong" aria-hidden><path d="M6 0v16M1.5 11.5 6 17l4.5-5.5" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+function FlowSankey({ rows, onPick, go, hov, setHov, id }: { rows: FlowRow[]; onPick: (id: string) => void; go: (n: number) => void; hov: string | null; setHov: (id: string | null) => void; id: string }) {
+  const [ref, cw] = useWidth<HTMLDivElement>()
+  const W = Math.max(200, cw || 280)
+  const { nodes, links, H, by, rowsShown } = useMemo(() => layoutFlow(rows, W), [rows, W])
+  const dim = (s?: string) => !!hov && !!s && s !== hov
   return (
-    <div className="flex flex-col items-stretch" role="img" aria-label={`Flow: ${rows.map(r => `${r.name}${r.arch ? ` on ${archName(r.arch)}` : ', no archetype yet'}`).join('; ')}`}>
-      <div className="flex flex-wrap items-start justify-center gap-4">
-        {groups.map(({ g, rs }) => (
-          <div key={g} className="flex min-w-[120px] flex-1 flex-col">
-            <div className="space-y-1.5">
-              {rs.map(r => (
-                <button key={r.id} type="button" onClick={() => onPick(r.id)} onMouseEnter={() => setHov(r.id)} onMouseLeave={() => setHov(null)}
-                  className={cx('flex w-full items-center gap-2 rounded-lg border bg-surface px-2.5 py-2 text-left text-[12.5px] font-semibold', hov === r.id ? 'border-text' : 'border-border')}>
-                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: r.hue }} /><span className="truncate">{r.name}</span>
-                </button>
-              ))}
-            </div>
-            <Arrow />
-            {g === 'pending'
-              ? <button type="button" onClick={() => go(2)} className="rounded-lg border border-dashed border-border-strong bg-surface px-2.5 py-2 text-center text-[12.5px] font-semibold text-warn">Choose archetype</button>
-              : <div className="rounded-lg bg-surface-2 px-2.5 py-2 text-center text-[12.5px] font-semibold">{archName(g as ArchId)}</div>}
-          </div>
-        ))}
-      </div>
-      {net > 0 && <><Arrow /><div className="rounded-lg bg-text px-3 py-2.5 text-center text-[13px] font-semibold text-white">Total net revenue · {fmtFunnel(net, '$')}</div></>}
+    <div ref={ref} className="w-full">
+      <svg viewBox={`0 0 ${W} ${H}`} className="block w-full overflow-visible" role="img" aria-label={`Flow: ${rows.map(r => `${r.name}${r.arch ? ` on ${archName(r.arch)}` : ', no archetype yet'}`).join('; ')}`}>
+        <defs><pattern id={`${id}-hatch`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#eef0f7" /><line x1="0" y1="0" x2="0" y2="6" stroke="#b9bed0" strokeWidth="1.5" /></pattern></defs>
+        {FLOW_ROWS.slice(0, rowsShown).map((t, r) => <text key={t} x={0} y={by(r) - 20} className="fill-text-3 font-mono" fontSize={9} fontWeight={600} letterSpacing={0.8} style={HALO}>{t.toUpperCase()}</text>)}
+        {links.map(l => <path key={l.key} d={l.d} onMouseEnter={() => setHov(l.stream)} onMouseLeave={() => setHov(null)} fill={l.pending ? `url(#${id}-hatch)` : l.hue} fillOpacity={dim(l.stream) ? 0.08 : l.pending ? 0.9 : hov === l.stream ? 0.4 : 0.22} style={{ transition: 'd .45s ease, fill-opacity .2s ease' }} />)}
+        {nodes.map(n => {
+          const y = by(n.row), chars = Math.floor(n.w / 6)
+          const fill = n.tone === 'total' ? '#000a5c' : n.pending ? '#ffffff' : n.tone === 'engine' ? '#4a5070' : n.hue!
+          const click = n.tone === 'stream' ? () => onPick(n.stream!) : n.pending ? () => go(2) : undefined
+          return (
+            <g key={n.key} onClick={click} onMouseEnter={() => n.stream && setHov(n.stream)} onMouseLeave={() => setHov(null)} className={click ? 'cursor-pointer' : undefined} opacity={dim(n.stream) ? 0.35 : 1}>
+              <title>{n.pending ? 'Choose an archetype in step 2' : n.label}</title>
+              <rect x={n.x} y={y} width={Math.max(2, n.w)} height={SK.BH} rx={3} fill={fill} stroke={n.pending ? '#8a8fa8' : 'none'} strokeDasharray={n.pending ? '3 2' : undefined} style={{ transition: 'x .45s ease, width .45s ease' }} />
+              {chars >= 4 && <text x={n.x + n.w / 2} y={y - 6} textAnchor="middle" fontSize={n.tone === 'total' ? 12 : 11} fontWeight={600} className={n.pending ? 'fill-warn' : 'fill-text'} style={HALO}>{clipText(n.label, chars)}</text>}
+            </g>
+          )
+        })}
+      </svg>
     </div>
   )
 }
 
-function ForecastFlowPanel({ c, stage, reached, go, onPick, open, aiOpen, onOpen, onClose }: {
-  c: Config; stage: number; reached: number; go: (n: number) => void; canGo: (n: number) => boolean; onPick: (id: string) => void
+function ForecastFlowPanel({ c, stage, go, onPick, open, aiOpen, onOpen, onClose }: {
+  c: Config; stage: number; go: (n: number) => void; canGo: (n: number) => boolean; onPick: (id: string) => void
   open: boolean; aiOpen: boolean; onOpen: () => void; onClose: () => void
 }) {
   const rows = useMemo(() => flowRows(c), [c])
-  const view = useMemo(() => flowView(c, stage, reached), [c, stage, reached])
+  const [hov, setHov] = useState<string | null>(null)
   const [big, setBig] = useState(false)
   useEffect(() => { if (!big) return; const k = (e: KeyboardEvent) => e.key === 'Escape' && setBig(false); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [big])
   const live = rows.filter(r => r.arch && r.net > 0)
@@ -4769,27 +4888,54 @@ function ForecastFlowPanel({ c, stage, reached, go, onPick, open, aiOpen, onOpen
 
   const kpi = (
     <div>
-      <div className="mb-2.5 rounded-lg bg-surface-2 px-2.5 py-1.5 text-xs text-text-2">
+      <div className="mb-2.5 rounded-md bg-surface-2 px-2.5 py-1.5 text-xs text-text-2">
         <span className="font-semibold text-text">{c.brand || 'Untitled model'}</span>
         <span className="text-text-3"> · </span>
         <span>{c.market || 'US'}</span>
         <span className="text-text-3"> · </span>
         <span>{c.inds.length} stream{c.inds.length > 1 ? 's' : ''}</span>
       </div>
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Total net revenue</p>
       {inBuild ? (
-        <p className="text-[11.5px] text-text-3">Each step is ticked as you complete it. Revenue calculates in Step 6 (Review).</p>
+        <>
+          <p className="mt-0.5 text-[15px] font-medium italic text-text-3">Not yet calculated</p>
+          <p className="mt-0.5 text-[11.5px] text-text-3">Structure is prioritised in build mode. Revenue calculates in Step 6 (Review).</p>
+        </>
       ) : (
         <>
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Total net revenue</p>
           <p className="mt-0.5 font-mono text-[26px] font-semibold leading-tight tracking-tight text-brand-dark">{net > 0 ? fmtFunnel(net, '$') : '—'}</p>
+          <p className="text-[11.5px] text-text-3">{net > 0 ? 'Annual at peak · calculated' : 'Appears once streams have archetypes'}</p>
         </>
       )}
     </div>
   )
+  const list = (close?: () => void) => (
+    <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
+      {rows.map(r => {
+        const done = r.steps.filter(Boolean).length
+        return (
+          <li key={r.id} onMouseEnter={() => setHov(r.id)} onMouseLeave={() => setHov(null)}>
+            <button type="button" onClick={() => { onPick(r.id); close?.() }} className={cx('flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-surface-2', c.active === r.id && 'bg-brand-soft/40')}>
+              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: r.hue }} />
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[12.5px] font-semibold">{r.name}</span>
+                <span className={cx('block truncate text-[11.5px]', r.arch ? 'text-text-3' : 'text-warn')}>{r.arch ? archName(r.arch) : 'No archetype yet'}</span>
+              </span>
+              <span className="shrink-0 text-right">
+                <span className="block font-mono text-[12px] font-semibold">{r.arch && r.net > 0 ? fmtFunnel(r.net, '$') : '—'}</span>
+                <span className="block text-[10.5px] text-text-3">{done}/5 steps</span>
+              </span>
+            </button>
+          </li>
+        )
+      })}
+    </ul>
+  )
+
   return (
     <div className="flex h-full w-full flex-col">
       <div className="flex items-center justify-between gap-2 border-b border-border px-4 py-3">
-        <div className="min-w-0"><p className="text-[13px] font-semibold">Full flow preview</p></div>
+        <div className="min-w-0"><p className="text-[13px] font-semibold">Full flow preview</p><p className="text-[11.5px] text-text-3">Updates as you configure</p></div>
         <div className="flex shrink-0 items-center gap-0.5">
           <ChartActions target="export-flow-side" title="Full flow preview" subtitle={c.brand || 'Untitled model'} />
           <button type="button" onClick={() => setBig(true)} aria-label="Expand the flow" title="Expand" className="grid h-7 w-7 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><Maximize2 size={14} /></button>
@@ -4797,7 +4943,8 @@ function ForecastFlowPanel({ c, stage, reached, go, onPick, open, aiOpen, onOpen
         </div>
       </div>
       <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
-        <div id="export-flow-side" className="space-y-4 bg-background">{kpi}<FlowSteps setup={view.setup} streams={view.streams} active={c.active} onPick={onPick} go={go} compact /></div>
+        <div id="export-flow-side" className="space-y-5 bg-background">{kpi}<FlowSankey rows={rows} onPick={onPick} go={go} hov={hov} setHov={setHov} id="flow-side" /></div>
+        {list()}
       </div>
 
       {big && createPortal(
@@ -4808,8 +4955,8 @@ function ForecastFlowPanel({ c, stage, reached, go, onPick, open, aiOpen, onOpen
               <div className="flex items-center gap-1"><ChartActions target="export-flow-big" title="Full flow preview" subtitle={c.brand || 'Untitled model'} /><button type="button" onClick={() => setBig(false)} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><X size={16} /></button></div>
             </header>
             <div className="grid min-h-0 flex-1 md:grid-cols-[minmax(0,1fr)_300px]">
-              <div className="min-h-0 overflow-y-auto bg-background px-10 py-8"><div id="export-flow-big" className="mx-auto max-w-md bg-background p-2"><FlowSteps setup={view.setup} streams={view.streams} active={c.active} onPick={onPick} go={n => { go(n); setBig(false) }} /></div></div>
-              <aside className="min-h-0 space-y-5 overflow-y-auto border-l border-border px-5 py-5">{kpi}</aside>
+              <div className="min-h-0 overflow-y-auto bg-background px-10 py-8"><div id="export-flow-big" className="bg-background p-2"><FlowSankey rows={rows} onPick={id => { onPick(id); setBig(false) }} go={n => { go(n); setBig(false) }} hov={hov} setHov={setHov} id="flow-big" /></div></div>
+              <aside className="min-h-0 space-y-5 overflow-y-auto border-l border-border px-5 py-5">{kpi}{list(() => setBig(false))}</aside>
             </div>
           </div>
         </div>, document.body)}
@@ -5108,15 +5255,15 @@ function PublishedScreen({ c, when, onExit }: { c: Config; when: string; onExit:
 
 /* ───────────────────────── Profile menu & admin access control ───────────────────────── */
 
-function ProfileMenu({ onAdmin, onLogout, onTour, placement }: { onAdmin: () => void; onLogout: () => void; onTour?: (flow: 'coe' | 'fc') => void; placement?: 'rail' }) {
+function ProfileMenu({ onAdmin, onLogout, placement }: { onAdmin: () => void; onLogout: () => void; placement?: 'rail' }) {
   const [open, setOpen] = useState(false)
   const ref = useDismiss(open, () => setOpen(false))
   return (
     <div ref={ref} className="relative">
       <button data-tour="profile" type="button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(v => !v)} title={`${ME} · Super Admin`}
-        className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-full text-xs font-semibold outline-none', placement === 'rail' ? 'bg-white text-navy ring-2 ring-white/40 focus-visible:ring-white' : 'bg-brand-dark text-white ring-offset-2 focus-visible:ring-2 focus-visible:ring-brand')}>JA</button>
+        className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-full text-xs font-semibold text-white outline-none', placement === 'rail' ? 'bg-brand-dark ring-1 ring-black/5 focus-visible:ring-2 focus-visible:ring-brand' : 'bg-brand-dark ring-offset-2 focus-visible:ring-2 focus-visible:ring-brand')}>JA</button>
       {open && (
-        <div role="menu" className={cx('rise absolute z-[60] w-64 overflow-hidden rounded-2xl border border-border bg-surface shadow-card shadow-xl', placement === 'rail' ? 'bottom-0 left-12' : 'right-0 top-11')}>
+        <div role="menu" className={cx('rise absolute z-[60] w-64 overflow-hidden rounded-lg border border-border bg-surface shadow-xl', placement === 'rail' ? 'bottom-0 left-12' : 'right-0 top-11')}>
           <div className="border-b border-border px-4 py-3">
             <p className="text-sm font-semibold">{ME}</p>
             <p className="text-xs text-text-2">j.andersen@pfizer.com</p>

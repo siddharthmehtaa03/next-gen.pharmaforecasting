@@ -18,8 +18,8 @@ export const AI_MODELS = [
   { id: 'sonnet', name: 'Claude Sonnet 5', by: 'Anthropic', note: 'Balanced speed and depth', color: '#c96442' },
   { id: 'opus', name: 'Claude Opus 5.5', by: 'Anthropic', note: 'Deepest reasoning', color: '#c96442' },
   { id: 'gemini', name: 'Gemini 2.5 Pro', by: 'Google', note: 'Long documents and data', color: '#3b6fe0' },
-  { id: 'gpt', name: 'GPT-5', by: 'OpenAI', note: 'Fast general reasoning', color: '#00b7a5' },
-  { id: 'chatgpt', name: 'ChatGPT Enterprise', by: 'OpenAI', note: 'Company workspace', color: '#00b7a5' },
+  { id: 'gpt', name: 'GPT-5', by: 'OpenAI', note: 'Fast general reasoning', color: '#0f8f6f' },
+  { id: 'chatgpt', name: 'ChatGPT Enterprise', by: 'OpenAI', note: 'Company workspace', color: '#0f8f6f' },
 ] as const
 const pickedModel = 'sonnet'
 
@@ -299,7 +299,7 @@ export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
   }
 
   const composer = (big: boolean, up: boolean) => (
-    <form onSubmit={e => { e.preventDefault(); send(q) }} className="relative rounded-2xl border border-[#6f6fff]/30 bg-surface p-3 shadow-[0_0_0_4px_rgb(111_111_255/0.08)] transition-shadow focus-within:border-[#6f6fff]/60 focus-within:shadow-[0_0_0_4px_rgb(47_158_115/0.14)]">
+    <form onSubmit={e => { e.preventDefault(); send(q) }} className="relative rounded-2xl border border-[#2f9e73]/30 bg-surface p-3 shadow-[0_0_0_4px_rgb(47_158_115/0.07)] transition-shadow focus-within:border-[#2f9e73]/60 focus-within:shadow-[0_0_0_4px_rgb(47_158_115/0.14)]">
       {voice === 'idle' ? (
         <textarea rows={big ? 3 : 1} value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(q) } }}
           placeholder={p.placeholder} aria-label={`Message ${AI}`}

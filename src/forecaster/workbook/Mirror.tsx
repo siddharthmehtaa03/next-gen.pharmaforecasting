@@ -112,7 +112,7 @@ export function Node({ n }: { n: ChildNode }) {
   const style = layoutOf(el)
   const inline = tag === 'SPAN' || tag === 'STRONG' || tag === 'B' || tag === 'EM' || tag === 'CODE' || tag === 'A'
   if (inline) return <span style={style} className={cx(tag === 'CODE' && 'font-mono text-[12px]')}><Kids el={el} /></span>
-  return <div style={style} className={cx(isBox(el) && 'rounded-2xl border border-border bg-surface shadow-card p-3', tag === 'P' && 'text-sm leading-relaxed text-text-2')}><Kids el={el} /></div>
+  return <div style={style} className={cx(isBox(el) && 'rounded-lg border border-border bg-surface p-3', tag === 'P' && 'text-sm leading-relaxed text-text-2')}><Kids el={el} /></div>
 }
 
 /** A workbook card rendered with the prototype's card chrome. */

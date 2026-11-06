@@ -36,7 +36,8 @@ export function ActualsView() {
   }
   return (
     <div className="space-y-5">
-      <div><h2 className="text-[26px] font-semibold tracking-tight">Actuals</h2><p className="mt-1 text-[15px] text-text-2">Reported actuals, locked.</p></div>
+      <div><h2 className="text-[22px] font-semibold tracking-tight">Actuals</h2>
+        <p className="mt-0.5 text-sm text-text-2">Reported monthly actuals through {mLong(LAST)}. Locked: they anchor every forecast and cannot be edited.</p></div>
       <ActualKpis />
       <Card title="Monthly actuals" sub="Change is against the same month last year." pad={false}>
         <div className="overflow-x-auto">

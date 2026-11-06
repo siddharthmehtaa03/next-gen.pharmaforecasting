@@ -21,7 +21,7 @@ type SetScenarios = (f: (s: Scenario[]) => Scenario[]) => void
 const PAT = ['prev', 'diag', 'treat', 'access', 'share'] as const
 const STEP_LABEL: Record<(typeof PAT)[number], string> = { prev: 'Prevalent', diag: 'Diagnosed', treat: 'Treated', access: 'Covered', share: 'On brand' }
 /** A scenario's own colour if one was picked in the builder, otherwise the palette by position. */
-export const PALETTE = ['#0095ff', '#007a6c', '#c4122f', '#8f5a00', '#a68aff', '#0000c9', '#be185d', '#4d7c0f', '#000067', '#ea580c', '#0891b2', '#9333ea']
+export const PALETTE = ['#0e7490', '#0a7d4f', '#c4122f', '#a35a00', '#7c3aed', '#0000c9', '#be185d', '#4d7c0f', '#0b0f2e', '#ea580c', '#0891b2', '#9333ea']
 const colorOf = (s: Scenario | null, k: number) => s?.color ?? COLOR.alt[k % COLOR.alt.length]!
 const fmtN = (v: number) => (v >= 1e6 ? `${(v / 1e6).toFixed(v >= 1e7 ? 1 : 2)}M` : v >= 1e3 ? `${(v / 1e3).toFixed(v >= 1e5 ? 0 : 1)}K` : `${Math.round(v)}`)
 const fmtNDelta = (d: number) => `${d >= 0 ? '+' : '−'}${fmtN(Math.abs(d))}`
@@ -73,7 +73,7 @@ function MiniFunnel({ f, base, color, width, label }: { f: Row[]; base: Row[] | 
 
 function Tile({ k, v, d, base, sameAs }: { k: string; v: string; d?: string | null; base?: boolean; sameAs?: boolean }) {
   return (
-    <div className="min-w-0 rounded-lg bg-surface-2 px-2 py-1.5">
+    <div className="min-w-0 rounded-md bg-surface-2 px-2 py-1.5">
       <p className="truncate text-[10.5px] text-text-3">{k}</p>
       <p className="truncate font-mono text-[12.5px] font-semibold">{v}</p>
       <p className={cx('truncate text-[10.5px]', d ? (d.startsWith('+') ? 'text-ok' : 'text-err') : 'text-text-3')}>{base ? 'comparison' : sameAs || !d ? 'same' : d}</p>
@@ -81,9 +81,9 @@ function Tile({ k, v, d, base, sameAs }: { k: string; v: string; d?: string | nu
   )
 }
 
-export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, setSelId, model, notify, renderPart, uePct = UE_PRIOR, woh }: {
+export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, setSelId, model, notify, renderPart, uePct = UE_PRIOR }: {
   scenarios: Scenario[]; setScenarios: SetScenarios; calc: Calc; events: EventDef[]; selId: string; setSelId: (id: string) => void
-  model: ModelCfg; notify: Notify; renderPart: (p: ScenarioPart) => ReactNode; uePct?: number; woh?: number
+  model: ModelCfg; notify: Notify; renderPart: (p: ScenarioPart) => ReactNode; uePct?: number
 }) {
   const [editing, setEditing] = useState(false)
   const [hovStep, setHovStep] = useState<string | null>(null)
@@ -149,7 +149,7 @@ export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, 
   const bridgeRow = (k: 'gross' | 'tud' | 'inv' | 'ueD', name: string, tip: string) => (
     <>
       {rowLabel(name, tip)}
-      {scenarios.map(s => { const v = bridgeOf(figs[s.id]!.rev, uePct, woh)[k], b0 = bridgeOf(b.rev, uePct, woh)[k], d = v - b0, isB = s.id === base.id; return (
+      {scenarios.map(s => { const v = bridgeOf(figs[s.id]!.rev, uePct)[k], b0 = bridgeOf(b.rev, uePct)[k], d = v - b0, isB = s.id === base.id; return (
         <div key={s.id} className={cx(col(s), 'flex flex-col items-center justify-center py-2')}>
           <span className={cx('font-mono text-[13px]', isB && 'font-semibold')}>{v < 0 ? '−' : ''}{fmtB(Math.abs(v))}</span>
           <span className={cx('font-mono text-[11px]', isB || near(d, v) ? 'text-text-3' : tone(d))}>{isB ? 'comparison' : near(d, v) ? 'same' : `${d >= 0 ? '+' : '−'}$${Math.abs(d).toFixed(1)}M`}</span>
@@ -170,7 +170,8 @@ export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h2 className="text-[26px] font-semibold tracking-tight">All scenarios side by side</h2><p className="mt-1 text-[15px] text-text-2">Compared against <b className="font-semibold text-text">{base.name}</b>.</p></div>
+        <div><h2 className="text-[22px] font-semibold tracking-tight">All scenarios side by side</h2>
+          <p className="mt-0.5 text-sm text-text-2">Every scenario’s funnel and figures, compared against <b className="font-semibold text-text">{base.name}</b>.</p></div>
         <div className="flex flex-wrap items-center gap-2">
             <Seg label="Year" value={String(year)} onChange={v => setYear(+v)} options={FC_YEARS.map(y => ({ id: String(y), label: `FY${y}` }))} />
             <select aria-label="Compare against" title="Scenario the others are compared against" value={base.id} onChange={e => setBaseId(e.target.value)} className={cx(field, 'h-8 w-auto max-w-[170px] pr-7 text-[13px]')}>{scenarios.map(s => <option key={s.id} value={s.id}>vs {s.name}</option>)}</select>
@@ -223,7 +224,7 @@ export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, 
                       {on && <span role="tooltip" className="pointer-events-none absolute left-1/2 top-full z-30 mt-1 w-44 -translate-x-1/2 rounded-md bg-text px-2.5 py-1.5 text-left text-[11.5px] leading-snug text-white shadow-lg">
                         <b className="block">{STEP_LABEL[id]} · {fmtN(v)}</b>
                         {rate !== undefined && <span className="block text-white/75">{fmtV(id as DriverId, rate)} of the step above</span>}
-                        {!isB && <span className={cx('block font-mono', near(d, v) ? 'text-white/60' : d > 0 ? 'text-[#68d1ff]' : 'text-[#fda4af]')}>{near(d, v) ? 'Same as comparison' : `${fmtNDelta(d)} vs ${base.name}`}</span>}
+                        {!isB && <span className={cx('block font-mono', near(d, v) ? 'text-white/60' : d > 0 ? 'text-[#7ee2b8]' : 'text-[#fda4af]')}>{near(d, v) ? 'Same as comparison' : `${fmtNDelta(d)} vs ${base.name}`}</span>}
                       </span>}
                     </div>
                   )
@@ -236,7 +237,7 @@ export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, 
           {grp('Volume and sales')}
           {stat('share', 'Patients on brand', 'Average month across the year.')}
           {stat('trx', 'TRx', 'Prescriptions, total for the year.')}
-          {stat('price', 'Weighted gross price', 'Per pack, before gross-to-net. Year average.')}
+          {stat('price', 'Net price per Rx', 'After gross-to-net. Year average.')}
           {stat('rev', 'Net revenue', 'Total for the year, $M.')}
           {grp('Revenue bridge · default modules')}
           {bridgeRow('tud', 'Total underlying demand', 'Calculated demand dollars. Change it upstream.')}
@@ -267,7 +268,7 @@ export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, 
         <div className="fixed inset-0 z-[60] grid place-items-center bg-text/40 p-4" role="dialog" aria-modal="true" aria-labelledby="edit-sc-title" onClick={() => setEditing(false)}>
           <div className="rise flex h-[min(92dvh,940px)] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-background shadow-2xl" onClick={e => e.stopPropagation()}>
             <header className="flex items-center justify-between gap-3 border-b border-border bg-surface px-6 py-3.5">
-              <div><h2 id="edit-sc-title" className="text-[17px] font-semibold">Edit scenario</h2></div>
+              <div><h2 id="edit-sc-title" className="text-[17px] font-semibold">Edit scenario</h2><p className="text-[12.5px] text-text-2">Events, adjustments and overrides for the selected scenario.</p></div>
               <div className="flex items-center gap-2"><Btn onClick={() => setEditing(false)}>Done</Btn><Btn variant="ghost" onClick={() => setEditing(false)} icon={<X size={16} />} title="Close" /></div>
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{renderPart('editor')}</div>
@@ -319,7 +320,8 @@ export function ScenarioBuilder({ scenarios, calc, events, model, year, base, on
       <aside role="dialog" aria-modal="true" aria-labelledby="sb-title" className="relative flex h-full w-full max-w-[880px] flex-col bg-surface shadow-2xl">
         <header className="flex items-start justify-between gap-3 border-b border-border px-6 py-4">
           <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand"><Sparkles size={12} />Scenario builder</p>
-            <h3 id="sb-title" className="mt-0.5 text-[18px] font-semibold">Build a new scenario</h3></div>
+            <h3 id="sb-title" className="mt-0.5 text-[18px] font-semibold">Build a new scenario</h3>
+            <p className="mt-0.5 text-[13px] text-text-2">The preview updates as you go.</p></div>
           <Btn variant="ghost" onClick={onClose} icon={<X size={16} />} title="Close" />
         </header>
 
@@ -398,12 +400,12 @@ export function ScenarioBuilder({ scenarios, calc, events, model, year, base, on
               <p className="mt-0.5 font-mono text-[24px] font-semibold tracking-tight">{fmtRev(x.rev, 1)}</p>
               <p className={cx('text-[12.5px] font-medium', near(gap, x.rev) ? 'text-text-3' : tone(gap))}>{near(gap, x.rev) ? `Same as ${base.name}` : `${gap >= 0 ? '+' : '−'}$${Math.abs(gap).toFixed(1)}M${pctTxt(gap, bx.rev)} vs ${base.name}`}</p>
             </div>
-            <div className="rounded-2xl border border-border bg-surface shadow-card p-3" style={{ borderTopWidth: 3, borderTopColor: color }}>
+            <div className="rounded-lg border border-border bg-surface p-3" style={{ borderTopWidth: 3, borderTopColor: color }}>
               <p className="mb-2 truncate text-[13px] font-semibold">{name.trim() || 'New scenario'}</p>
               <MiniFunnel f={f} base={funnelOf(calc[base.id]!.layer, year)} color={color} width={width} label="Preview funnel" />
               <div className="mt-2 grid grid-cols-2 gap-1.5">
                 <Tile k="TRx" v={fmtN(x.trx)} d={fmtNDelta(x.trx - bx.trx)} sameAs={near(x.trx - bx.trx, x.trx)} />
-                <Tile k="Gross price" v={fmtV('price', x.price)} d={`${x.price - bx.price >= 0 ? '+' : '−'}$${Math.abs(x.price - bx.price).toFixed(2)}`} sameAs={near(x.price - bx.price, x.price)} />
+                <Tile k="Net price" v={fmtV('price', x.price)} d={`${x.price - bx.price >= 0 ? '+' : '−'}$${Math.abs(x.price - bx.price).toFixed(2)}`} sameAs={near(x.price - bx.price, x.price)} />
               </div>
             </div>
             <ul className="space-y-1 text-[12px] text-text-2">
@@ -422,4 +424,3 @@ export function ScenarioBuilder({ scenarios, calc, events, model, year, base, on
     </div>
   )
 }
-

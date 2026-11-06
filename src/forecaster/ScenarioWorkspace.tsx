@@ -56,19 +56,19 @@ const totalWith = (c: Ctx, id: string, d: Driver, f: (y: number, v: number) => n
 /* ───────── primitives ───────── */
 
 function Pill({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'brand' | 'ok' | 'warn' | 'err' }) {
-  return <span className={cx('inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide', tone === 'neutral' && 'bg-surface-2 text-text-2', tone === 'brand' && 'bg-brand-soft text-brand', tone === 'ok' && 'bg-ok-soft text-ok', tone === 'warn' && 'bg-warn-soft text-warn', tone === 'err' && 'bg-err-soft text-err')}>{children}</span>
+  return <span className={cx('inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide', tone === 'neutral' && 'bg-surface-2 text-text-2', tone === 'brand' && 'bg-brand-soft text-brand', tone === 'ok' && 'bg-ok-soft text-ok', tone === 'warn' && 'bg-warn-soft text-warn', tone === 'err' && 'bg-err-soft text-err')}>{children}</span>
 }
 function Panel({ title, sub, right, children, className }: { title: string; sub?: string; right?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={cx('min-w-0 rounded-2xl border border-border bg-surface shadow-card', className)}>
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-5 py-3.5"><div className="min-w-0"><h3 className="font-display text-base font-semibold">{title}</h3>{sub && <p className="text-xs text-text-2">{sub}</p>}</div>{right && <div className="flex flex-wrap items-center gap-2">{right}</div>}</header>
+    <section className={cx('min-w-0 rounded-lg border border-border bg-surface', className)}>
+      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-5 py-3.5"><div className="min-w-0"><h3 className="text-[15px] font-semibold">{title}</h3>{sub && <p className="text-xs text-text-2">{sub}</p>}</div>{right && <div className="flex flex-wrap items-center gap-2">{right}</div>}</header>
       <div className="p-5">{children}</div>
     </section>
   )
 }
 /** Secondary segmented control — the one style used for sub-views and toggles everywhere. */
 export function Seg<T extends string>({ value, options, onChange, label }: { value: T; options: readonly T[]; onChange: (v: T) => void; label?: string }) {
-  return <div role="radiogroup" aria-label={label} className="inline-flex flex-wrap items-center gap-0.5 rounded-full border border-border bg-surface-2 p-1">{options.map(o => <button key={o} type="button" role="radio" aria-checked={value === o} onClick={() => onChange(o)} className={cx('whitespace-nowrap rounded-full px-3.5 py-1 text-[13px] font-medium transition-all', value === o ? 'bg-brand text-white shadow-sm' : 'text-text-2 hover:bg-white hover:text-brand')}>{o}</button>)}</div>
+  return <div role="radiogroup" aria-label={label} className="inline-flex flex-wrap items-center rounded-md border border-border-strong bg-surface p-0.5">{options.map(o => <button key={o} type="button" role="radio" aria-checked={value === o} onClick={() => onChange(o)} className={cx('whitespace-nowrap rounded px-3 py-1 text-[13px] font-medium transition-colors', value === o ? 'bg-brand-soft text-brand' : 'text-text-2 hover:text-text')}>{o}</button>)}</div>
 }
 /** Primary tabs — the one style used for page-level sections (cycle and scenario workspaces). */
 export function Tabs<T extends string>({ value, options, onChange, label, className }: { value: T; options: readonly { id: T; label: string; badge?: ReactNode }[]; onChange: (v: T) => void; label: string; className?: string }) {
@@ -80,7 +80,7 @@ export function Tabs<T extends string>({ value, options, onChange, label, classN
   )
 }
 export function Kpi({ label, value, note, tone }: { label: string; value: string; note?: string; tone?: 'ok' | 'err' }) {
-  return <div className="min-w-0 rounded-2xl border border-border bg-surface shadow-card p-4"><p className="truncate text-xs text-text-3">{label}</p><p className={cx('mt-1 truncate font-display text-2xl font-semibold tabular-nums', tone === 'ok' && 'text-ok', tone === 'err' && 'text-err')}>{value}</p>{note && <p className="mt-0.5 truncate text-xs text-text-2">{note}</p>}</div>
+  return <div className="min-w-0 rounded-lg border border-border bg-surface p-4"><p className="truncate text-xs text-text-3">{label}</p><p className={cx('mt-1 truncate font-mono text-xl font-semibold tabular-nums', tone === 'ok' && 'text-ok', tone === 'err' && 'text-err')}>{value}</p>{note && <p className="mt-0.5 truncate text-xs text-text-2">{note}</p>}</div>
 }
 function Select({ value, options, onChange, label }: { value: string; options: string[]; onChange: (v: string) => void; label: string }) {
   return <select aria-label={label} value={value} onChange={e => onChange(e.target.value)} className="h-8 max-w-full rounded-md border border-border-strong bg-surface px-2 text-[13px] outline-none focus:border-brand">{options.map(o => <option key={o}>{o}</option>)}</select>
@@ -337,7 +337,7 @@ export function ScenarioWorkspace(p: WorkspaceProps) {
           <button type="button" onClick={generate} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-strong px-2.5 text-[13px] font-medium text-text-2 hover:border-brand hover:text-brand"><Sparkles size={14} />Generate insight</button>
           <button type="button" onClick={() => p.onNew(id)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-brand px-3 text-[13px] font-semibold text-white hover:bg-brand-dark"><Plus size={14} />New scenario</button>
           {logOpen && (
-            <div className="absolute right-0 top-10 z-40 w-[360px] max-w-[calc(100vw-24px)] rounded-2xl border border-border bg-surface shadow-card p-3 shadow-xl">
+            <div className="absolute right-0 top-10 z-40 w-[360px] max-w-[calc(100vw-24px)] rounded-lg border border-border bg-surface p-3 shadow-xl">
               <p className="mb-2 text-sm font-semibold">Change log</p>
               {log.length ? <ul className="max-h-64 space-y-1.5 overflow-auto text-xs text-text-2">{log.map((l, i) => <li key={i} className="border-b border-border pb-1.5 last:border-0">{l}</li>)}</ul> : <p className="text-xs text-text-3">No changes yet in this session.</p>}
             </div>
@@ -405,7 +405,7 @@ function ImpactRail({ ctx, id, cur, trendTotal, log }: { ctx: Ctx; id: string; c
   const max = Math.max(...rows.flatMap(r => [r.b, r.f]))
   return (
     <aside className="space-y-3 self-start lg:sticky lg:top-[76px]">
-      <section className="rounded-2xl border border-border bg-surface shadow-card p-4">
+      <section className="rounded-lg border border-border bg-surface p-4">
         <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Live impact · FY26–30</p>
         <p className="mt-3 text-xs text-text-2">Adjusted net revenue</p>
         <p className="font-mono text-2xl font-semibold tabular-nums">{money(cur)}</p>
@@ -425,7 +425,7 @@ function ImpactRail({ ctx, id, cur, trendTotal, log }: { ctx: Ctx; id: string; c
         <table className="mt-3 w-full text-xs"><tbody>{rows.map(r => { const dv = r.f - r.b; return (
           <tr key={r.y} className="border-t border-border"><td className="py-1.5 text-text-2">{r.y}</td><td className="py-1.5 text-right font-mono">{money(r.f)}</td><td className={cx('w-16 py-1.5 text-right font-mono', Math.abs(dv) < 0.05 ? 'text-text-3' : dv > 0 ? 'text-ok' : 'text-err')}>{Math.abs(dv) < 0.05 ? '–' : signed(dv)}</td></tr>) })}</tbody></table>
       </section>
-      <section className="rounded-2xl border border-border bg-surface shadow-card p-4">
+      <section className="rounded-lg border border-border bg-surface p-4">
         <p className="text-xs font-semibold">Latest changes</p>
         {log.length ? <ul className="mt-2 space-y-1.5 text-xs text-text-2">{log.slice(0, 4).map((l, i) => <li key={i} className="break-words">{l}</li>)}</ul> : <p className="mt-1 text-xs text-text-3">Type in a bordered cell. The impact shows here and in every chart.</p>}
       </section>
@@ -475,7 +475,7 @@ function InputsTab(p: Sub & { setOne: SetOne; applyMany: ApplyMany; cur: number;
   return (
     <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_288px]">
       <div className="min-w-0 space-y-6">
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-2xl border border-border bg-surface shadow-card px-4 py-3 text-xs text-text-2">
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-lg border border-border bg-surface px-4 py-3 text-xs text-text-2">
           <span className="inline-flex items-center gap-1.5"><i className="h-3 w-4 rounded-sm border border-brand/60 bg-surface" />Your input</span>
           <span className="inline-flex items-center gap-1.5"><i className="h-3 w-4 rounded-sm border border-warn bg-warn-soft" />Changed</span>
           <span className="inline-flex items-center gap-1.5"><Lock size={11} />Model default</span>
@@ -690,7 +690,7 @@ function CompareTab(p: Sub) {
   const drivers = DRIVERS.flatMap(d => FYS.map(y => ({ d, y, va: finalVal(ctx, a, d, y), vb: finalVal(ctx, b, d, y) }))).filter(x => Math.abs(x.va - x.vb) > x.d.step / 2)
   return (
     <div className="mt-6 space-y-5">
-      <div className="grid gap-4 rounded-2xl border border-border bg-surface shadow-card p-4 sm:grid-cols-2">
+      <div className="grid gap-4 rounded-lg border border-border bg-surface p-4 sm:grid-cols-2">
         <label className="text-xs font-medium text-text-2">Scenario A<span className="mt-1 block"><Select label="Scenario A" value={a} options={ids} onChange={setA} /></span></label>
         <label className="text-xs font-medium text-text-2">Scenario B<span className="mt-1 block"><Select label="Scenario B" value={b} options={ids} onChange={setB} /></span></label>
       </div>

@@ -60,7 +60,7 @@ export function downloadPdf(el: HTMLElement, title: string, subtitle?: string) {
   const clone = el.cloneNode(true) as HTMLElement
   inline(el, clone)
   clone.querySelectorAll('[data-export-ignore]').forEach(n => n.remove())
-  w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:system-ui,-apple-system,sans-serif;margin:32px;color:#000067}h1{font-size:22px;margin:0 0 4px}p{color:#5b6078;font-size:13px;margin:0 0 20px}@media print{@page{margin:20mm}}</style></head><body><h1>${title}</h1>${subtitle ? `<p>${subtitle}</p>` : ''}${clone.outerHTML}</body></html>`)
+  w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:system-ui,-apple-system,sans-serif;margin:32px;color:#0b0f2e}h1{font-size:22px;margin:0 0 4px}p{color:#5b6078;font-size:13px;margin:0 0 20px}@media print{@page{margin:20mm}}</style></head><body><h1>${title}</h1>${subtitle ? `<p>${subtitle}</p>` : ''}${clone.outerHTML}</body></html>`)
   w.document.close()
   w.focus()
   setTimeout(() => w.print(), 350)

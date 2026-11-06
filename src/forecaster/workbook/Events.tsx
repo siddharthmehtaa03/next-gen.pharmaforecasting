@@ -76,6 +76,7 @@ export default function Events() {
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
             <div>
               <h2 className="font-display text-[17px] font-semibold">Event register</h2>
+              <p className="text-sm text-text-2">Switch an event into the current scenario and set how likely it is.</p>
             </div>
             <div className="flex flex-wrap gap-1.5">{d.regBtns.map(b => <ProxyButton key={eid(b)} el={b} />)}</div>
           </div>
@@ -110,7 +111,7 @@ export default function Events() {
                       </div>
                     </div>
                     {open && (
-                      <div className="rise mt-3 grid gap-3 rounded-2xl border border-border bg-surface shadow-card p-4 text-sm lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
+                      <div className="rise mt-3 grid gap-3 rounded-lg border border-border bg-surface p-4 text-sm lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
                         <div className="space-y-2 text-text-2 [&_input]:inline-block"><Kids el={info} /></div>
                         <dl className="space-y-1.5 text-xs">
                           {['Date', 'Markets', 'Impacts', 'Probability', 'Phase', 'Duration', 'Magnitude', 'Confidence'].map((k, i) => <div key={k} className="flex justify-between gap-2"><dt className="text-text-3">{k}</dt><dd className="font-medium">{txt(c[i + 2])}</dd></div>)}

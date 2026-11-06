@@ -43,36 +43,34 @@ const TONE: Record<Verdict, { box: string; dot: string; text: string; note: stri
 }
 
 /** CR-003: can you depend on the trend? One verdict per metric, evidence one click away. */
-/** `id` checks a driver's actuals; pass `series`, `label` and `fmt` instead to check an output such as net revenue. */
-export function TrendPanel({ id, series, label, fmt }: { id?: DriverId; series?: number[]; label?: string; fmt?: (v: number) => string }) {
+export function TrendPanel({ id }: { id: DriverId }) {
   const [open, setOpen] = useState(false)
-  const d = id ? DRV[id] : null
-  const c = trendCheck(series ?? ACTUALS[id!]), t = TONE[c.verdict]
-  const show = (v: number) => fmt ? fmt(v) : fmtV(id!, v)
-  const miss = (v: number) => d?.pct ? `${v.toFixed(2)} pts` : show(v)
+  const c = trendCheck(ACTUALS[id]), t = TONE[c.verdict], d = DRV[id]
+  const unit = d.pct ? ' pts' : ''
+  const miss = (v: number) => d.pct ? `${v.toFixed(2)}${unit}` : fmtV(id, v)
   return (
-    <aside data-tour="trend" aria-label={`Trend reliability for ${label ?? d!.label}`} className="flex flex-col rounded-2xl border border-border bg-surface shadow-card p-4">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Can you depend on the trend?</p>
-      <div className={cx('mt-2 rounded-md px-3 py-2.5', t.box)}>
-        <p className={cx('flex items-center gap-2 text-[15px] font-semibold', t.text)}><span className={cx('h-2.5 w-2.5 rounded-full', t.dot)} />{c.verdict}</p>
-        <p className={cx('mt-0.5 text-[12.5px]', t.text)}>{t.note}</p>
+    <section data-tour="trend" aria-label={`Trend reliability for ${d.label}`} className="rounded-xl border border-border bg-surface p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-[13.5px] font-semibold">Can you depend on the trend?</p>
+        <button type="button" aria-expanded={open} onClick={() => setOpen(v => !v)} className="text-[12.5px] font-medium text-text-2 hover:text-text">{open ? 'Hide evidence' : 'Show evidence →'}</button>
       </div>
-      {c.run >= 3 && <p className="mt-3 text-[13px]">Trend has {c.dir}-forecast {c.run} months running.</p>}
-      <dl className="mt-3 space-y-1.5 border-t border-border pt-3 text-[12.5px]">
-        <div className="flex justify-between gap-2"><dt className="text-text-3">Direction</dt><dd className={c.run >= 3 ? t.text : ''}>{c.run}-mo {c.dir}-forecast</dd></div>
-        <div className="flex justify-between gap-2"><dt className="text-text-3">Avg miss</dt><dd className="font-mono">±{miss(c.avgMiss)} · {c.mape.toFixed(1)}%</dd></div>
-        <div className="flex justify-between gap-2"><dt className="text-text-3">Vs simple guess</dt><dd className={c.edge ? 'text-ok' : 'text-warn'}>{c.edge ? 'Beats it' : 'No edge'}</dd></div>
-      </dl>
-      <p className="mt-3 text-[11.5px] text-text-3">Backtest of the last {c.rows.length} months, refitting the trend each month. Sharpens as snapshots accrue.</p>
-      <button type="button" aria-expanded={open} onClick={() => setOpen(v => !v)} className="mt-2 self-start text-[12.5px] font-semibold text-brand hover:underline">{open ? 'Hide evidence' : 'Show evidence →'}</button>
+      <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+        <div className={cx('rounded-xl border border-black/[0.04] px-3.5 py-3', t.box)}>
+          <p className={cx('flex items-center gap-2 text-[15px] font-semibold', t.text)}><span className={cx('h-2 w-2 rounded-full', t.dot)} />{c.verdict}</p>
+          <p className={cx('mt-0.5 text-[12px]', t.text)}>{t.note}</p>
+        </div>
+        {([['Direction', `${c.run}-mo ${c.dir}-forecast`, c.run >= 3 ? t.text : ''], ['Avg miss', `±${miss(c.avgMiss)} · ${c.mape.toFixed(1)}%`, ''], ['Vs simple guess', c.edge ? 'Beats it' : 'No edge', c.edge ? 'text-ok' : 'text-warn']] as const).map(([k, v, cls]) => (
+          <div key={k} className="rounded-xl border border-border px-3.5 py-3"><p className={cx('text-[15px] font-semibold tabular-nums', cls)}>{v}</p><p className="mt-0.5 text-[12px] text-text-3">{k}</p></div>
+        ))}
+      </div>
       {open && (
-        <table className="mt-2 w-full text-[11.5px]">
+        <table className="mt-3 w-full text-[12px]">
           <thead><tr className="text-text-3"><th className="py-1 text-left font-medium">Month</th><th className="py-1 text-right font-medium">Actual</th><th className="py-1 text-right font-medium">Trend</th><th className="py-1 text-right font-medium">Miss</th></tr></thead>
           <tbody>{c.rows.map(r => { const m = r.actual - r.trend; return (
-            <tr key={r.i} className="border-t border-border"><td className="py-1">{mLabel(r.i)}</td><td className="py-1 text-right font-mono">{show(r.actual)}</td><td className="py-1 text-right font-mono">{show(r.trend)}</td><td className={cx('py-1 text-right font-mono', m >= 0 ? 'text-ok' : 'text-err')}>{m >= 0 ? '+' : '−'}{miss(Math.abs(m))}</td></tr>) })}</tbody>
+            <tr key={r.i} className="border-t border-border"><td className="py-1">{mLabel(r.i)}</td><td className="py-1 text-right font-mono">{fmtV(id, r.actual)}</td><td className="py-1 text-right font-mono">{fmtV(id, r.trend)}</td><td className={cx('py-1 text-right font-mono', m >= 0 ? 'text-ok' : 'text-err')}>{m >= 0 ? '+' : '−'}{miss(Math.abs(m))}</td></tr>) })}</tbody>
         </table>
       )}
-      {ACT < 18 && <p className="mt-2 text-[11px] text-text-3">Fewer than 18 months of actuals: verdict is indicative.</p>}
-    </aside>
+      <p className="mt-2.5 text-[11.5px] text-text-3">Backtest of the last {c.rows.length} months, refitting the trend each month.{ACT < 18 ? ' Fewer than 18 months of actuals: indicative.' : ''}</p>
+    </section>
   )
 }

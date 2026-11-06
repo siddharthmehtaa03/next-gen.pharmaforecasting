@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowRight, Check, Copy, CalendarClock, GitCompare, Lock, LockOpen, Pencil, Plus, Presentation, RotateCcw, Save, Trash2, X } from 'lucide-react'
 import {
-  ACT, ACTUAL_LAYER, CURVE_LABEL, DRIVERS, DRV, EVENT_CURVE_LABEL, EVENT_SUBTYPES, EVENT_TYPES, MFN_SUB, FY, METHOD_LABEL, N, OUTPUTS, REPEAT_LABEL, UNBIASED,
+  ACT, ACTUAL_LAYER, CURVE_LABEL, DRIVERS, DRV, EVENT_CURVE_LABEL, EVENT_SUBTYPES, EVENT_TYPES, MFN_SUB, FY, METHOD_LABEL, N, OUTPUTS, UNBIASED,
   adjusted, applyEvents, describeOverride, fmtDelta, fmtRev, fmtV, fySum, fyAvg, mLong, revenue,
 } from './engine'
 import type { DriverId, Edit, EventCurve, EventDef, EventType, Impact, Layer, ModelCfg, OutputId, Scenario } from './engine'
@@ -29,22 +29,22 @@ export function EventsStage({ events, setEvents, scenarios, setScenarios, calc, 
   model: ModelCfg; metric: OutputId; setMetric: (m: OutputId) => void; modified: number; notify: Notify; onNext: () => void
 }) {
   const [form, setForm] = useState<EventDef | null>(null)
-  const [filterMode, setFilterMode] = useState<'scenario' | 'all'>('all')
+  const [filterMode, setFilterMode] = useState<'scenario' | 'all'>('scenario')
   const agent = useAgentFocus()
   const sel = scenarios.find(s => s.id === selId) ?? scenarios[0]!
   const c = calc[sel.id]!, work = calc.__working!, o = OUTPUTS[metric]
   const series: ChartSeries = { actual: o.fn(UNBIASED), unbiased: o.fn(UNBIASED), working: o.fn(work.layer), scenario: o.fn(c.layer), scenarioName: `${sel.name} · with events` }
   const evDelta = o.fn(c.layer).slice((FY - 2025) * 12, (FY - 2025) * 12 + 12).reduce((a, b) => a + b, 0) - o.fn(work.layer).slice((FY - 2025) * 12, (FY - 2025) * 12 + 12).reduce((a, b) => a + b, 0)
-  const save = (e: EventDef, scIds: string[]) => {
+  const save = (e: EventDef) => {
     const isNew = !e.id
     const evId = isNew ? `ev${Date.now()}` : e.id
     const saved = { ...e, id: evId }
     setEvents(xs => isNew ? [...xs, saved] : xs.map(x => x.id === e.id ? saved : x))
-    // The picked scenarios carry the event; final scenarios are locked and left as they are.
-    setScenarios(ss => ss.map(s => s.locked ? s : scIds.includes(s.id) ? (s.active.includes(evId) ? s : { ...s, active: [...s.active, evId] }) : { ...s, active: s.active.filter(x => x !== evId) }))
+    if (isNew) {
+      setScenarios(ss => ss.map(s => s.id === sel.id ? { ...s, active: [...s.active, evId] } : s))
+    }
     setForm(null)
-    const n = scIds.length
-    notify({ tone: 'ok', text: `“${e.name}” ${isNew ? 'created' : 'updated'}${n ? ` and applied to ${n === 1 ? scenarios.find(s => s.id === scIds[0])?.name ?? '1 scenario' : `${n} scenarios`}` : ' and kept in the library, off in every scenario'}.` })
+    notify({ tone: 'ok', text: isNew ? `“${e.name}” created and applied to ${sel.name}.` : `“${e.name}” updated.` })
   }
   const dup = (e: EventDef) => { setEvents(xs => [...xs, { ...e, id: `ev${Date.now()}`, name: `${e.name} (copy)` }]); notify({ tone: 'info', text: 'Event duplicated. The copy is off in every scenario.' }) }
   const del = (e: EventDef) => { setEvents(xs => xs.filter(x => x.id !== e.id)); notify({ tone: 'info', text: `“${e.name}” deleted from the library and removed from all scenarios.` }) }
@@ -56,9 +56,10 @@ export function EventsStage({ events, setEvents, scenarios, setScenarios, calc, 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h2 className="text-[26px] font-semibold tracking-tight">Scenario events</h2><p className="mt-1 text-[15px] text-text-2">Create an event once, then add it to any scenario.</p></div>
+        <div><h2 className="text-[22px] font-semibold tracking-tight">Scenario events</h2>
+          <p className="mt-0.5 max-w-2xl text-sm text-text-2">Events are assigned in the context of <b className="text-text">{sel.name}</b>. New events apply to this scenario.</p></div>
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-sm font-semibold">Chart scenario
+          <label className="flex items-center gap-2 text-sm font-semibold">Scenario
             <select value={sel.id} onChange={e => setSelId(e.target.value)} aria-label="Selected scenario for events" className={cx(field, 'w-44 font-medium text-text')}>{scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
           <span data-tour="add-event" className="inline-flex"><Btn onClick={() => setForm(blankEvent())} icon={<Plus size={15} />} disabled={!!form && !form.id}>Add event</Btn></span>
         </div>
@@ -76,7 +77,7 @@ export function EventsStage({ events, setEvents, scenarios, setScenarios, calc, 
         <Card pad={false} title={`Events for ${sel.name}`} right={<Seg label="Filter" value={filterMode} onChange={setFilterMode} options={[{ id: 'scenario', label: `Included in ${sel.name} (${c.events.length})` }, { id: 'all', label: `All library events (${events.length})` }]} />}>
           <div className="overflow-x-auto">
             <table className="w-full min-w-[720px] text-left text-[13px]">
-              <thead><tr className="border-b border-border bg-surface-2 text-[11px] uppercase tracking-wide text-text-3"><th className="px-4 py-2.5 font-semibold">Event</th><th className="px-3 py-2.5 font-semibold">Timing</th><th className="px-3 py-2.5 font-semibold">Impacted metrics</th><th className="px-3 py-2.5 text-right font-semibold">Probability</th><th className="px-3 py-2.5 font-semibold">In scenarios</th><th className="px-3 py-2.5" /></tr></thead>
+              <thead><tr className="border-b border-border bg-surface-2 text-[11px] uppercase tracking-wide text-text-3"><th className="px-4 py-2.5 font-semibold">Event</th><th className="px-3 py-2.5 font-semibold">Timing</th><th className="px-3 py-2.5 font-semibold">Impacted metrics</th><th className="px-3 py-2.5 text-right font-semibold">Probability</th><th className="px-3 py-2.5 text-center font-semibold">Apply to {sel.name}</th><th className="px-3 py-2.5" /></tr></thead>
               <tbody>
                 {displayed.map(e => {
                   const isApplied = sel.active.includes(e.id)
@@ -84,22 +85,9 @@ export function EventsStage({ events, setEvents, scenarios, setScenarios, calc, 
                     <tr key={e.id} className={cx('border-b border-border last:border-0', form?.id === e.id && 'bg-brand-soft/40', agent.field === e.id && 'agent-row')}>
                       <td className="px-4 py-3"><p className="font-medium">{e.name}</p><span className="mt-1 inline-block"><Tag tone={typeTone(e.type)}>{e.type}</Tag>{e.sub && <span className="ml-1.5 text-[12px] text-text-2">{e.sub}{e.mfn && ` · ${e.mfn}`}</span>}</span></td>
                       <td className="whitespace-nowrap px-3 py-3 text-text-2">{mLong(e.date)}</td>
-                      <td className="px-3 py-3"><div className="flex flex-wrap gap-1">{e.impacts.map(i => <span key={i.metric} className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-0.5 text-[12px]">{DRV[i.metric].label}<b className={cx('font-mono', i.dir === 'up' ? 'text-ok' : 'text-err')}>{i.dir === 'up' ? '+' : '−'}{i.mag}%</b></span>)}{e.impacts.length === 0 && <span className="rounded bg-warn-soft px-1.5 py-0.5 text-[12px] font-semibold text-warn" title="Gross-to-net events land on net, downstream, and never touch gross price">GTN · moves net, not gross</span>}{e.impacts.some(i => i.metric === 'price') && <span className="rounded bg-ok-soft px-1.5 py-0.5 text-[12px] font-semibold text-ok" title="Only List / WAC events move gross price">List · moves gross</span>}{!!e.repeat && <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[12px] text-text-2">{REPEAT_LABEL[e.repeat].toLowerCase()}</span>}</div></td>
+                      <td className="px-3 py-3"><div className="flex flex-wrap gap-1">{e.impacts.map(i => <span key={i.metric} className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-0.5 text-[12px]">{DRV[i.metric].label}<b className={cx('font-mono', i.dir === 'up' ? 'text-ok' : 'text-err')}>{i.dir === 'up' ? '+' : '−'}{i.mag}%</b></span>)}</div></td>
                       <td className="px-3 py-3 text-right font-mono">{e.prob}%</td>
-                      <td className="px-3 py-3">
-                        <div className="flex max-w-[260px] flex-wrap items-center gap-1">
-                          {scenarios.filter(s => s.active.includes(e.id)).map(s => (
-                            <span key={s.id} className={cx('inline-flex items-center gap-1 rounded-full border py-0.5 pl-2 text-[12px] font-medium', s.id === sel.id ? 'border-brand bg-brand-soft text-brand' : 'border-border-strong bg-surface text-text-2', s.locked ? 'pr-2 opacity-70' : 'pr-0.5')}>
-                              {s.name}{s.locked ? <Lock size={10} aria-label="Final" /> : <button type="button" onClick={() => flip(s.id, e.id, false)} aria-label={`Remove ${e.name} from ${s.name}`} title={`Remove from ${s.name}`} className="grid h-4 w-4 place-items-center rounded-full hover:bg-surface-2"><X size={10} /></button>}
-                            </span>))}
-                          {!isApplied && !scenarios.some(s => s.active.includes(e.id)) && <span className="text-[12px] text-text-3">No scenario</span>}
-                          {scenarios.some(s => !s.active.includes(e.id) && !s.locked) && (
-                            <select aria-label={`Add a scenario to ${e.name}`} value="" onChange={x => { if (x.target.value) flip(x.target.value, e.id, true) }} className="h-6 rounded-full border border-dashed border-border-strong bg-surface px-2 text-[12px] font-medium text-brand outline-none hover:border-brand focus:border-brand">
-                              <option value="">+ Add scenario</option>
-                              {scenarios.filter(s => !s.active.includes(e.id) && !s.locked).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>)}
-                        </div>
-                      </td>
+                      <td className="px-3 py-3 text-center"><div className="flex items-center justify-center gap-2"><Toggle on={isApplied} onChange={v => flip(sel.id, e.id, v)} label={`Include ${e.name} in ${sel.name}`} /><span className="text-xs font-medium">{isApplied ? 'Included' : 'Off'}</span></div></td>
                       <td className="px-3 py-3"><div className="flex justify-end gap-0.5">
                         <Btn variant="ghost" title="Edit" onClick={() => setForm(structuredClone(e))} icon={<Pencil size={14} />} />
                         <Btn variant="ghost" title="Duplicate" onClick={() => dup(e)} icon={<Copy size={14} />} />
@@ -113,16 +101,15 @@ export function EventsStage({ events, setEvents, scenarios, setScenarios, calc, 
           </div>
         </Card>
         </AgentFrame>
-        {form && <EventForm key={form.id || 'new'} initial={form} scenarios={scenarios} picked={form.id ? scenarios.filter(s => s.active.includes(form.id)).map(s => s.id) : [sel.id]} onSave={save} onCancel={() => setForm(null)} model={model} work={work.layer} metric={metric} />}
+        {form && <EventForm key={form.id || 'new'} initial={form} onSave={save} onCancel={() => setForm(null)} model={model} work={work.layer} metric={metric} />}
       </div>
       <p className="rounded-md border border-dashed border-border-strong bg-surface px-4 py-3 text-[13px] text-text-2">Testing “share 2 points higher”? Use <b>Sensitivity</b>, not an event.</p>
     </div>
   )
 }
 
-function EventForm({ initial, scenarios, picked, onSave, onCancel, model, work, metric }: { initial: EventDef; scenarios: Scenario[]; picked: string[]; onSave: (e: EventDef, scenarioIds: string[]) => void; onCancel: () => void; model: ModelCfg; work: Layer; metric: OutputId }) {
+function EventForm({ initial, onSave, onCancel, model, work, metric }: { initial: EventDef; onSave: (e: EventDef) => void; onCancel: () => void; model: ModelCfg; work: Layer; metric: OutputId }) {
   const [e, setE] = useState(initial)
-  const [scIds, setScIds] = useState(picked)
   useEffect(() => { const k = (ev: KeyboardEvent) => ev.key === 'Escape' && onCancel(); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [onCancel])
   const set = (p: Partial<EventDef>) => setE(x => ({ ...x, ...p }))
   const has = (m: DriverId) => e.impacts.some(i => i.metric === m)
@@ -137,7 +124,7 @@ function EventForm({ initial, scenarios, picked, onSave, onCancel, model, work, 
       <div className="absolute inset-0 bg-text/30 backdrop-blur-[1px]" onClick={onCancel} aria-hidden />
       <aside role="dialog" aria-modal="true" aria-label={initial.id ? 'Edit event' : 'New event'} className="relative flex h-full w-full max-w-[560px] flex-col bg-surface shadow-2xl">
         <header className="flex items-start justify-between gap-3 border-b border-border px-6 py-4">
-          <div><h3 className="text-[17px] font-semibold">{initial.id ? 'Edit event' : 'New event'}</h3></div>
+          <div><h3 className="text-[17px] font-semibold">{initial.id ? 'Edit event' : 'New event'}</h3><p className="mt-0.5 text-[13px] text-text-2">Saved events are reusable across scenarios and stay off until you turn them on.</p></div>
           <Btn variant="ghost" onClick={onCancel} icon={<X size={16} />} title="Close" />
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
@@ -152,9 +139,6 @@ function EventForm({ initial, scenarios, picked, onSave, onCancel, model, work, 
         </div>
         <div className="grid grid-cols-2 gap-3"><Period label="Expected date" value={e.date} min={ACT} max={N - 1} onChange={v => set({ date: v })} />
           <label className="block"><Label className="mb-1">Probability · {e.prob}%</Label><input type="range" min={0} max={100} step={5} value={e.prob} onChange={x => set({ prob: +x.target.value })} className="mt-2.5 w-full accent-[#0000c9]" /></label></div>
-        <label className="block max-w-xs"><Label className="mb-1" hint="a regular price action is one event">Repeats</Label>
-          <select aria-label="Repeats" value={e.repeat ?? 0} onChange={x => set({ repeat: +x.target.value as 0 | 6 | 12 })} className={field}>{([0, 6, 12] as const).map(r => <option key={r} value={r}>{REPEAT_LABEL[r]}</option>)}</select>
-          {!!e.repeat && <span className="mt-1 block text-[11.5px] text-text-3">The same impact is applied again every {e.repeat} months after {mLong(e.date)}. Use it for the increment above what the trend already carries, for example a biannual increase.</span>}</label>
         <div><Label className="mb-1.5">Impacted metrics</Label>
           <div className="flex flex-wrap gap-1.5">{model.modules.map(m => DRV[m.id]).map(d => <button key={d.id} type="button" aria-pressed={has(d.id)} onClick={() => toggle(d.id)} className={cx('inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[13px] font-medium transition-colors', has(d.id) ? 'border-brand bg-brand-soft text-brand' : 'border-border-strong text-text-2 hover:border-text')}>{has(d.id) && <Check size={12} />}{d.label}</button>)}</div></div>
         <fieldset disabled={none} className={cx('space-y-3 rounded-md border border-border p-3 transition-opacity', none && 'opacity-50')}>
@@ -174,16 +158,11 @@ function EventForm({ initial, scenarios, picked, onSave, onCancel, model, work, 
           ))}
           <p className="text-[12px] text-text-3">Magnitude is a relative change to the metric, weighted by probability.</p>
         </fieldset>
-        <div><Label className="mb-1.5" hint="add it to one or more">Apply to scenarios</Label>
-          <div className="flex flex-wrap gap-1.5">{scenarios.map(s => { const on = scIds.includes(s.id); return (
-            <button key={s.id} type="button" aria-pressed={on} disabled={s.locked} title={s.locked ? 'Final scenarios are locked' : undefined} onClick={() => setScIds(x => on ? x.filter(i => i !== s.id) : [...x, s.id])}
-              className={cx('inline-flex items-center gap-1 rounded-full border px-3 py-1 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50', on ? 'border-brand bg-brand-soft text-brand' : 'border-border-strong text-text-2 hover:border-text')}>{on && <Check size={12} />}{s.name}</button>) })}</div>
-          <p className="mt-1 text-[12px] text-text-3">{scIds.length ? `On in ${scIds.length} scenario${scIds.length === 1 ? '' : 's'}.` : 'Saved to the library and off in every scenario.'} You can add or remove scenarios from the event list later.</p></div>
         {pv && <div><Label className="mb-1.5">Impact preview · {o.label}</Label><div className="mb-1"><Legend s={pv} /></div><ForecastChart s={pv} fmt={v => o.fmt(v, 1)} dp={0} unit={o.unit} height={170} /></div>}
         <label className="block"><Label className="mb-1" hint="optional">Notes</Label><textarea value={e.notes} onChange={x => set({ notes: x.target.value })} rows={2} placeholder="Source, rationale, assumptions" className="w-full resize-y rounded-md border border-border-strong bg-surface p-2.5 text-sm outline-none focus:border-brand" /></label>
       </div>
         </div>
-        <footer className="flex justify-end gap-2 border-t border-border bg-surface px-6 py-3"><Btn variant="secondary" onClick={onCancel}>Cancel</Btn><Btn disabled={!ok} onClick={() => onSave({ ...e, name: e.name.trim() }, scIds)} icon={<Save size={15} />}>Save event</Btn></footer>
+        <footer className="flex justify-end gap-2 border-t border-border bg-surface px-6 py-3"><Btn variant="secondary" onClick={onCancel}>Cancel</Btn><Btn disabled={!ok} onClick={() => onSave({ ...e, name: e.name.trim() })} icon={<Save size={15} />}>Save event</Btn></footer>
       </aside>
     </div>
   )
@@ -293,7 +272,8 @@ export function ScenariosStage({ events, scenarios, setScenarios, selId, setSelI
       {part === 'editor' && (
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h2 className="text-[26px] font-semibold tracking-tight">Scenario configuration</h2>
+            <h2 className="text-[22px] font-semibold tracking-tight">Scenario configuration</h2>
+            <p className="mt-0.5 max-w-2xl text-sm text-text-2">Configure scenarios and understand their posture. Build new scenarios or adjust assumptions below.</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <OutputSelect model={model} metric={metric} onChange={setMetric} />
@@ -472,7 +452,8 @@ export function GoalSeekStage({ scenarios, setScenarios, calc, selId, setSelId, 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h2 className="text-[26px] font-semibold tracking-tight">Set the outcome, see what it takes</h2><p className="mt-1 text-[15px] text-text-2">Set a target and see which assumption has to move.</p></div>
+        <div><h2 className="text-[22px] font-semibold tracking-tight">Set the outcome, see what it takes</h2>
+          <p className="mt-0.5 text-sm text-text-2">Set target ranges in order. Nothing is saved until you apply.</p></div>
         <div className="flex items-center gap-2"><Label>Scenario</Label><select aria-label="Scenario" value={sel.id} onChange={e => setSelId(e.target.value)} className={cx(field, 'w-40')}>{scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
           <Btn variant="ghost" onClick={() => setNonce(n => n + 1)} icon={<RotateCcw size={15} />}>Reset</Btn></div>
       </div>
@@ -514,7 +495,8 @@ export function ReviewStage({ scenarios, selId, setSelId, calc, events, edits, w
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h2 className="text-[26px] font-semibold tracking-tight">Why the forecast differs from the baseline</h2><p className="mt-1 text-[15px] text-text-2">FY{FY} net revenue, from the reference baseline to the selected scenario.</p></div>
+        <div><h2 className="text-[22px] font-semibold tracking-tight">Why the forecast differs from the baseline</h2>
+          <p className="mt-0.5 max-w-2xl text-sm text-text-2">FY{FY} net revenue, traced from the reference baseline to the selected scenario.</p></div>
         <div className="flex flex-wrap items-center gap-2">
           <Seg label="Scenario" value={sel.id} onChange={setSelId} options={scenarios.map(s => ({ id: s.id, label: s.name }))} />
           {sel.locked ? <Tag tone="ok"><Lock size={11} />Final · locked</Tag> : <Tag tone="neutral">Draft</Tag>}

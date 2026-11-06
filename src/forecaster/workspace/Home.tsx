@@ -203,6 +203,7 @@ function DeleteDialog({
         onClick={e => e.stopPropagation()}
       >
         <h3 className="text-base font-semibold text-err">Delete {name}?</h3>
+        <p className="mt-1.5 text-sm text-text-2">This will remove it from your forecasts. This action cannot be undone.</p>
         <div className="mt-5 flex justify-end gap-2">
           <Btn variant="secondary" size="sm" onClick={onClose}>Cancel</Btn>
           <Btn variant="danger" size="sm" onClick={() => { onConfirm(); onClose() }}>Delete</Btn>
@@ -261,16 +262,12 @@ export default function ForecasterHome({ onOpen, notify }: { onOpen: (b: BrandRo
   )
 
   return (
-    <div className="min-h-full bg-background">
+    <div className="min-h-full bg-bg">
       <main className="mx-auto max-w-[1240px] px-6 py-8">
-        <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Forecaster</p>
-        <div className="mt-1 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-[28px] font-semibold tracking-tight">Your forecasts</h1>
-          <div className="flex items-center gap-2">
-            <span className="ml-1 hidden text-xs font-medium text-text-3 sm:inline">Layout</span>
-            <Seg label="UX" value={ux} onChange={setUx} options={[{ id: 'fractal', label: 'A' }, { id: 'syeda', label: 'B' }]} />
-          </div>
         </div>
+        <p className="mt-1 max-w-2xl text-sm text-text-2">Open a forecast to review the reference baseline, adjust assumptions, add events, build scenarios and run simulations.</p>
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-[15px] font-semibold">Forecasts · {rows.length}</h2>
@@ -279,13 +276,14 @@ export default function ForecasterHome({ onOpen, notify }: { onOpen: (b: BrandRo
         <div className="mt-3 overflow-x-auto rounded-lg border border-border bg-surface">
           <table className="w-full text-[13px]">
             <thead>
-              <tr className="border-b border-border bg-surface-2 text-left text-xs uppercase tracking-wide text-text-3">
+              <tr className="border-b border-border bg-surface text-left text-[12px] font-medium text-text-3">
                 {([['brand', 'Forecast', 'w-[22%]'], ['stream', 'Scope', 'w-[20%]'], ['cycle', 'Cycle', 'w-[18%]'], ['status', 'Status', 'w-[14%]'], ['updated', 'Updated', 'w-[16%]']] as const).map(([k, h, w]) => {
                   const on = sort?.k === k
                   const Icon = !on ? ArrowUpDown : sort.dir === 1 ? ArrowUp : ArrowDown
                   return (
-                    <th key={k} className={cx('px-3 py-2.5 font-semibold', w)} aria-sort={on ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
-                      <button type="button" onClick={() => toggleSort(k)} className={cx('inline-flex items-center gap-1 uppercase tracking-wide outline-none hover:text-text focus-visible:text-brand', on && 'text-text')}>
+                    <th key={k} className={cx('px-3 py-2 font-medium', w)} aria-sort={on ? (sort.dir === 1 ? 'ascending' : 'descending') : 'none'}>
+                      <button type="button" onClick={() => toggleSort(k)} className={cx('inline-flex items-center gap-1 outline-none hover:text-text focus-visible:text-brand', on && 'text-text')}>
+                        {k === 'updated' && <Clock size={11} className="mr-0.5 shrink-0 text-text-3" />}
                         {h}<Icon size={12} className={on ? 'text-brand' : 'opacity-60'} />
                       </button>
                     </th>
@@ -297,13 +295,14 @@ export default function ForecasterHome({ onOpen, notify }: { onOpen: (b: BrandRo
             <tbody>
               {rows.map(b => (
                 <tr key={b.id} onClick={() => ux === 'syeda' ? setSyeda(b) : onOpen(b)} title={`${ACTION[b.status]} ${b.brand}`}
-                  className="group cursor-pointer border-b border-border align-middle last:border-0 hover:bg-brand-soft/30 transition-colors">
+                  className="group cursor-pointer border-b border-border align-middle last:border-0 hover:bg-[#f8f8fa] transition-colors">
                   <td className="px-3 py-2.5 text-[14px] font-semibold text-text whitespace-nowrap group-hover:text-brand">{b.brand}</td>
                   <td className="px-3 py-2.5 text-xs text-text-2">{b.stream}</td>
                   <td className="px-3 py-2.5 text-xs text-text-2">{b.cycle}</td>
                   <td className="px-3 py-2.5 whitespace-nowrap"><Tag tone={TONE[b.status]}>{b.status}</Tag></td>
                   <td className="px-3 py-2.5 text-xs text-text-2 whitespace-nowrap">
                     <span className="inline-flex items-center gap-1">
+                      <Clock size={11} className="shrink-0 text-text-3" />
                       <span>{b.updated || 'Recent'}</span>
                     </span>
                   </td>
@@ -329,6 +328,7 @@ export default function ForecasterHome({ onOpen, notify }: { onOpen: (b: BrandRo
             </tbody>
           </table>
         </div>
+
         {versions && <VersionsDrawer b={versions} onClose={() => setVersions(null)} />}
         {renamingBrand && (
           <RenameDialog

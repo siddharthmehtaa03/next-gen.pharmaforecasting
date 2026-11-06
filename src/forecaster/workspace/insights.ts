@@ -7,10 +7,10 @@ export type Person = { id: string; name: string; role: string; color: string }
 export const ME = 'me'
 export const PEOPLE: Person[] = [
   { id: 'me', name: 'J. Andersen', role: 'Forecaster · you', color: '#0000c9' },
-  { id: 'priya', name: 'Priya Nair', role: 'Brand lead', color: '#0095ff' },
-  { id: 'daniel', name: 'Daniel Reyes', role: 'Finance', color: '#8f5a00' },
-  { id: 'tom', name: 'Tom Becker', role: 'Market access', color: '#007a6c' },
-  { id: 'sara', name: 'Sara Lindqvist', role: 'Commercial analytics', color: '#a68aff' },
+  { id: 'priya', name: 'Priya Nair', role: 'Brand lead', color: '#0e7490' },
+  { id: 'daniel', name: 'Daniel Reyes', role: 'Finance', color: '#a35a00' },
+  { id: 'tom', name: 'Tom Becker', role: 'Market access', color: '#0a7d4f' },
+  { id: 'sara', name: 'Sara Lindqvist', role: 'Commercial analytics', color: '#7c3aed' },
   { id: 'aiko', name: 'Aiko Tanaka', role: 'Forecasting CoE', color: '#c4122f' },
 ]
 export const person = (id: string) => PEOPLE.find(p => p.id === id) ?? PEOPLE[0]!

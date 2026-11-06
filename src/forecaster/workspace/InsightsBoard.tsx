@@ -46,8 +46,7 @@ export default function InsightsBoard({ insights, setInsights, brandId, embedded
     <>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          {!embedded && <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Forecaster</p>}
-          <h1 className={cx('font-semibold tracking-tight', embedded ? 'text-[20px]' : 'mt-1 text-[28px]')}>{brandName ? `${brandName} insights` : 'Insights across all brands'}</h1>
+          <h1 className={cx('font-semibold tracking-tight', embedded ? 'text-[20px]' : 'text-[28px]')}>{brandName ? `${brandName} insights` : 'Insights across all brands'}</h1>
           <p className="mt-1 max-w-2xl text-sm text-text-2">{brandName ? `Saved views and scenarios for ${brandName}. Comment and tag colleagues to discuss them.` : 'Every saved view and scenario from every brand in one place. Open a card to read the discussion and reply.'}</p>
         </div>
         <div className="flex gap-2">
@@ -85,7 +84,7 @@ export default function InsightsBoard({ insights, setInsights, brandId, embedded
       </div>
     </>
   )
-  return embedded ? <div>{body}</div> : <div className="min-h-full bg-background"><main className="mx-auto max-w-[1240px] px-6 py-8">{body}</main></div>
+  return embedded ? <div>{body}</div> : <div className="min-h-full bg-bg"><main className="mx-auto max-w-[1240px] px-6 py-8">{body}</main></div>
 }
 
 function InsightCard({ i, active, showBrand, onOpen }: { i: Insight; active: boolean; showBrand: boolean; onOpen: () => void }) {
@@ -198,7 +197,7 @@ function Detail({ i, onClose, patch, onDelete, onOpenBrand }: { i: Insight; onCl
               {options.map(p => <li key={p.id}><button type="button" role="option" aria-selected={false} onMouseDown={e => { e.preventDefault(); pick(p.name) }} className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] hover:bg-surface-2"><Avatar id={p.id} size={22} /><span className="font-medium">{p.name}</span><span className="text-text-3">{p.role}</span></button></li>)}
             </ul>
           )}
-          {replyTo && <p className="mb-2 flex items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1.5 text-[12px] text-text-2"><CornerDownRight size={12} />Replying to <b className="font-semibold">{person(replyTo.by).name}</b><button type="button" aria-label="Cancel reply" onClick={() => setReplyTo(null)} className="ml-auto text-text-3 hover:text-text"><X size={13} /></button></p>}
+          {replyTo && <p className="mb-2 flex items-center gap-1.5 rounded-md bg-surface-2 px-2.5 py-1.5 text-[12px] text-text-2"><CornerDownRight size={12} />Replying to <b className="font-semibold">{person(replyTo.by).name}</b><button type="button" aria-label="Cancel reply" onClick={() => setReplyTo(null)} className="ml-auto text-text-3 hover:text-text"><X size={13} /></button></p>}
           <textarea ref={ref} rows={2} value={text} onChange={e => setText(e.target.value)} aria-label="Add a comment" placeholder={replyTo ? 'Write a reply' : 'Add a comment. Type @ to tag someone'} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !options.length) { e.preventDefault(); post() } }} className={cx(field, 'h-auto resize-none py-2')} />
           <div className="mt-2 flex items-center justify-between">
             <button type="button" onClick={() => { setText(t => t + (t && !t.endsWith(' ') ? ' @' : '@')); ref.current?.focus() }} className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-[12px] font-medium text-text-2 hover:bg-surface-2"><AtSign size={13} />Tag people</button>

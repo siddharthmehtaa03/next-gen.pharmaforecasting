@@ -171,22 +171,22 @@ type SetKb = (f: (x: Insight[]) => Insight[]) => void
 function Btn({ children, variant = 'primary', onClick, icon, disabled }: { children: ReactNode; variant?: 'primary' | 'secondary' | 'ghost'; onClick?: () => void; icon?: ReactNode; disabled?: boolean }) {
   return (
     <button type="button" onClick={onClick} disabled={disabled}
-      className={cx('inline-flex h-10 items-center justify-center gap-2 rounded-full px-5 text-sm font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-50',
-        variant === 'primary' && 'bg-brand text-white hover:bg-brand-dark', variant === 'secondary' && 'border border-border-strong bg-surface text-brand hover:border-brand hover:bg-brand-soft', variant === 'ghost' && 'text-text-2 hover:bg-surface-2')}>
+      className={cx('inline-flex h-9 items-center justify-center gap-2 rounded-md px-3.5 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
+        variant === 'primary' && 'bg-brand text-white hover:bg-brand-dark', variant === 'secondary' && 'border border-border-strong bg-surface hover:border-text', variant === 'ghost' && 'text-text-2 hover:bg-surface-2')}>
       {icon}{children}
     </button>
   )
 }
 function Card({ title, sub, right, children, className }: { title?: string; sub?: string; right?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={cx('rounded-2xl border border-border bg-surface shadow-card', className)}>
-      {title && <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4"><div><h3 className="font-display text-base font-semibold">{title}</h3>{sub && <p className="mt-0.5 text-[13px] text-text-2">{sub}</p>}</div>{right}</header>}
+    <section className={cx('rounded-lg border border-border bg-surface', className)}>
+      {title && <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4"><div><h3 className="text-[15px] font-semibold">{title}</h3>{sub && <p className="mt-0.5 text-[13px] text-text-2">{sub}</p>}</div>{right}</header>}
       <div className="p-5">{children}</div>
     </section>
   )
 }
 function Tag({ tone = 'neutral', children }: { tone?: 'neutral' | 'brand' | 'ok' | 'warn' | 'err'; children: ReactNode }) {
-  return <span className={cx('inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide', tone === 'neutral' && 'bg-surface-2 text-text-2', tone === 'brand' && 'bg-brand-soft text-brand', tone === 'ok' && 'bg-ok-soft text-ok', tone === 'warn' && 'bg-warn-soft text-warn', tone === 'err' && 'bg-err-soft text-err')}>{children}</span>
+  return <span className={cx('inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide', tone === 'neutral' && 'bg-surface-2 text-text-2', tone === 'brand' && 'bg-brand-soft text-brand', tone === 'ok' && 'bg-ok-soft text-ok', tone === 'warn' && 'bg-warn-soft text-warn', tone === 'err' && 'bg-err-soft text-err')}>{children}</span>
 }
 function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
@@ -404,7 +404,7 @@ function ForecastFlow({ onHome, notify, brand, model, cycle, cycleName, cycleRow
                 <li key={s.title} className="shrink-0">
                   <button type="button" onClick={() => { setStep(id); top() }} aria-current={id === step ? 'step' : undefined}
                     className={cx('flex w-full items-center gap-3 rounded-md px-3 py-2.5 text-left transition-colors', id === step ? 'bg-white text-brand-dark' : 'hover:bg-white/10')}>
-                    <span className={cx('grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold', id === step ? 'bg-brand text-white' : done ? 'bg-[#68d1ff] text-brand-dark' : 'border border-white/40 text-white/80')}>{done && id !== step ? <Check size={13} strokeWidth={3} /> : id}</span>
+                    <span className={cx('grid h-6 w-6 shrink-0 place-items-center rounded-full text-[11px] font-semibold', id === step ? 'bg-brand text-white' : done ? 'bg-[#34d399] text-brand-dark' : 'border border-white/40 text-white/80')}>{done && id !== step ? <Check size={13} strokeWidth={3} /> : id}</span>
                     <span><span className="block whitespace-nowrap text-[13px] font-semibold">{s.title}</span><span className={cx('block whitespace-nowrap text-[11px]', id === step ? 'text-text-2' : 'text-white/55')}>{s.sub}</span></span>
                     {stepIds[i] === 'inputs' && pending.length > 0 && id !== step && <span className="ml-auto rounded-full bg-warn px-1.5 font-mono text-[10px] font-semibold text-white">{pending.length}</span>}
                   </button>
@@ -504,7 +504,7 @@ function AssumptionsEditor({ cfg, values, onChange, onReset, readOnly }: { cfg: 
   const changed = cfg.assumptions.filter(a => values[a.id] !== undefined && values[a.id] !== a.value).length
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-border bg-surface shadow-card px-4 py-3">
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-surface px-4 py-3">
         <div className="min-w-0 text-sm"><p className="font-semibold">{cfg.archetype} model <span className="font-normal text-text-3">· {MODEL.version} from CoE</span></p><p className="text-xs text-text-2">{cfg.summary}</p></div>
         <div className="flex items-center gap-3 text-xs text-text-2">{changed > 0 && <Tag tone="warn">{changed} changed</Tag>}{!readOnly && <button type="button" disabled={!changed} onClick={onReset} className="inline-flex items-center gap-1 font-semibold text-text-2 hover:text-brand disabled:opacity-40"><RotateCcw size={12} />Reset to model defaults</button>}</div>
       </div>
@@ -781,6 +781,7 @@ function AgentDock({ onClose, insights, setInsights, addInsight, notify, ctx }: 
       ) : (
         <>
           <div className="flex-1 space-y-3 overflow-y-auto p-4">
+            <p className="rounded-md bg-brand-soft/60 p-3 text-xs text-text-2">{tab === 'Ask Agent' ? 'Ask about this forecast. Answers use the live numbers on screen.' : `Builds what-ifs on ${ctx.scenario}. Nothing changes until you apply it.`}</p>
             {thread.map(m => (
               <div key={m.id} className="space-y-2">
                 <p className="ml-auto w-fit max-w-[85%] rounded-lg bg-text px-3 py-2 text-[13px] text-white">{m.q}</p>
@@ -939,7 +940,7 @@ function StepBaseline() {
           ['TRx share', '43.8%', '−0.0 pt vs LY'],
           ['Gross sales', fmtM(GROSS_FY), 'GTN 78.40%'],
           ['Net sales (trend)', fmtM(NET_FY), '+8.5% vs budget'],
-        ].map(([k, v, s]) => <div key={k} className="rounded-2xl border border-border bg-surface shadow-card p-4"><p className="text-xs text-text-3">{k}</p><p className="mt-1 font-mono text-xl font-semibold">{v}</p><p className="mt-0.5 text-xs text-text-2">{s}</p></div>)}
+        ].map(([k, v, s]) => <div key={k} className="rounded-lg border border-border bg-surface p-4"><p className="text-xs text-text-3">{k}</p><p className="mt-1 font-mono text-xl font-semibold">{v}</p><p className="mt-0.5 text-xs text-text-2">{s}</p></div>)}
       </div>
 
       <Card className="mt-5" title="Product TRx — monthly" sub="Nurtec ODT · Franchise (000s)">
@@ -1152,7 +1153,7 @@ function StepPressure({ net, eventsNet, gtnNet, gtn, setGtn, sims, pHit, pBudget
           ['Chance of beating budget', `${pBudget.toFixed(0)}%`, `Budget ${fmtM(BUDGET_NET)}`, pBudget < 50 ? 'text-warn' : 'text-ok'],
           ['P10 – P90 range', `${fmtM(p10)} – ${fmtM(p90)}`, `P50 ${fmtM(p50)}`, 'text-text'],
           ['Unreviewed events', String(pending.length), pending.length ? 'AlphaSense · not in forecast' : 'All reviewed', pending.length ? 'text-warn' : 'text-ok'],
-        ].map(([k, v, s2, tone]) => <div key={k} className="rounded-2xl border border-border bg-surface shadow-card p-4"><p className="text-xs text-text-3">{k}</p><p className={cx('mt-1 font-mono text-xl font-semibold', tone)}>{v}</p><p className="mt-0.5 text-xs text-text-2">{s2}</p></div>)}
+        ].map(([k, v, s2, tone]) => <div key={k} className="rounded-lg border border-border bg-surface p-4"><p className="text-xs text-text-3">{k}</p><p className={cx('mt-1 font-mono text-xl font-semibold', tone)}>{v}</p><p className="mt-0.5 text-xs text-text-2">{s2}</p></div>)}
       </div>
 
       <Card className="mt-5" title="Probability of hitting forecast" sub="2,000 simulated outcomes: each included event lands or not at its probability, plus trend noise on Aug–Dec."
@@ -1264,8 +1265,8 @@ function StepReview({ sub, scenario, eventsNet, gtnNet, net, vsBudget, checks, i
         <Card title="FY2026 net sales bridge" sub={`${scenario} · ${sub}`}>
           <Bridge rows={[['Trended statistical', NET_FY], ['Events (risk-adjusted)', eventsNet], ['GTN changes', gtnNet]]} total={net} />
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <div className="rounded-lg bg-surface-2 p-3"><p className="text-xs text-text-3">Budget</p><p className="font-mono font-semibold">{fmtM(BUDGET_NET)}</p></div>
-            <div className="rounded-lg bg-surface-2 p-3"><p className="text-xs text-text-3">vs budget</p><p className={cx('font-mono font-semibold', vsBudget >= 0 ? 'text-ok' : 'text-err')}>{vsBudget >= 0 ? '+' : ''}{vsBudget.toFixed(1)}%</p></div>
+            <div className="rounded-md bg-surface-2 p-3"><p className="text-xs text-text-3">Budget</p><p className="font-mono font-semibold">{fmtM(BUDGET_NET)}</p></div>
+            <div className="rounded-md bg-surface-2 p-3"><p className="text-xs text-text-3">vs budget</p><p className={cx('font-mono font-semibold', vsBudget >= 0 ? 'text-ok' : 'text-err')}>{vsBudget >= 0 ? '+' : ''}{vsBudget.toFixed(1)}%</p></div>
           </div>
         </Card>
         <Card title="Checks before you submit" sub={blocks ? `${blocks} must pass · ${warns} to acknowledge` : warns ? `${warns} to acknowledge` : 'All clear'}>
@@ -1440,7 +1441,8 @@ function KnowledgeBank({ kb, setKb, onOpen }: { kb: Insight[]; setKb: SetKb; onO
   return (
     <div className="rise">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0"><h1 className="text-[28px] font-semibold tracking-tight">Knowledge bank</h1></div>
+        <div className="min-w-0"><h1 className="text-[28px] font-semibold tracking-tight">Knowledge bank</h1>
+          <p className="mt-1 max-w-2xl text-sm text-text-2">Charts and findings pinned from your forecasts, with the graph captured as it looked. Anyone on the brand team can comment on the assumptions behind them.</p></div>
         <label className="relative w-full max-w-[280px]"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-3" /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Search" aria-label="Search the knowledge bank" className="h-9 w-full rounded-md border border-border-strong bg-surface pl-8 pr-3 text-sm" /></label>
       </div>
       {!shown.length ? (
@@ -1546,7 +1548,7 @@ export function LegacyForecaster({ onHome, notify }: { onHome: () => void; notif
                     <span className="shrink-0">{n.icon}</span>
                     <span className={cx('truncate', navMin && 'md:sr-only')}>{n.label}</span>
                     {count > 0 && (navMin
-                      ? <span className="absolute right-1.5 top-1.5 hidden h-2 w-2 rounded-full bg-[#68d1ff] md:block" />
+                      ? <span className="absolute right-1.5 top-1.5 hidden h-2 w-2 rounded-full bg-[#34d399] md:block" />
                       : <span className={cx('ml-auto rounded-full px-1.5 font-mono text-[10px]', on ? 'bg-brand-soft text-brand' : 'bg-white/15 text-white')}>{count}</span>)}
                   </button>
                 </li>
@@ -1561,7 +1563,7 @@ export function LegacyForecaster({ onHome, notify }: { onHome: () => void; notif
           {section === 'forecasts' && (
             <div className="rise">
               <div className="flex flex-wrap items-end justify-between gap-4">
-                <div><h1 className="text-[28px] font-semibold tracking-tight">My forecasts</h1></div>
+                <div><h1 className="text-[28px] font-semibold tracking-tight">My forecasts</h1><p className="mt-1 text-sm text-text-2">Brand, then forecast cycle, then scenarios. Open a cycle to summarise and compare, or a scenario to adjust it.</p></div>
                 <button type="button" onClick={() => setOpen(open.size ? new Set() : new Set([...brands.map(b => b.id), ...brands.flatMap(b => b.cycles.map(c => c.id))]))} className="text-sm font-medium text-brand">{open.size ? 'Collapse all' : 'Expand all'}</button>
               </div>
 
@@ -1652,6 +1654,7 @@ export function LegacyForecaster({ onHome, notify }: { onHome: () => void; notif
           {section === 'sources' && (
             <div className="rise">
               <h1 className="text-[28px] font-semibold tracking-tight">Data sources</h1>
+              <p className="mt-1 text-sm text-text-2">Feeds behind your forecasts and how fresh they are.</p>
               <ul className="mt-6 divide-y divide-border rounded-lg border border-border bg-surface">
                 {FEEDS.map(f => (
                   <li key={f.name} className="flex flex-wrap items-center gap-x-6 gap-y-1 px-5 py-3.5">
@@ -1686,7 +1689,6 @@ export type ForecasterProps = {
 
 /** Forecaster: brand home → workspace, plus Chat; insights live inside each brand. */
 export default function Forecaster({ section, setSection, notify, insights, setInsights, chat, setChatBrand, onWorkspace, Copilot, onPublished }: ForecasterProps) {
-  // Opening the Forecaster tour from the profile menu lands straight in the first brand's workspace.
   const [brand, setBrand] = useState<HomeBrand | null>(null)
   const inWs = section === 'forecasts' && !!brand
   useEffect(() => { onWorkspace?.(inWs) }, [inWs, onWorkspace])

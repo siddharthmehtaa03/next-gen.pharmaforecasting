@@ -19,15 +19,3 @@ logs/
 # beside it.
 /.plugins/
 /.opencode-skills/
-
-# local tooling / duplicates
-.netlify/
-.claude/
-/figma-make-app-code.zip
-/LES_Context/
-package-lock.json
-
-.agents/
-skills-lock.json
-
-/public/ref/

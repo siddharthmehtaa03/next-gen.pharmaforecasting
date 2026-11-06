@@ -12,7 +12,7 @@ import {
 import type { Dev, DevKind, DevStatus, Method, Model, NodeId, Setup, Tier } from './engine'
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
-const C = { brand: '#0000c9', base: '#767676', act: '#000067', ok: '#007a6c', warn: '#8f5a00', grid: '#dbe8f6', alt: ['#0000c9', '#007a6c', '#8f5a00', '#c4122f'] }
+const C = { brand: '#0000c9', base: '#8a8fa8', act: '#0b0f2e', ok: '#0a7d4f', warn: '#a35a00', grid: '#dfe2ec', alt: ['#0000c9', '#0a7d4f', '#a35a00', '#c4122f'] }
 type Notify = (t: { tone: 'ok' | 'info' | 'err'; text: string }) => void
 type Stage = 'orient' | 'baseline' | 'deviations' | 'scenarios' | 'publish'
 type Gran = 'monthly' | 'yearly'
@@ -35,22 +35,22 @@ const FY = 2027
 
 /* ───────── primitives ───────── */
 function Btn({ children, variant = 'primary', onClick, icon, disabled, size = 'md' }: { children: ReactNode; variant?: 'primary' | 'secondary' | 'ghost'; onClick?: () => void; icon?: ReactNode; disabled?: boolean; size?: 'sm' | 'md' }) {
-  return <button type="button" onClick={onClick} disabled={disabled} className={cx('inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-full font-semibold transition-all disabled:cursor-not-allowed disabled:opacity-45', size === 'sm' ? 'h-8 px-3.5 text-[13px]' : 'h-10 px-5 text-sm', variant === 'primary' && 'bg-brand text-white hover:bg-brand-dark', variant === 'secondary' && 'border border-border-strong bg-surface text-brand hover:border-brand hover:bg-brand-soft', variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text')}>{icon}{children}</button>
+  return <button type="button" onClick={onClick} disabled={disabled} className={cx('inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45', size === 'sm' ? 'h-8 px-2.5 text-[13px]' : 'h-10 px-4 text-sm', variant === 'primary' && 'bg-brand text-white hover:bg-brand-dark', variant === 'secondary' && 'border border-border-strong bg-surface hover:border-text', variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text')}>{icon}{children}</button>
 }
 function Card({ title, sub, right, children, className, pad = true }: { title?: ReactNode; sub?: string; right?: ReactNode; children: ReactNode; className?: string; pad?: boolean }) {
   return (
-    <section className={cx('min-w-0 rounded-2xl border border-border bg-surface shadow-card', className)}>
-      {title && <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-3.5"><div className="min-w-0"><h3 className="font-display text-base font-semibold">{title}</h3>{sub && <p className="mt-0.5 text-[13px] text-text-2">{sub}</p>}</div>{right}</header>}
+    <section className={cx('min-w-0 rounded-lg border border-border bg-surface', className)}>
+      {title && <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-3.5"><div className="min-w-0"><h3 className="text-[15px] font-semibold">{title}</h3>{sub && <p className="mt-0.5 text-[13px] text-text-2">{sub}</p>}</div>{right}</header>}
       <div className={cx(pad && 'p-5')}>{children}</div>
     </section>
   )
 }
 function Tag({ tone = 'neutral', children }: { tone?: 'neutral' | 'brand' | 'ok' | 'warn' | 'err'; children: ReactNode }) {
-  return <span className={cx('inline-flex items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-semibold tracking-wide', tone === 'neutral' && 'bg-surface-2 text-text-2', tone === 'brand' && 'bg-brand-soft text-brand', tone === 'ok' && 'bg-ok-soft text-ok', tone === 'warn' && 'bg-warn-soft text-warn', tone === 'err' && 'bg-err-soft text-err')}>{children}</span>
+  return <span className={cx('inline-flex items-center gap-1 whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide', tone === 'neutral' && 'bg-surface-2 text-text-2', tone === 'brand' && 'bg-brand-soft text-brand', tone === 'ok' && 'bg-ok-soft text-ok', tone === 'warn' && 'bg-warn-soft text-warn', tone === 'err' && 'bg-err-soft text-err')}>{children}</span>
 }
 function Seg<T extends string>({ value, options, onChange, label }: { value: T; options: { id: T; label: ReactNode }[]; onChange: (v: T) => void; label: string }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex gap-0.5 rounded-full border border-border bg-surface-2 p-1">
+    <div role="radiogroup" aria-label={label} className="inline-flex rounded-md border border-border-strong bg-surface p-0.5">
       {options.map(o => <button key={o.id} type="button" role="radio" aria-checked={value === o.id} onClick={() => onChange(o.id)} className={cx('rounded px-2.5 py-1 text-[13px] font-medium transition-colors', value === o.id ? 'bg-brand-soft text-brand' : 'text-text-2 hover:text-text')}>{o.label}</button>)}
     </div>
   )
@@ -81,11 +81,11 @@ function TrendChart({ model, id, gran, extra, height = 260 }: { model: Model; id
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
           <CartesianGrid stroke={C.grid} vertical={false} />
-          <XAxis dataKey="x" tick={{ fontSize: 11, fill: '#767676' }} interval={gran === 'monthly' ? 11 : 0} tickLine={false} axisLine={{ stroke: C.grid }} />
-          <YAxis tick={{ fontSize: 11, fill: '#767676' }} width={56} tickLine={false} axisLine={false} domain={['auto', 'auto']} tickFormatter={v => Number(v).toLocaleString('en-US', { maximumFractionDigits: n.dp > 1 ? 2 : 0 })} />
+          <XAxis dataKey="x" tick={{ fontSize: 11, fill: '#8a8fa8' }} interval={gran === 'monthly' ? 11 : 0} tickLine={false} axisLine={{ stroke: C.grid }} />
+          <YAxis tick={{ fontSize: 11, fill: '#8a8fa8' }} width={56} tickLine={false} axisLine={false} domain={['auto', 'auto']} tickFormatter={v => Number(v).toLocaleString('en-US', { maximumFractionDigits: n.dp > 1 ? 2 : 0 })} />
           <Tooltip formatter={(v) => (typeof v === 'number' ? fmt(id, v) : String(v))} contentStyle={{ fontSize: 12, borderRadius: 6, borderColor: C.grid }} />
           <Legend wrapperStyle={{ fontSize: 12 }} iconType="plainline" />
-          <ReferenceLine x={gran === 'monthly' ? mLabel(ACT - 1) : '2026'} stroke="#a9c4e4" strokeDasharray="2 3" label={{ value: 'Actuals | Forecast', fontSize: 10, fill: '#767676', position: 'insideTopRight' }} />
+          <ReferenceLine x={gran === 'monthly' ? mLabel(ACT - 1) : '2026'} stroke="#b9bed0" strokeDasharray="2 3" label={{ value: 'Actuals | Forecast', fontSize: 10, fill: '#8a8fa8', position: 'insideTopRight' }} />
           <Line dataKey="actual" name="Actuals" stroke={C.act} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />
           <Line dataKey="baseline" name="Baseline (trend)" stroke={C.base} strokeDasharray="5 4" strokeWidth={1.75} dot={false} isAnimationActive={false} />
           {!extra && <Line dataKey="forecast" name="Forecast (with deviations)" stroke={C.brand} strokeWidth={2.25} dot={false} isAnimationActive={false} />}
@@ -215,9 +215,10 @@ function ModelsHome({ onOpen, onLegacy }: { onOpen: (id: string) => void; onLega
       <main className="mx-auto max-w-[1100px] px-5 py-10 sm:px-8">
         <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Forecaster</p>
         <h1 className="mt-1 text-[28px] font-semibold tracking-tight">My models</h1>
+        <p className="mt-1 max-w-2xl text-sm text-text-2">Models are the organising object. Cycle and version are attributes. The flow and governance tier for each model are set by the CoE in the configurator.</p>
         <div className="mt-6 grid gap-4 md:grid-cols-3">
           {MODELS.map(m => (
-            <button key={m.id} type="button" onClick={() => onOpen(m.id)} className="group rounded-2xl border border-border bg-surface shadow-card p-5 text-left transition-shadow hover:border-brand/50 hover:shadow-md">
+            <button key={m.id} type="button" onClick={() => onOpen(m.id)} className="group rounded-lg border border-border bg-surface p-5 text-left transition-shadow hover:border-brand/50 hover:shadow-md">
               <div className="flex items-center justify-between"><Tag tone={m.tier === 'tight' ? 'brand' : m.tier === 'standard' ? 'neutral' : 'ok'}>{TIERS[m.tier].label} tier</Tag><span className="text-[12px] font-medium text-warn">{m.due}</span></div>
               <p className="mt-3 text-lg font-semibold">{m.brand}</p>
               <p className="text-[13px] text-text-2">{m.ind}</p>
@@ -286,7 +287,7 @@ function Flow({ row, notify, onBack }: { row: ModelRow; notify: Notify; onBack: 
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span title="Set per model in the configurator. Forecasters cannot change it." className="inline-flex items-center gap-1.5 rounded-lg bg-surface-2 px-2.5 py-1.5 text-[12px] text-text-2"><Lock size={12} />Governance <b className="text-text">{TIERS[tier].label}</b></span>
+            <span title="Set per model in the configurator. Forecasters cannot change it." className="inline-flex items-center gap-1.5 rounded-md bg-surface-2 px-2.5 py-1.5 text-[12px] text-text-2"><Lock size={12} />Governance <b className="text-text">{TIERS[tier].label}</b></span>
             <Btn size="sm" variant={panel === 'log' ? 'primary' : 'secondary'} onClick={() => setPanel(p => p === 'log' ? null : 'log')} icon={<History size={14} />}>Rationale log{needs.length > 0 && <span className={cx('rounded-full px-1.5 font-mono text-[10px]', panel === 'log' ? 'bg-white/20' : 'bg-warn-soft text-warn')}>{needs.length}</span>}</Btn>
             <Btn size="sm" variant={panel === 'ai' ? 'primary' : 'secondary'} onClick={() => setPanel(p => p === 'ai' ? null : 'ai')} icon={<Sparkles size={14} />}>AI assist</Btn>
           </div>
@@ -362,10 +363,11 @@ function Orient({ model, devs, tier, gran, saved, published, onGo, onPick }: { m
     <>
       <div>
         <h1 className="text-[24px] font-semibold tracking-tight">Model home</h1>
+        <p className="mt-1 text-sm text-text-2">What changed, where the forecast sits against its trend, and which funnel metrics have moved off it.</p>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
         {[{ k: `FY${FY} net revenue`, v: fmt('rev', rev), d: `${((rev / ly - 1) * 100).toFixed(1)}% vs FY26` }, { k: 'Deviation from baseline', v: `${rev >= revB ? '+' : '−'}${fmt('rev', Math.abs(rev - revB))}`, d: `${devs.length} logged deviations` }, { k: 'Last published', v: published.at(-1)!.name.split(' · ').at(-1)!, d: `${published.at(-1)!.at} · ${saved.length} working scenario${saved.length === 1 ? '' : 's'}` }].map(x => (
-          <div key={x.k} className="rounded-2xl border border-border bg-surface shadow-card p-4"><p className="text-[12px] text-text-3">{x.k}</p><p className="mt-1 font-mono text-[22px] font-semibold">{x.v}</p><p className="text-[12px] text-text-2">{x.d}</p></div>
+          <div key={x.k} className="rounded-lg border border-border bg-surface p-4"><p className="text-[12px] text-text-3">{x.k}</p><p className="mt-1 font-mono text-[22px] font-semibold">{x.v}</p><p className="text-[12px] text-text-2">{x.d}</p></div>
         ))}
       </div>
       <Card title="Net revenue: baseline vs forecast" sub="Dashed line is the trend-only baseline. The gap is explained entirely by logged deviations.">
@@ -495,7 +497,7 @@ function Deviations({ model, devs, tier, filter, setFilter, add, patch, remove }
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h1 className="text-[24px] font-semibold tracking-tight">Deviations</h1></div>
+        <div><h1 className="text-[24px] font-semibold tracking-tight">Deviations</h1><p className="mt-1 text-sm text-text-2">Every move away from the baseline: events, targets, grid edits and goal seek. Each one carries its rationale.</p></div>
         <Btn icon={<Plus size={15} />} onClick={() => setForm({ label: '', node: filter && NODE[filter].kind === 'input' ? filter : 'brand', start: idxOf(2027, 0), end: null, value: '-5' })}>Add event</Btn>
       </div>
 
@@ -556,7 +558,7 @@ function Scenarios({ model, devs, setup, saved, scale, gran, onSave, onLoad }: {
   return (
     <>
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h1 className="text-[24px] font-semibold tracking-tight">Scenarios</h1></div>
+        <div><h1 className="text-[24px] font-semibold tracking-tight">Scenarios</h1><p className="mt-1 text-sm text-text-2">Save working versions as you go and compare them. Saving never publishes.</p></div>
         <div className="flex gap-2"><input aria-label="Scenario name" value={name} onChange={e => setName(e.target.value)} className={cx(field, 'w-52')} /><Btn icon={<Save size={15} />} disabled={!name.trim()} onClick={() => { onSave(name.trim()); setName(`Working ${saved.length + 1}`) }}>Save working scenario</Btn></div>
       </div>
       <Card title="Compare net revenue" right={<div className="flex flex-wrap gap-1.5">{saved.map(s => <button key={s.id} type="button" aria-pressed={cmp.includes(s.id)} onClick={() => setCmp(c => c.includes(s.id) ? c.filter(x => x !== s.id) : [...c, s.id].slice(-3))} className={cx('rounded-md border px-2 py-1 text-[12px] font-medium', cmp.includes(s.id) ? 'border-brand bg-brand-soft text-brand' : 'border-border text-text-2 hover:border-border-strong')}>{s.name}</button>)}</div>}>
@@ -618,7 +620,7 @@ function Publish({ row, model, devs, tier, saved, published, onFix, onPublish }:
   const blocked = checks.some(c => !c.ok && !c.soft)
   return (
     <>
-      <div><h1 className="text-[24px] font-semibold tracking-tight">Publish</h1></div>
+      <div><h1 className="text-[24px] font-semibold tracking-tight">Publish</h1><p className="mt-1 text-sm text-text-2">Publishing releases a named version to finance and the PBF team. It is separate from saving a working scenario.</p></div>
       <div className="grid gap-5 xl:grid-cols-[1fr_1fr]">
         <Card title="Completeness check" sub={`${TIERS[tier].label} governance · ${TIERS[tier].rule}`}>
           <ul className="space-y-2.5">{checks.map(c => <li key={c.label} className="flex items-start gap-2.5 text-[13.5px]">{c.ok ? <CheckCircle2 size={16} className="mt-0.5 shrink-0 text-ok" /> : <CircleAlert size={16} className={cx('mt-0.5 shrink-0', c.soft ? 'text-text-3' : 'text-warn')} />}<span className={cx(!c.ok && !c.soft && 'font-medium')}>{c.label}{!c.ok && c.soft && <span className="text-text-3"> · optional</span>}</span></li>)}</ul>
@@ -673,7 +675,7 @@ function AiPanel({ model, devs, tier, onClose, notify, add }: { model: Model; de
       {tab === 'import' ? (
         <div className="mt-4 space-y-3">
           {step === 0 ? <button type="button" onClick={() => setStep(1)} className="flex w-full flex-col items-center gap-1.5 rounded-lg border border-dashed border-border-strong p-6 text-center text-[13px] text-text-2 hover:border-brand/50"><FileUp size={20} className="text-text-3" />Drop a brand team file<span className="text-[12px] text-text-3">Try: Nurtec_brand_inputs_Sep.xlsx</span></button>
-            : <p className="flex items-center gap-2 rounded-lg bg-surface-2 px-3 py-2 text-[13px]"><Paperclip size={13} />Nurtec_brand_inputs_Sep.xlsx</p>}
+            : <p className="flex items-center gap-2 rounded-md bg-surface-2 px-3 py-2 text-[13px]"><Paperclip size={13} />Nurtec_brand_inputs_Sep.xlsx</p>}
           {step >= 1 && Q.slice(0, Math.min(step, 3)).map((x, k) => (
             <div key={k} className="rounded-md border border-border p-3 text-[13px]">
               <p>{x.q}</p>

@@ -232,7 +232,7 @@ export default function AdminPortal({ notify, onBack }: { notify: Notify; onBack
     <div className="mx-auto flex w-full max-w-[1240px] flex-1 flex-col px-6 py-8">
       <button type="button" onClick={onBack} className="mb-3 flex items-center gap-1 self-start text-sm text-text-2 hover:text-text"><ArrowLeft size={14} />Model library</button>
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div><h1 className="text-[28px] font-semibold tracking-tight">Admin Portal</h1></div>
+        <div><h1 className="text-[28px] font-semibold tracking-tight">Admin Portal</h1><p className="text-[13px] text-text-2">Approve access requests and manage who can use the forecaster.</p></div>
       </header>
 
       <nav aria-label="Admin sections" className="mb-6 border-b border-border">
@@ -260,7 +260,7 @@ export default function AdminPortal({ notify, onBack }: { notify: Notify; onBack
           {blocked(R) && <p className="rounded-md bg-warn-soft p-3 text-[13px] text-warn">{blocked(R)}</p>}
           <section><Label className="mb-2">Requester</Label><Dl rows={[['NTID', R.ntid], ['Name', R.name], ['Email', R.email], ['Cost center', R.costCenter], ['Submitted', R.submitted]]} /></section>
           <section><Label className="mb-2">Access requested</Label><Dl rows={[['Role', <span>{roleLabel(R.role)}<span className="block text-xs text-text-3">{ROLES.find(x => x.name === R.role)!.desc}</span></span>], ['Access type', R.accessType], ['Excel model access', <YesNo v={R.excel} />], ['Tableau access', <YesNo v={R.tableau} />]]} /></section>
-          <section><Label className="mb-2">Justification</Label><p className="rounded-lg bg-surface-2 p-3 text-[13px]">{R.justification}</p></section>
+          <section><Label className="mb-2">Justification</Label><p className="rounded-md bg-surface-2 p-3 text-[13px]">{R.justification}</p></section>
           <section><Label className="mb-2">Approval history</Label><ol className="space-y-3">{R.history.map((h, k) => <li key={k} className="flex gap-3 text-[13px]"><span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-brand" /><div><p>{h.what}</p><p className="text-xs text-text-3">{h.who} · {h.when}</p></div></li>)}</ol></section>
         </Drawer>
       )}
