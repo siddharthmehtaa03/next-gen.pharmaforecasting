@@ -702,7 +702,7 @@ const CIBINQO_REAL: Record<string, [string, string][]> = {
   'Price & FX': [['Price per pill (all packs)', '$206.00']],
 }
 /** Streams start empty so users add their own while demoing; the real values still show on matching modules. */
-const cibinqoDemo = (c: Config): Config => ({ ...c, realData: true, inds: [emptyInd('i1', '')], active: 'i1' })
+const cibinqoDemo = (c: Config): Config => ({ ...c, realData: true, inds: [], active: '' })
 
 function applyFixture(c: Config, fx?: FixtureId): Config {
   const i0 = c.inds[0]
@@ -2919,7 +2919,7 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
     ...prev, inds: prev.inds.map(i => i.id === id ? initInd(i, a) : i),
     bindings: Object.fromEntries(Object.entries(prev.bindings).filter(([k]) => !k.startsWith(`${id}:`))),
   }))
-  const ind = c.inds.find(i => i.id === c.active) ?? c.inds[0]
+  const ind = c.inds.find(i => i.id === c.active) ?? c.inds[0] ?? emptyInd('', '')
   const [sharing, setSharing] = useState(false)
   const [history, setHistory] = useState(false)
   const [agent, setAgent] = useState<AgentState>({ section: null, field: null })
