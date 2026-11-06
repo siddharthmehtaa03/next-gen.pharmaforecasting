@@ -690,8 +690,6 @@ function freshConfig(seed: Seed): Config {
   return base
 }
 
-/** The Cibinqo US forecast demo: modules chosen to match the steps of the Cibinqo model-mapping workbook (Prevalent-Share, patients to net revenue). */
-const CIBINQO_MODS = ['Epi funnel builder', 'Nested share cascades', 'Compliance matrices', 'Volume conversion chains', 'Selling-day adjustments', 'Below-the-line set', 'Gross-to-net engines', 'Price & FX']
 /** Oct 2026 workbook values from the Cibinqo model-mapping PDF, shown in the module inspector. */
 const CIBINQO_REAL: Record<string, [string, string][]> = {
   'Epi funnel builder': [['AD advanced systemic patients', '435,507'], ['JAK class patients', '39,805.34']],
@@ -703,7 +701,8 @@ const CIBINQO_REAL: Record<string, [string, string][]> = {
   'Gross-to-net engines': [['GTN rate', '43.20%'], ['Net revenue', '$18,342,942']],
   'Price & FX': [['Price per pill (all packs)', '$206.00']],
 }
-const cibinqoDemo = (c: Config): Config => ({ ...c, realData: true, inds: c.inds.map(i => ({ ...i, modules: CIBINQO_MODS.map(n => byName(n).id) })) })
+/** Streams start empty so users add their own while demoing; the real values still show on matching modules. */
+const cibinqoDemo = (c: Config): Config => ({ ...c, realData: true, inds: [emptyInd('i1', '')], active: 'i1' })
 
 function applyFixture(c: Config, fx?: FixtureId): Config {
   const i0 = c.inds[0]
