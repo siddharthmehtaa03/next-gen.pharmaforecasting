@@ -384,7 +384,7 @@ type ModelRow = {
   fx?: FixtureId; tag?: string; name?: string; diff?: { kind: '+' | '−' | '~'; text: string }[]
 }
 const SEED_MODELS: ModelRow[] = [
-  { id: 'a', brand: 'Velsipity', inds: [{ name: 'Ulcerative colitis', arch: '' }], market: 'US', cycle: 'OP 2027', version: 'v1.0 draft', status: 'Draft', fresh: 'Current', issues: 3, updated: 'Today, 09:12', by: 'You', step: 2, versions: [] },
+  { id: 'a', brand: 'Cibinqo', inds: [{ name: 'Atopic dermatitis', arch: 'Prevalent-Share' }], market: 'US', cycle: 'OP 2027', version: 'v1.0 draft', status: 'Draft', fresh: 'Current', issues: 3, updated: 'Today, 09:12', by: 'You', step: 2, versions: [] },
   { id: 'd', brand: 'Abrysvo', inds: [{ name: 'RSV — older adults', arch: 'Market Stock-Flow' }], market: 'US', cycle: 'OP 2027', version: 'v1.3 draft', status: 'Draft', fresh: 'Partial', issues: 2, updated: 'Sep 24', by: 'You', step: 5,
     versions: [{ v: 'v1.2', date: 'Jun 12', by: 'You', note: 'Seasonal dose-basket for 2026/27.', scenarios: 9 }] },
   { id: 'f', brand: 'Elrexfio', inds: [{ name: 'Multiple myeloma 4L+', arch: 'Patient-Flow' }, { name: 'Multiple myeloma 2L', arch: 'Brand Inflow-Outflow' }], market: 'US', cycle: 'OP 2027', version: 'v2.0', status: 'Published', fresh: 'Current', issues: 0, updated: 'Oct 5', by: 'K. Brandt',
@@ -402,7 +402,7 @@ const ACTIVITY = [
   { who: 'You', what: 'resumed Abrysvo v1.3 draft (Step 5)', when: 'Oct 4, 11:02', icon: Clock },
   { who: 'System', what: 'IQVIA NPA weekly feed is 9 days late (Nurtec ODT)', when: 'Oct 3, 06:00', icon: Clock },
   { who: 'A. Nguyen', what: 'published Cibinqo v2.3 · 14 scenarios re-pinned', when: 'Oct 2, 09:30', icon: CheckCircle2 },
-  { who: 'You', what: 'created Velsipity draft from blank', when: 'Oct 1, 14:18', icon: Plus },
+  { who: 'You', what: 'created Cibinqo US forecast draft from blank', when: 'Oct 1, 14:18', icon: Plus },
 ]
 const CYCLES = [{ name: 'OP 2027', due: 'Nov 14' }, { name: 'Q4 2026 Re-forecast', due: 'Oct 31' }, { name: 'LRP 2027–2036', due: 'Feb 6' }]
 
@@ -630,6 +630,7 @@ type Config = {
   cascade: number[]; lastActual: Record<string, number>; zeroValues: string[]; retired: boolean
   // collaboration, release & change tracking
   team: Member[]; release: string; viewers: string[]; geoRestrict: boolean; log: LogEntry[]; notified: string[]
+  realData?: boolean
 }
 type Role = 'Creator' | 'Editor' | 'Viewer'
 type Member = { name: string; role: Role }
@@ -684,10 +685,14 @@ function freshConfig(seed: Seed): Config {
       const bindings = Object.fromEntries(inputsFor(pre).map(b => [b.key, { source: b.input.suggested, owner: OWNERS[0], confidence: 'Medium' as const, status: 'ok' as const, msg: 'Connected.', fresh: { state: 'Current' as Fresh, refreshed: 'today 06:00', boundary: 'Aug 2026', coverage: 100 } }]))
       return { ...pre, bindings }
     }
-    return applyFixture(c, m.fx)
+    return m.id === 'a' ? cibinqoDemo(c) : applyFixture(c, m.fx)
   }
   return base
 }
+
+/** The Cibinqo US forecast demo: modules chosen to match the steps of the Cibinqo model-mapping workbook (Prevalent-Share, patients to net revenue). */
+const CIBINQO_MODS = ['Epi funnel builder', 'Nested share cascades', 'Compliance matrices', 'Volume conversion chains', 'Selling-day adjustments', 'Below-the-line set', 'Gross-to-net engines', 'Price & FX']
+const cibinqoDemo = (c: Config): Config => ({ ...c, realData: true, inds: c.inds.map(i => ({ ...i, modules: CIBINQO_MODS.map(n => byName(n).id) })) })
 
 function applyFixture(c: Config, fx?: FixtureId): Config {
   const i0 = c.inds[0]
@@ -928,7 +933,7 @@ export default function App() {
   const enterFull = () => { setFull(true); document.documentElement.requestFullscreen?.().catch(() => {}) }
   const exitFull = () => { setFull(false); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}) }
   useEffect(() => { const h = () => { if (!document.fullscreenElement) setFull(false) }; document.addEventListener('fullscreenchange', h); return () => document.removeEventListener('fullscreenchange', h) }, [])
-  const resume = (m: ModelRow) => open(m.id === 'a' ? {} : { from: m })
+  const resume = (m: ModelRow) => open({ from: m })
 
   /** A finalised model gets a workspace row straight away; making it available only flips its status. */
   const upsertRow = (ms: ModelRow[], c: Config, status: MStatus): ModelRow[] => {
@@ -4436,7 +4441,7 @@ function StageModules({ c, ind, update, updInd, go, errs, fix }: Ctx & { errs?: 
         <aside aria-label="Module library"
           onDragOver={e => { if (e.dataTransfer.types.includes(DRAG_ON)) { e.preventDefault(); setBinOver(true) } }} onDragLeave={() => setBinOver(false)}
           onDrop={e => { e.preventDefault(); setBinOver(false); const id = e.dataTransfer.getData(DRAG_ON); if (id) remove(id) }}
-          className={cx('relative flex max-h-[calc(100dvh-140px)] min-w-0 flex-col overflow-hidden rounded-lg border bg-surface @3xl:sticky @3xl:top-4', binOver ? 'border-2 border-dashed border-err' : 'border-border')}>
+          className={cx('relative flex max-h-[calc(100dvh-140px)] min-w-0 flex-col overflow-hidden rounded-lg border bg-surface @3xl:sticky @3xl:top-4', binOver ? 'border-2 border-dashed border-err' : 'border-border', c.realData && 'border-l-4 border-l-brand')}>
           {binOver && <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-err-soft/85 text-sm font-semibold text-err"><span className="flex items-center gap-2"><X size={16} />Drop to remove from canvas</span></div>}
           <div className="border-b border-border p-3">
             <div className="flex items-center justify-between"><h3 className="text-sm font-semibold">Module library</h3><span className="font-mono text-[11px] text-text-3">{valid.length} compatible</span></div>
