@@ -692,6 +692,17 @@ function freshConfig(seed: Seed): Config {
 
 /** The Cibinqo US forecast demo: modules chosen to match the steps of the Cibinqo model-mapping workbook (Prevalent-Share, patients to net revenue). */
 const CIBINQO_MODS = ['Epi funnel builder', 'Nested share cascades', 'Compliance matrices', 'Volume conversion chains', 'Selling-day adjustments', 'Below-the-line set', 'Gross-to-net engines', 'Price & FX']
+/** Oct 2026 workbook values from the Cibinqo model-mapping PDF, shown in the module inspector. */
+const CIBINQO_REAL: Record<string, [string, string][]> = {
+  'Epi funnel builder': [['AD advanced systemic patients', '435,507'], ['JAK class patients', '39,805.34']],
+  'Nested share cascades': [['JAK class share', '9.14%'], ['Cibinqo share in class', '17.38%'], ['Patients on Cibinqo', '6,918.17']],
+  'Compliance matrices': [['Compliance rate', '70.58%']],
+  'Volume conversion chains': [['Rx per patient', '1.01'], ['Pack split 100 / 200 / 50 mg', '63% / 32% / 5%'], ['Pills per Rx', '30']],
+  'Selling-day adjustments': [['Calendar days', '31'], ['4-4-5 days kept', '26']],
+  'Below-the-line set': [['Unexplained difference rate', '7.00%'], ['Change in inventory', '0']],
+  'Gross-to-net engines': [['GTN rate', '43.20%'], ['Net revenue', '$18,342,942']],
+  'Price & FX': [['Price per pill (all packs)', '$206.00']],
+}
 const cibinqoDemo = (c: Config): Config => ({ ...c, realData: true, inds: c.inds.map(i => ({ ...i, modules: CIBINQO_MODS.map(n => byName(n).id) })) })
 
 function applyFixture(c: Config, fx?: FixtureId): Config {
@@ -4307,6 +4318,7 @@ function ModuleLanes({ c, ind, updInd, readOnly, go, dragging, inspect: inspectP
                 <div className="flex justify-between gap-2"><dt className="text-text-3">Depends on</dt><dd className="text-right">{insp.needs ?? '—'}</dd></div>
                 <div className="flex justify-between gap-2"><dt className="text-text-3">Feeds</dt><dd className="text-right">{usedBy.map(m => m.name).join(', ') || 'Next stage'}</dd></div>
                 <div className="flex justify-between gap-2"><dt className="text-text-3">Data input</dt><dd className="text-right">{insp.data ? MODULE_INPUTS[insp.data]?.name : 'None'}</dd></div>
+                {c.realData && CIBINQO_REAL[insp.name]?.map(([k, v]) => <div key={k} className="flex justify-between gap-2"><dt className="text-text-3">{k}</dt><dd className="text-right font-mono">{v}</dd></div>)}
                 <div className="flex justify-between gap-2"><dt className="text-text-3">Taxonomy evidence</dt><dd className="font-mono">{insp.ev.join(', ')}</dd></div>
               </dl>
               {st === 'missing' && insp.needs && !readOnly && <Btn size="sm" className="mt-3 w-full" icon={<Plus size={13} />} onClick={() => { const d = byName(insp.needs!).id; const a = seq.filter(x => x !== d); a.splice(a.indexOf(insp.id), 0, d); set(a) }}>Attach {insp.needs} before it</Btn>}
