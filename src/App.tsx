@@ -4252,7 +4252,7 @@ function ModuleLanes({ c, ind, updInd, readOnly, go, dragging, inspect: inspectP
   const [over, setOver] = useState(false)
   const arch = ind.arch
   if (!arch) return null
-  const req = requiredFor(arch)
+  const req = c.realData ? [] : requiredFor(arch) // demo: the canvas starts empty and only shows what is dragged in
   const seq = Array.from(new Set([...ind.modules, ...req]))
   const insp = MODULES.find(m => m.id === inspect)
   const set = (modules: string[]) => updInd?.(ind.id, { modules })
@@ -4314,7 +4314,8 @@ function ModuleLanes({ c, ind, updInd, readOnly, go, dragging, inspect: inspectP
         <div onDragOver={readOnly ? undefined : e => { if (e.dataTransfer.types.includes(DRAG_NEW)) { e.preventDefault(); setOver(true) } }} onDragLeave={() => setOver(false)} onDrop={readOnly ? undefined : drop}
           className={cx('relative overflow-x-auto rounded-lg border p-5 transition-colors', readOnly ? 'border-border bg-background/60' : 'min-h-[420px] border-border bg-[radial-gradient(circle,var(--color-border-strong)_1px,transparent_1px)] bg-[length:18px_18px]', dragging && (ok ? 'border-2 border-dashed border-brand' : 'border-2 border-dashed border-err/60'), over && ok && 'bg-brand-soft/40')}>
           {dragging && <div className="pointer-events-none sticky left-0 top-0 z-10 mb-3 flex justify-center"><span className={cx('rounded-full px-3 py-1 text-[12px] font-semibold shadow-sm', ok ? 'bg-brand text-white' : 'bg-err text-white')}>{ok ? `Drop to add ${dragging.name} · lands in ${dragging.cat}` : seq.includes(dragging.id) ? 'Already on the canvas' : `Not compatible with ${archName(arch)}`}</span></div>}
-          <div className="mx-auto flex flex-col items-center" style={{ minWidth: Math.max(1, segs.length || 1) * Math.max(1, lots.length || 1) * 150 }}>
+          {!seq.length && <p className="grid min-h-[360px] place-items-center text-center text-[13px] text-text-3">Drag cards from the Module library onto this canvas to build the flow.</p>}
+          <div className={cx('mx-auto flex flex-col items-center', !seq.length && 'hidden')} style={{ minWidth: Math.max(1, segs.length || 1) * Math.max(1, lots.length || 1) * 150 }}>
             {stack(trunk.map(m => node(m, 'trunk', undefined, true)))}
             {trunk.length > 0 && <VLine />}
             {segs.length
