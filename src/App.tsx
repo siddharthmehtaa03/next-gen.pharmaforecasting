@@ -184,7 +184,7 @@ const customTimeErr = (m: Record<string, string>) => {
 }
 const modeDefault = (a: ArchId, m: ModeDef) => (a === 'D-03' && m.id === 'persist') ? 'Aggregate Churn' : m.def ?? m.options[0]
 const ALL: ArchId[] = ['D-01', 'D-02', 'D-03', 'D-04', 'D-05', 'D-06', 'D-07']
-type Mod = { id: string; code: string; name: string; cat: string; desc: string; ev: string[]; required?: ArchId[]; rec?: ArchId[]; data?: string; patients?: boolean; needs?: string }
+type Mod = { id: string; code: string; name: string; cat: string; desc: string; ev: string[]; required?: ArchId[]; rec?: ArchId[]; data?: string; patients?: boolean; needs?: string; demo?: boolean; val?: string }
 const RAW: [string, string, string, string[], Partial<Mod>?][] = [
   ['Population & top-of-funnel', 'Epi funnel builder', 'Population → incidence/prevalence → staged filters → eligible; arbitrary filter steps.', ['A-15', 'A-26'], { rec: ['D-01', 'D-03'], data: 'epi', patients: true }],
   ['Population & top-of-funnel', 'Age-structured cohorts', 'Single-year-of-age stocks with aging in/out and mortality survival.', ['A-1', 'A-4'], { rec: ['D-05'], data: 'age', patients: true }],
@@ -252,7 +252,41 @@ const RAW: [string, string, string, string[], Partial<Mod>?][] = [
   ['Conversion, financial & integration', 'Automated report generation', 'In-model report builder producing formatted outputs from model state.', ['A-32']],
   ['Share machinery', 'Competitor & market-share tracking', 'Tracks named competitor products and market share from script data, feeding share-based forecasts.', ['A-21', 'A-31']],
 ]
-const MODULES: Mod[] = RAW.map(([cat, name, desc, ev, extra], i) => ({ id: `m${i + 1}`, code: String(i + 1).padStart(2, '0'), cat, name, desc, ev, ...extra }))
+/** Cibinqo US forecast demo cards, in the order of the model-mapping list. Lane = the library family each card sits under; value = Oct 2026 from the workbook. */
+const CIBINQO_CARDS: [string, string, string, string][] = [
+  ['Population & top-of-funnel', 'Addressable patients', 'AD advanced systemic patients, taken from the workbook.', '435,507'],
+  ['Share machinery', 'Class share', 'JAK class share, taken from the workbook.', '9.14%'],
+  ['Share machinery', 'Class patients', 'Addressable patients × class share.', '39,805.34'],
+  ['Share machinery', 'Share within class', 'Cibinqo share within the JAK class, taken from the workbook.', '17.38%'],
+  ['Share machinery', 'Brand patients', 'Addressable patients × class share × share within class.', '6,918.17'],
+  ['Persistence, dosing & regimen', 'Prescriptions per patient', 'Prescriptions per patient, taken from the workbook.', '1.01'],
+  ['Persistence, dosing & regimen', 'Prescriptions before compliance', 'Brand patients × prescriptions per patient.', '6,987.35'],
+  ['Persistence, dosing & regimen', 'Compliance rate', 'Compliance rate, taken from the workbook.', '70.58%'],
+  ['Persistence, dosing & regimen', 'Total prescriptions', 'Prescriptions before compliance × compliance rate.', '4,931.67'],
+  ['Conversion, financial & integration', 'Pack share, {sku}', 'Share of the prescription mix for each SKU (100 mg, 200 mg, 50 mg).', '63% / 32% / 5%'],
+  ['Conversion, financial & integration', 'Prescriptions, {sku}', 'Total prescriptions × pack share.', '3,106.95 / 1,578.13 / 246.58'],
+  ['Conversion, financial & integration', 'Units per prescription', 'Pills per prescription, taken from the workbook.', '30'],
+  ['Conversion, financial & integration', 'Units, {sku}', 'Prescriptions × units per prescription.', '93,208.59 / 47,344.05 / 7,397.51'],
+  ['Conversion, financial & integration', 'Price per unit, {sku}', 'Price per pill for each SKU, taken from the workbook.', '$206.00 / $206.00 / $206.00'],
+  ['Conversion, financial & integration', 'Audited demand, {sku}', 'Units × price per unit.', '19,200,969.60 / 9,752,873.45 / 1,523,886.48'],
+  ['Conversion, financial & integration', 'Total audited demand', 'Sum of the audited demand across SKUs.', '30,477,729.53'],
+  ['Actuals, calibration & reconciliation', 'Unaudited demand rate', 'Unaudited demand rate, taken from the workbook.', '9.00%'],
+  ['Actuals, calibration & reconciliation', 'Unaudited demand', 'Audited demand × rate ÷ (1 − rate).', '3,014,280.94'],
+  ['Conversion, financial & integration', 'Underlying demand', 'Audited demand + unaudited demand.', '33,492,010.47'],
+  ['Actuals, calibration & reconciliation', 'Calendar days', 'Calendar days in the month, taken from the workbook.', '31'],
+  ['Actuals, calibration & reconciliation', 'Days kept (4-4-5)', '4-4-5 days kept in the month, taken from the workbook.', '26'],
+  ['Actuals, calibration & reconciliation', 'Prior-month carry', 'Prior-month daily demand × leftover days.', '2,175,924.72'],
+  ['Actuals, calibration & reconciliation', 'Calendar-adjusted demand', 'Days kept this month + prior-month carry.', '30,265,998.02'],
+  ['Actuals, calibration & reconciliation', 'Inventory change', 'Change in inventory, taken from the workbook.', '0.00'],
+  ['Actuals, calibration & reconciliation', 'Gross revenue before unexplained difference', 'Calendar-adjusted demand + inventory change.', '30,265,998.02'],
+  ['Actuals, calibration & reconciliation', 'Unexplained difference rate', 'Unexplained difference rate, taken from the workbook.', '7.00%'],
+  ['Actuals, calibration & reconciliation', 'Unexplained difference', 'Gross revenue before the difference × rate.', '2,118,619.86'],
+  ['Conversion, financial & integration', 'Gross revenue', 'Gross revenue before the difference + unexplained difference.', '32,384,617.88'],
+  ['Conversion, financial & integration', 'Price kept after gross-to-net', 'Share of price kept after discounts, taken from the workbook.', '43.20%'],
+  ['Conversion, financial & integration', 'Net revenue', 'Gross revenue × price kept after gross-to-net.', '13,990,154.93'],
+]
+const MODULES: Mod[] = [...RAW.map(([cat, name, desc, ev, extra], i) => ({ id: `m${i + 1}`, code: String(i + 1).padStart(2, '0'), cat, name, desc, ev, ...extra })),
+  ...CIBINQO_CARDS.map(([cat, name, desc, val], i): Mod => ({ id: `c${i + 1}`, code: `C${i + 1}`, cat, name, desc, val, ev: [], demo: true }))]
 const CATS = ['All', ...Array.from(new Set(MODULES.map(m => m.cat)))]
 // Vaccine-only machinery, and patient-carrying modules can't attach to Rx-Share (no patient state).
 const VACCINE_ONLY = new Set(['Dose-sequence chains', 'Booster due-pool queues', 'Waning-immunity re-entry', 'Anti-vaccination carve-out', 'Stock-reconciliation bridges'])
@@ -690,17 +724,6 @@ function freshConfig(seed: Seed): Config {
   return base
 }
 
-/** Oct 2026 workbook values from the Cibinqo model-mapping PDF, shown in the module inspector. */
-const CIBINQO_REAL: Record<string, [string, string][]> = {
-  'Epi funnel builder': [['AD advanced systemic patients', '435,507'], ['JAK class patients', '39,805.34']],
-  'Nested share cascades': [['JAK class share', '9.14%'], ['Cibinqo share in class', '17.38%'], ['Patients on Cibinqo', '6,918.17']],
-  'Compliance matrices': [['Compliance rate', '70.58%']],
-  'Volume conversion chains': [['Rx per patient', '1.01'], ['Pack split 100 / 200 / 50 mg', '63% / 32% / 5%'], ['Pills per Rx', '30']],
-  'Selling-day adjustments': [['Calendar days', '31'], ['4-4-5 days kept', '26']],
-  'Below-the-line set': [['Unexplained difference rate', '7.00%'], ['Change in inventory', '0']],
-  'Gross-to-net engines': [['GTN rate', '43.20%'], ['Net revenue', '$18,342,942']],
-  'Price & FX': [['Price per pill (all packs)', '$206.00']],
-}
 /** Streams start empty so users add their own while demoing; the real values still show on matching modules. */
 const cibinqoDemo = (c: Config): Config => ({ ...c, realData: true, inds: [], active: '' })
 
@@ -1223,7 +1246,7 @@ function think(th: Thread, raw: string, models: ModelRow[]): Res {
   if (/which (engine|archetype)|what (engine|archetype)|suit|fit|best for/.test(s) && kb[0]) return keep({ out: [{ text: `For **${kb[0][1]}**, the closest precedent is **${ARCH(kb[0][2]).name}**. ${kb[0][3]} It’s your call; here are the closest alternatives:`, card: { t: 'archs', ids: [kb[0][2], ...ALTS[kb[0][2]]] }, chips: [`Set up a ${kb[0][1]} model`] }] })
   if (archIn(s) && !/archetypes/.test(s)) { const a = archIn(s)!; return keep({ out: [{ text: `**${ARCH(a).name}** (${a}) models *${ARCH(a).state.toLowerCase()}*, counted in ${ARCH(a).unit.toLowerCase()}.`, card: { t: 'archs', ids: [a] }, chips: [`How is it different from ${ARCH(ALTS[a][0]).name}?`] }] }) }
   if (/archetype|engine/.test(s)) return keep({ out: [{ text: 'There are seven governed engines. Each one fixes *what is being counted*; modes and modules configure it. Ask about any one, or tell me the indication and I’ll show the closest fit.', card: { t: 'archs', ids: ARCHETYPES.map(a => a.id) }, chips: ['Which engine suits RSV?', 'Rx-Share vs Prevalent-Share?'] }] })
-  if (/module/.test(s)) return keep({ out: [{ text: `The library has **${MODULES.length} modules** across ${CATS.length - 1} families. Each engine requires some of them and recommends others. When we set up a model, I wire the required ones and pre-select the recommended ones for you to review.`, chips: ['Set up a new model'] }] })
+  if (/module/.test(s)) return keep({ out: [{ text: `The library has **${RAW.length} modules** across ${CATS.length - 1} families. Each engine requires some of them and recommends others. When we set up a model, I wire the required ones and pre-select the recommended ones for you to review.`, chips: ['Set up a new model'] }] })
   if (/help|what can you/.test(s)) return keep({ out: [{ text: 'I can work through anything in the CoE with you, right here in the chat: **set up a model end to end**, **clear blocking issues**, **finalise** drafts, **compare** models and versions, and explain engines, modes and modules. I propose and you decide; nothing is saved without your OK.', chips: ['Set up a new model', 'Show my drafts', 'Compare Cibinqo and Nurtec'] }] })
   return keep({ out: [{ text: `I didn’t quite catch that. I can set up a model, fix or finalise drafts, compare models, or explain how an engine works. Could you say a bit more?`, chips: ['Set up a new model', 'Show my drafts', 'Explain the archetypes'] }] })
 }
@@ -2916,7 +2939,7 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
     return keys.length ? { ...n, log: logged(prev, `${i0?.name || 'Stream'}: changed ${keys.map(k => FIELD_LABEL[k]).join(', ')}`) } : n
   })
   const setArch = (id: string, a: ArchId) => setC(prev => ({
-    ...prev, inds: prev.inds.map(i => i.id === id ? initInd(i, a) : i),
+    ...prev, inds: prev.inds.map(i => i.id === id ? (prev.realData ? { ...initInd(i, a), modules: [] } : initInd(i, a)) : i),
     bindings: Object.fromEntries(Object.entries(prev.bindings).filter(([k]) => !k.startsWith(`${id}:`))),
   }))
   const ind = c.inds.find(i => i.id === c.active) ?? c.inds[0] ?? emptyInd('', '')
@@ -3689,7 +3712,7 @@ function StreamCard({ i, k, c, error, update, onRemove }: { i: Ind; k: number; c
               <button role="menuitem" className={menuItem} onClick={() => { setMenu(false); const id = `i${Date.now()}`; update({ inds: [...c.inds.slice(0, idx + 1), { ...i, id, name: `${i.name || 'Stream'} (copy)` }, ...c.inds.slice(idx + 1)], active: id }) }}>Duplicate</button>
               <button role="menuitem" className={menuItem} disabled={idx === 0} onClick={() => { setMenu(false); swap(-1) }}>Move up</button>
               <button role="menuitem" className={menuItem} disabled={idx === c.inds.length - 1} onClick={() => { setMenu(false); swap(1) }}>Move down</button>
-              <button role="menuitem" className={cx(menuItem, 'text-err')} disabled={c.inds.length === 1} onClick={() => { setMenu(false); onRemove() }}>Remove</button>
+              <button role="menuitem" className={cx(menuItem, 'text-err')} disabled={c.inds.length === 1 && !!(i.name || i.arch)} onClick={() => { setMenu(false); onRemove() }}>Remove</button>
             </div></>}
         </div>
         <button type="button" aria-label={open ? 'Collapse stream' : 'Expand stream'} onClick={() => setOpen(o => !o)} className="grid h-8 w-8 place-items-center rounded-md text-text-2 hover:bg-surface"><ChevronUp size={16} className={cx('transition-transform', !open && 'rotate-180')} /></button>
@@ -4317,7 +4340,7 @@ function ModuleLanes({ c, ind, updInd, readOnly, go, dragging, inspect: inspectP
                 <div className="flex justify-between gap-2"><dt className="text-text-3">Depends on</dt><dd className="text-right">{insp.needs ?? '—'}</dd></div>
                 <div className="flex justify-between gap-2"><dt className="text-text-3">Feeds</dt><dd className="text-right">{usedBy.map(m => m.name).join(', ') || 'Next stage'}</dd></div>
                 <div className="flex justify-between gap-2"><dt className="text-text-3">Data input</dt><dd className="text-right">{insp.data ? MODULE_INPUTS[insp.data]?.name : 'None'}</dd></div>
-                {c.realData && CIBINQO_REAL[insp.name]?.map(([k, v]) => <div key={k} className="flex justify-between gap-2"><dt className="text-text-3">{k}</dt><dd className="text-right font-mono">{v}</dd></div>)}
+                {insp.val && <div className="flex justify-between gap-2"><dt className="text-text-3">Oct 2026 value</dt><dd className="text-right font-mono">{insp.val}</dd></div>}
                 <div className="flex justify-between gap-2"><dt className="text-text-3">Taxonomy evidence</dt><dd className="font-mono">{insp.ev.join(', ')}</dd></div>
               </dl>
               {st === 'missing' && insp.needs && !readOnly && <Btn size="sm" className="mt-3 w-full" icon={<Plus size={13} />} onClick={() => { const d = byName(insp.needs!).id; const a = seq.filter(x => x !== d); a.splice(a.indexOf(insp.id), 0, d); set(a) }}>Attach {insp.needs} before it</Btn>}
@@ -4417,8 +4440,8 @@ function StageModules({ c, ind, update, updInd, go, errs, fix }: Ctx & { errs?: 
   const arch = ind.arch
   const conflicts = (errs || []).filter(e => e.ind === ind.id && e.field === 'needs')
   const req = requiredFor(arch)
-  const valid = arch ? MODULES.filter(m => validFor(m, arch)) : []
-  const hidden = MODULES.length - valid.length
+  const valid = arch ? MODULES.filter(m => !!m.demo === !!c.realData && validFor(m, arch)) : []
+  const hidden = c.realData ? 0 : RAW.length - valid.length
   const term = q.trim().toLowerCase()
   const isOn = (m: Mod) => ind.modules.includes(m.id) || req.includes(m.id)
   const shown = (m: Mod) => (!term || `${m.name} ${m.desc} ${m.cat}`.toLowerCase().includes(term)) && (filter === 'All' || (filter === 'On canvas') === isOn(m))
