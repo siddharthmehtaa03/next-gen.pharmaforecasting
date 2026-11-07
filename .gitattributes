@@ -144,3 +144,6 @@
 *.stl                filter=lfs diff=lfs merge=lfs -text
 *.nc                 filter=lfs diff=lfs merge=lfs -text
 *.mat                filter=lfs diff=lfs merge=lfs -text
+
+# Already committed as a plain blob before LFS was set up on this machine; keep it plain
+public/figma-make-app-code.zip -filter -diff -merge -text
