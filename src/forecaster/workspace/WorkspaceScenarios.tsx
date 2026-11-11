@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { Copy, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { useEffect, useRef, useState } from 'react'
+import { Copy, EllipsisVertical, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { ACTUALS, DRV, FC_YEARS, UNBIASED, fmtDelta, fmtRev, fmtV, fyAvg, fySum } from './engine'
 import type { DriverId, EventDef, Layer, ModelCfg, Scenario } from './engine'
-import { Btn, Card, ForecastChart, Legend, Seg, Tag, cx, field } from './ui'
+import { Btn, Card, ForecastChart, Legend, cx, field } from './ui'
 import type { ChartSeries } from './ui'
 import { NumField } from './Drivers'
 import type { CompareProps, Notify } from './Drivers'
@@ -38,27 +38,43 @@ export function ScenarioBar({ scenarios, setScenarios, scope, setScope, year, se
     if (!sc || scenarios.length < 2 || !window.confirm(`Delete “${sc.name}”? Its events, adjustments and overrides go with it.`)) return
     setScenarios(ss => ss.filter(s => s.id !== sc.id)); setScope(FORECAST); notify({ tone: 'info', text: `${sc.name} deleted.` })
   }
-  const nAdj = sc ? Object.values(sc.adj).filter(Boolean).length + (sc.ovr?.length ?? 0) : 0
-  const ib = 'grid h-9 w-9 place-items-center rounded-full text-text-2 transition-colors hover:bg-surface-2 hover:text-text disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent'
+  const [menu, setMenu] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!menu) return
+    const off = (e: Event) => { if (e instanceof KeyboardEvent ? e.key === 'Escape' : !menuRef.current?.contains(e.target as Node)) setMenu(false) }
+    document.addEventListener('mousedown', off); document.addEventListener('keydown', off)
+    return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', off) }
+  }, [menu])
+  const item = 'flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent'
   return (
     <div data-tour="scenario-bar" className="space-y-3">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-border bg-surface px-5 py-3.5 shadow-card">
-        <div className="flex items-center gap-2.5">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-border bg-surface px-5 py-3 shadow-card">
+        <div className="flex min-w-0 items-center gap-2.5">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-text-3">Working on</span>
           <select aria-label="Working on" value={scope} onChange={e => { setScope(e.target.value); setForm(null) }} className={cx(field, 'h-10 w-56 font-semibold text-text')}>
             <option value={FORECAST}>Active forecast</option>
             {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}{s.locked ? ' · Final' : ''}</option>)}
           </select>
-          <div className="flex items-center rounded-full border border-border bg-surface-2 p-0.5" role="group" aria-label="Scenario actions">
-            <button type="button" className={ib} title="Duplicate" aria-label="Duplicate scenario" disabled={!sc} onClick={dup}><Copy size={15} /></button>
-            <button type="button" className={ib} title="Rename" aria-label="Rename scenario" disabled={!sc || lock} onClick={() => sc && setForm({ mode: 'rename', name: sc.name, from: FORECAST })}><Pencil size={15} /></button>
-            <button type="button" className={cx(ib, 'hover:!bg-err-soft hover:!text-err')} title="Delete" aria-label="Delete scenario" disabled={!sc || lock || scenarios.length < 2} onClick={del}><Trash2 size={15} /></button>
+          <div ref={menuRef} className="relative">
+            <button type="button" title="Scenario actions" aria-label="Scenario actions" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(v => !v)}
+              className="grid h-9 w-9 place-items-center rounded-full text-text-2 transition-colors hover:bg-surface-2 hover:text-text"><EllipsisVertical size={16} /></button>
+            {menu && (
+              <div role="menu" className="rise absolute left-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-xl">
+                <button type="button" role="menuitem" className={item} disabled={!sc} onClick={() => { setMenu(false); dup() }}><Copy size={14} />Duplicate</button>
+                <button type="button" role="menuitem" className={item} disabled={!sc || lock} onClick={() => { setMenu(false); sc && setForm({ mode: 'rename', name: sc.name, from: FORECAST }) }}><Pencil size={14} />Rename</button>
+                <button type="button" role="menuitem" className={cx(item, 'text-err hover:!bg-err-soft')} disabled={!sc || lock || scenarios.length < 2} onClick={() => { setMenu(false); del() }}><Trash2 size={14} />Delete</button>
+              </div>
+            )}
           </div>
-          <Tag tone={sc ? 'brand' : 'neutral'}>{sc ? (nAdj ? `${nAdj} change${nAdj === 1 ? '' : 's'}` : 'No changes yet') : 'Baseline for every scenario'}</Tag>
         </div>
-        <Btn size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => setForm({ mode: 'new', name: `Scenario ${scenarios.length + 1}`, from: FORECAST })}>New scenario</Btn>
-        <div className="ml-auto flex items-center gap-2.5"><span className="text-[11px] font-semibold uppercase tracking-wider text-text-3">Values for</span>
-          <Seg label="Year" value={String(year)} onChange={v => setYear(+v)} options={FC_YEARS.map(y => ({ id: String(y), label: `FY${y}` }))} /></div>
+        <div className="ml-auto flex items-center gap-4">
+          <Btn size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => setForm({ mode: 'new', name: `Scenario ${scenarios.length + 1}`, from: FORECAST })}>New scenario</Btn>
+          <label className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-text-3">Values for
+            <select aria-label="Values for" value={year} onChange={e => setYear(+e.target.value)} className={cx(field, 'h-9 w-24 normal-case tracking-normal text-text')}>
+              {FC_YEARS.map(y => <option key={y} value={y}>FY{y}</option>)}
+            </select></label>
+        </div>
       </div>
       {form && (
         <form className="flex flex-wrap items-end gap-3 rounded-lg border border-brand/30 bg-brand-soft/30 px-4 py-3" onSubmit={e => { e.preventDefault(); form.mode === 'new' ? create() : rename() }}>

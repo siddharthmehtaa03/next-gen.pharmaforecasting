@@ -263,7 +263,7 @@ export default function ForecasterHome({ onOpen, notify }: { onOpen: (b: BrandRo
 
   return (
     <div className="min-h-full bg-bg">
-      <main className="mx-auto max-w-[1240px] px-6 py-8">
+      <main className="mx-auto max-w-[1240px] px-10 py-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-[28px] font-semibold tracking-tight">Your forecasts</h1>
         </div>
