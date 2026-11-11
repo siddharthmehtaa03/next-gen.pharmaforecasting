@@ -218,7 +218,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
           </div>
         </div>
       ) : <>
-      <div className={cx('mx-auto px-10', view === 'Overview' ? 'pb-8 pt-6' : 'py-8', mapView && !presenting && 'grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)_360px]')}>
+      <div className={cx('mx-auto px-10', view === 'Overview' ? 'pb-8 pt-6' : 'py-8', mapView && !presenting && 'grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]')}>
         {mapView && <aside className="lg:sticky lg:top-[98px] lg:self-start"><ForecastMap sel={sel} onSel={pick} edits={edits} working={work.layer} model={model} metric={metric} mod={mod} onMod={m => { if (m !== mod && leaveOk()) setMod(m) }} uePct={ueFy(ue)} onCollapse={undefined} /></aside>}
         <main className="min-w-0">
           {view === 'Overview' && <BaselineTrend onWorkspace={() => go('Assumptions')} />}
