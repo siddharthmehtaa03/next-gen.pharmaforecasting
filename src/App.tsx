@@ -18,15 +18,18 @@ import type { CopilotProps } from './forecaster/workspace/agent'
 import { FRAME_ID, scrollFrameTop } from './frame'
 import { ChartActions } from './chart/ChartActions'
 import { MoreMenu } from './forecaster/workspace/ui'
-import { SnowflakeSources } from './ConfigInputs'
+import { InputCanvas, ModelFlowTree, PatientFlowList, SnowflakeSources } from './ConfigInputs'
+import type { StreamRef } from './ConfigInputs'
+import { flowRows as inputFlow, withPatientFlow } from './configCatalog'
+import type { InputMap } from './configCatalog'
 import pfizerMark from './assets/pfizer-mark-color.png'
 import pfizerLogo from './assets/pfizer-logo-color.png'
 import {
-  AlertCircle, AlertTriangle, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, ArrowRight, BarChart3, Bell, Boxes, Check, CheckCircle2, ChevronDown, ChevronRight,
-  Clock, Copy, Database, FileText, GitBranch, History, Info, Layers, Loader2, Lock, LockOpen, Plus, PanelRightClose, PanelRightOpen, Maximize2, Minimize2,
-  RefreshCw, RotateCcw, Search, Send, Settings2, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, Upload, Download, Users, Workflow, X, Eye, Zap, ArrowUpRight, LogOut, Mail, GripVertical, ChevronUp, FileUp, Keyboard, Link2,
+  AlertCircle, AlertTriangle, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, ArrowRight, Bell, Boxes, Check, CheckCircle2, ChevronDown, ChevronRight,
+  Clock, Copy, Database, FileText, GitBranch, History, Info, Layers, Loader2, Lock, Plus, PanelRightClose, PanelRightOpen, Maximize2, Minimize2,
+  RefreshCw, RotateCcw, Search, Send, Settings2, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, Upload, Download, Users, Workflow, X, Eye, Zap, ArrowUpRight, LogOut, Mail, ChevronUp,
   House, MessagesSquare, LineChart, SquarePen, MessageSquare, ArrowUpRight as SendArrow, Wand2,
-  Bookmark, Trash2, Pencil, HelpCircle, ListChecks, Sigma, MoreVertical, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+  Bookmark, Trash2, Pencil, HelpCircle, ListChecks, MoreVertical, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 /* ───────────────────────── Domain data (model taxonomy, working draft v2) ───────────────────────── */
 
@@ -186,7 +189,7 @@ const customTimeErr = (m: Record<string, string>) => {
 }
 const modeDefault = (a: ArchId, m: ModeDef) => (a === 'D-03' && m.id === 'persist') ? 'Aggregate Churn' : m.def ?? m.options[0]
 const ALL: ArchId[] = ['D-01', 'D-02', 'D-03', 'D-04', 'D-05', 'D-06', 'D-07']
-type Mod = { id: string; code: string; name: string; cat: string; desc: string; ev: string[]; required?: ArchId[]; rec?: ArchId[]; data?: string; patients?: boolean; needs?: string; demo?: boolean; val?: string; inp?: string }
+type Mod = { id: string; code: string; name: string; cat: string; desc: string; ev: string[]; required?: ArchId[]; rec?: ArchId[]; data?: string; patients?: boolean; needs?: string }
 const RAW: [string, string, string, string[], Partial<Mod>?][] = [
   ['Population & top-of-funnel', 'Epi funnel builder', 'Population → incidence/prevalence → staged filters → eligible; arbitrary filter steps.', ['A-15', 'A-26'], { rec: ['D-01', 'D-03'], data: 'epi', patients: true }],
   ['Population & top-of-funnel', 'Age-structured cohorts', 'Single-year-of-age stocks with aging in/out and mortality survival.', ['A-1', 'A-4'], { rec: ['D-05'], data: 'age', patients: true }],
@@ -254,7 +257,7 @@ const RAW: [string, string, string, string[], Partial<Mod>?][] = [
   ['Conversion, financial & integration', 'Automated report generation', 'In-model report builder producing formatted outputs from model state.', ['A-32']],
   ['Share machinery', 'Competitor & market-share tracking', 'Tracks named competitor products and market share from script data, feeding share-based forecasts.', ['A-21', 'A-31']],
 ]
-/** Cibinqo US forecast demo cards, in the order of the model-mapping list. Lane = the library family each card sits under; value = Oct 2026 from the workbook. */
+/** Cibinqo US forecast demo: the workbook rows behind its patient flow. Value = Oct 2026 from the workbook. */
 const CIBINQO_CARDS: [string, string, string, string, string][] = [
   ['Population & top-of-funnel', 'Addressable patients', 'AD advanced systemic patients, taken from the workbook.', '435,507', 'prev'],
   ['Share machinery', 'Class share', 'JAK class share, taken from the workbook.', '9.14%', 'share'],
@@ -287,8 +290,7 @@ const CIBINQO_CARDS: [string, string, string, string, string][] = [
   ['Conversion, financial & integration', 'Price kept after gross-to-net', 'Share of price kept after discounts, taken from the workbook.', '43.20%', 'sales'],
   ['Conversion, financial & integration', 'Net revenue', 'Gross revenue × price kept after gross-to-net.', '13,990,154.93', 'sales'],
 ]
-const MODULES: Mod[] = [...RAW.map(([cat, name, desc, ev, extra], i) => ({ id: `m${i + 1}`, code: String(i + 1).padStart(2, '0'), cat, name, desc, ev, ...extra })),
-  ...CIBINQO_CARDS.map(([cat, name, desc, val, inp], i): Mod => ({ id: `c${i + 1}`, code: `C${i + 1}`, cat, name, desc, val, inp, ev: [], demo: true }))]
+const MODULES: Mod[] = RAW.map(([cat, name, desc, ev, extra], i) => ({ id: `m${i + 1}`, code: String(i + 1).padStart(2, '0'), cat, name, desc, ev, ...extra }))
 const CATS = ['All', ...Array.from(new Set(MODULES.map(m => m.cat)))]
 // Vaccine-only machinery, and patient-carrying modules can't attach to Rx-Share (no patient state).
 const VACCINE_ONLY = new Set(['Dose-sequence chains', 'Booster due-pool queues', 'Waning-immunity re-entry', 'Anti-vaccination carve-out', 'Stock-reconciliation bridges'])
@@ -372,8 +374,8 @@ const STAGES = [
   { id: 1, title: 'Model setup', short: 'Setup', sub: 'Subject + streams', icon: Settings2, desc: 'Name the model and define its revenue streams.' },
   { id: 2, title: 'Archetype', short: 'Archetype', sub: 'Model foundation', icon: Layers, desc: 'Choose the forecasting engine for each stream.' },
   { id: 3, title: 'Modes', short: 'Modes', sub: 'Archetype-specific options', icon: SlidersHorizontal, desc: 'Set the options for each stream’s archetype.' },
-  { id: 4, title: 'Module map', short: 'Module map', sub: 'Build the model structure', icon: Workflow, desc: 'Attach modules to build each stream’s calculation.' },
-  { id: 5, title: 'Data configuration', short: 'Data', sub: 'Sources · pathways · exposure', icon: Database, desc: 'Choose where each input comes from and who can edit it.' },
+  { id: 4, title: 'Module map', short: 'Module map', sub: 'Build the patient flow', icon: Workflow, desc: 'Drag the patient-flow inputs onto the canvas. Each one sits in its own group class.' },
+  { id: 5, title: 'Data sources', short: 'Data', sub: 'Where the data comes from · read-only', icon: Database, desc: 'See which Snowflake table and schema each input is read from. Nothing is chosen here.' },
   { id: 6, title: 'Review configuration', short: 'Review', sub: 'Structure · inputs · issues', icon: CheckCircle2, desc: 'Check the whole configuration before you finalise.' },
   { id: 7, title: 'Finalise setup', short: 'Finalise', sub: 'Validate · hand off', icon: Send, desc: 'Validate, save a version and release it to forecasters.' },
 ] as const
@@ -659,8 +661,12 @@ type Binding = {
 type Perm = { open: boolean; min: number; max: number; owner: string; source: string; confidence: '' | 'High' | 'Medium' | 'Low'; grain: string; value: number; notes: string; fval?: number }
 type BaseRow = { id: string; name: string; eng: string; v: number[] }
 type Baseline = { n: number; at: string; sig: string; rows: BaseRow[] }
-type Level = { id: string; kind: string; items: string[] }
-type Ind = { stype?: string; levels?: Level[]; auto?: boolean; sep?: string; snap?: string[][]; id: string; name: string; desc?: string; dim?: string; dimOther?: string; parent?: string; arch: ArchId | null; engine: string; sliceArch: Record<string, string>; modes: Record<string, string>; modules: string[]; perms: Record<string, Perm> }
+type Ind = { id: string; name: string; desc?: string; dim?: string; dimOther?: string; parent?: string; arch: ArchId | null; engine: string; sliceArch: Record<string, string>; modes: Record<string, string>; modules: string[]; perms: Record<string, Perm>
+  /** The stream's patient flow in the Module map. */
+  inputMap?: InputMap
+  /** Archetype and modes suggested from institutional knowledge for this brand. */
+  sugg?: Sugg }
+type Sugg = { arch: ArchId; modes: Record<string, string>; why: string; brand: string }
 type Config = {
   brand: string; asset: string; subjectType: string; therapyArea: string; lifecycle: string; subnational: boolean; context: string; competing: boolean; market: string; cycle: string; start: string; end: string; granularity: string; grade: string; slices: Slice[]
   shared: { price: boolean; g2n: boolean }; inds: Ind[]; active: string; bindings: Record<string, Binding>
@@ -732,7 +738,7 @@ function freshConfig(seed: Seed): Config {
   return base
 }
 
-/** Streams start empty so users add their own while demoing; the real values still show on matching modules. */
+/** Streams start empty so users add their own while demoing; the workbook values still show on the patient-flow cards. */
 const cibinqoDemo = (c: Config): Config => ({ ...c, realData: true, inds: [], active: '' })
 
 function applyFixture(c: Config, fx?: FixtureId): Config {
@@ -818,12 +824,6 @@ function validate(stage: number, c: Config): Issue[] {
     MODULES.filter(m => i.modules.includes(m.id) && m.needs && !i.modules.includes(byName(m.needs).id))
       .forEach(m => out.push({ ind: i.id, field: 'needs', msg: `${indLabel(c, i)}${m.name} needs ${m.needs} attached.` }))
   })
-  if (stage === 5) {
-    const ins = inputsFor(c)
-    if (!ins.length) out.push({ msg: 'No inputs yet — choose archetypes first.' })
-    const unmapped = ins.filter(i => c.bindings[i.key]?.path === 'File' && !c.bindings[i.key]?.mapField?.trim())
-    if (unmapped.length) out.push({ msg: `${unmapped.length} file-based input${unmapped.length > 1 ? 's need' : ' needs'} a mapped field.` })
-  }
   if (stage === LAST) {
     if (c.forecasters.length === 0 && !c.selfForecast) out.push({ field: 'forecasters', msg: 'Assign at least one forecaster, or act as the forecaster yourself.' })
     if (!c.visibility) out.push({ field: 'visibility', msg: 'Choose who can see this model.' })
@@ -834,8 +834,6 @@ function validate(stage: number, c: Config): Issue[] {
 /** Non-blocking: things a CoE should know before publishing, but may accept. */
 function warningsFor(c: Config): { msg: string; stage: number }[] {
   const out: { msg: string; stage: number }[] = []
-  const open = inputsFor(c).filter(b => !dataReady(c.bindings[b.key]))
-  if (open.length) out.push({ stage: 5, msg: `${open.length} input${open.length > 1 ? 's are' : ' is'} not configured yet. They will reach the Forecaster without a data source.` })
   if (c.inds.length && c.inds.every(i => i.arch === 'D-06')) out.push({ stage: 2, msg: 'Every indication uses Trend / Extrapolation — a component method is standing in for the whole brand forecast.' })
   if (c.inds.some(i => i.arch === 'D-06' && i.modes.role === 'Blend') && c.inds.every(i => i.arch === 'D-06')) out.push({ stage: 3, msg: 'Trend role is “Blend” but there is no structural archetype to blend into.' })
   c.inds.forEach(i => {
@@ -1532,7 +1530,7 @@ const BUILD_ASK: Record<number, string> = {
   1: '**Step 1 of 7 · Model setup.** I’ve filled in the basics from your request. Please check the brand, market and cycle, then approve.',
   2: '**Step 2 of 7 · Archetype.** I’ve picked the closest engine from precedent for each indication. Change it if you know better, then approve.',
   4: '**Step 4 of 7 · Module map.** The required modules are locked in and I’ve pre-selected the recommended ones. Untick anything you don’t need, then approve.',
-  5: '**Step 5 of 7 · Data configuration.** I’ve mapped each input to a connected source. Approve to attach them.',
+  5: '**Step 5 of 7 · Data sources.** Each input on the patient flow is read from a governed Snowflake table. Nothing is chosen here, so approve to continue.',
   7: '**Step 7 of 7 · Hand-off.** Everything is built and checked. I’ll save it as a draft; finalising it for forecasters stays with you in the configurator.',
 }
 const buildFlow = (b: Build): CreateFlow => ({ kind: 'create', brand: b.brand, market: b.market, cycle: b.cycle, inds: b.inds, stage: 'review', modes: [], mods: b.mods })
@@ -1675,7 +1673,7 @@ const AREA_HELP: Record<string, string> = {
   'Revenue streams': 'A **revenue stream** is one indication of a brand, for example “Multiple myeloma 2L”. Each stream gets its own engine, modes and modules, and the streams roll up into the brand hierarchy. You define them in **Model setup (step 1)** and each one picks its engine in **Archetype (step 2)**.',
   'Archetype and modes': 'The **archetype** is the engine that does the maths for a stream: it decides what is counted (patients, scripts or share) and which modes and modules fit. **Modes** then set how it behaves, such as how share is cascaded. Both are set per stream, in **steps 2 and 3**.',
   Modules: '**Modules** are the building blocks added on top of the engine, such as pricing, access or seasonality. Some are required by the engine and some are recommended. You choose them in **Module map (step 4)**.',
-  'Data sources': '**Data configuration (step 5)** says where each input comes from: a connected source, a file or manual entry, and which inputs forecasters can see or edit. Nothing is calculated there. I propose the mappings and you approve them.',
+  'Data sources': '**Data sources (step 5)** shows the Snowflake database, schema, table, columns and filter each patient-flow input is read from. It is read-only: the platform team owns the connections.',
 }
 const STARTER_CHIPS = ['Create a new model from scratch', 'Continue a model I left in draft', 'Modify an existing model']
 const archByNameOr = (n: string, fallback: string): ArchId => ARCHETYPES.find(a => a.name === n)?.id ?? recFor(fallback)[2]
@@ -2947,7 +2945,7 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
     return keys.length ? { ...n, log: logged(prev, `${i0?.name || 'Stream'}: changed ${keys.map(k => FIELD_LABEL[k]).join(', ')}`) } : n
   })
   const setArch = (id: string, a: ArchId) => setC(prev => ({
-    ...prev, inds: prev.inds.map(i => i.id === id ? (prev.realData ? { ...initInd(i, a), modules: [] } : initInd(i, a)) : i),
+    ...prev, inds: prev.inds.map(i => i.id === id ? (i.sugg?.arch === a ? withSugg(i, i.sugg) : initInd(i, a)) : i),
     bindings: Object.fromEntries(Object.entries(prev.bindings).filter(([k]) => !k.startsWith(`${id}:`))),
   }))
   const ind = c.inds.find(i => i.id === c.active) ?? c.inds[0] ?? emptyInd('', '')
@@ -3002,29 +3000,20 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
       await step(3, 3, 'modes')
       const MODE_PICKS = [{ actuals: 'Claims-level actuals', lot: 'Progression-Derived', retreat: 'Excluded' }, { actuals: 'Claims-level actuals', lot: 'Independent', retreat: 'Excluded' }, { actuals: 'Aggregate actuals ingestion', lot: 'Named Feeders', retreat: 'Allowed' }]
       for (let k = 0; k < 3; k++) { setC(p => ({ ...p, active: ids[k] })); await wait(600); onInd(ids[k], i => ({ ...i, modes: { ...i.modes, ...MODE_PICKS[k] } })); await wait(800) }
-      // 4 · Module map: attach one compatible optional module per stream
+      // 4 · Module map: place the standard patient flow on each stream
       await step(4, 4, 'modules')
       for (const iid of ids) {
         setC(p => ({ ...p, active: iid })); await wait(600)
-        const cur = cRef.current.inds.find(i => i.id === iid)
-        const extra = cur && MODULES.find(m => validFor(m, 'D-03') && !cur.modules.includes(m.id) && !requiredFor('D-03').includes(m.id) && !GOVERNED.has(m.name) && (!m.needs || cur.modules.includes(byName(m.needs).id)))
-        if (extra) onInd(iid, i => ({ ...i, modules: [...i.modules, extra.id] }))
+        onInd(iid, i => ({ ...i, inputMap: withPatientFlow(i.inputMap) }))
         await wait(800)
       }
-      // 5 · Data configuration: connect every input, keep a few as manual forecaster entry
+      // 5 · Data sources: read-only, so only shown
       await step(5, 5, 'data')
-      const ins = inputsFor(cRef.current)
-      const pace = Math.max(140, Math.min(380, 6000 / Math.max(ins.length, 1)))
-      for (let k = 0; k < ins.length; k++) {
-        const b = ins[k], manual = k % 4 === 3
-        focus(`bind-${b.key}`)
-        setC(p => ({ ...p, bindings: { ...p.bindings, [b.key]: { path: manual ? 'Manual' : 'Connected', source: b.input.suggested, owner: OWNERS[k % OWNERS.length], confidence: 'High', status: 'ok', msg: 'Connected.', expose: manual || k % 3 === 0 ? 'Editable' : 'Visible' } } }))
-        await wait(pace)
-      }
+      await wait(1200)
       // 6 · Hand over at Review
       await step(6, null, null)
       await wait(600)
-      setC(p => ({ ...p, active: ids[0], log: logged(p, `${ASSISTANT} built the configuration: Braftovi, 3 streams on Patient-Flow, modes, modules and data`) }))
+      setC(p => ({ ...p, active: ids[0], log: logged(p, `${ASSISTANT} built the configuration: Braftovi, 3 streams on Patient-Flow, modes and the patient flow`) }))
       go(REVIEW)
       setDemo({ i: DEMO_STEPS.length, done: true })
     } catch { setAgent(idle) }
@@ -3104,8 +3093,13 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
       return { kind: 'list', title: `Configuration check · ${items.filter(i => i.tone === 'err').length} blocking, ${warns.length} to review`, empty: 'Nothing blocking. Ready to finalise.', items }
     }
     if (/data|source|input|map|configured/.test(s)) {
-      const items = ins.filter(b => !dataReady(c.bindings[b.key])).map(b => ({ tone: 'warn' as const, text: `${b.input.name} (${b.scopeLabel}) is not configured. Choose a pathway and map a field.`, link: { label: 'Configure', go: () => go(5) } }))
-      return { kind: 'list', title: 'Data configuration check', empty: ins.length ? 'Every input has a pathway and mapping.' : 'No inputs yet — choose archetypes first.', items }
+      const items = c.inds.map(i => {
+        const f = inputFlow(i.inputMap), sf = f.filter(x => x.tables).length, nm = i.name || 'Untitled stream'
+        return f.length
+          ? { tone: 'ok' as const, text: `${nm}: ${sf} of ${f.length} inputs read from Snowflake; the rest are calculated or entered by the forecaster.`, link: { label: 'Data sources', go: () => go(5) } }
+          : { tone: 'warn' as const, text: `${nm} has no inputs on its patient flow yet, so no data sources to show.`, link: { label: 'Module map', go: () => go(4) } }
+      })
+      return { kind: 'list', title: 'Data sources check', empty: 'No revenue streams yet.', items }
     }
     if (/recommend|attach|module|set up/.test(s)) {
       if (!ind.arch) return { kind: 'text', title: 'Choose an archetype first', body: `Modules depend on the archetype for ${ind.name || 'this indication'}.`, link: { label: 'Go to Archetypes', go: () => go(2) } }
@@ -3523,7 +3517,7 @@ function SummaryPanel({ c, issues, visited, go }: { c: Config; issues: Issue[][]
     { label: 'Model', value: c.brand ? `${c.brand} · ${c.asset} · ${c.subjectType}` : <span className="text-text-3">Not set</span>, stage: 1 },
     { label: 'Streams & archetypes', value: <ul className="space-y-0.5">{c.inds.map(i => <li key={i.id}>{i.name || 'Untitled'} <span className="text-text-3">· {ARCHETYPES.find(a => a.id === i.arch)?.name ?? 'not chosen'}</span></li>)}</ul>, stage: 2 },
     { label: 'Modules', value: c.inds.some(i => i.arch) ? c.inds.map(i => `${i.modules.length}`).join(' + ') + ' attached' : '—', stage: 4 },
-    { label: 'Data configuration', value: ins.length ? `${ins.length} inputs · ${ins.filter(b => exposeOf(c.bindings[b.key]) === 'Editable').length} forecaster-editable` : '—', stage: 5 },
+    { label: 'Data sources', value: (() => { const f = c.inds.flatMap(i => inputFlow(i.inputMap)); return f.length ? `${f.filter(x => x.tables).length} of ${f.length} patient-flow inputs from Snowflake · read-only` : '—' })(), stage: 5 },
   ]
   return (
     <aside className="hidden border-l border-border bg-surface wide:block">
@@ -3561,7 +3555,8 @@ function StageBrand({ c, update, errs }: Ctx & { errs: Issue[] }) {
   // Editing a field the assistant filled clears its marker: the value is now the user's.
   const setF = <K extends keyof Config>(k: K, v: Config[K]) => update({ [k]: v, aiFields: c.aiFields.filter(x => x !== k) } as Partial<Config>)
   const [pending, setPending] = useState<string | null>(null)
-  const addInd = () => { const id = 'i' + Date.now(); update({ inds: [...c.inds, emptyInd(id, '')], active: id }) }
+  const sugg = suggestionFor(c)
+  const addInd = (parent?: string) => { const id = 'i' + Date.now(), i = { ...emptyInd(id, ''), parent }; update({ inds: [...c.inds, sugg ? withSugg(i, sugg) : i], active: id }) }
   const rmInd = (id: string) => {
     const inds = c.inds.filter(i => i.id !== id)
     update({ inds, active: c.active === id ? inds[0]?.id ?? '' : c.active, bindings: Object.fromEntries(Object.entries(c.bindings).filter(([k]) => !k.startsWith(`${id}:`))) })
@@ -3596,25 +3591,36 @@ function StageBrand({ c, update, errs }: Ctx & { errs: Issue[] }) {
         <fieldset className="mt-5">
           <legend className="mb-2 text-[11px] font-bold uppercase tracking-wider text-text-2">Multi-asset options</legend>
           <div className="space-y-2">
-            <label className="flex items-start gap-2.5 text-sm"><input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-brand" checked={c.competing} onChange={e => update({ competing: e.target.checked })} />Model competing assets drawing from the same patient pool (e.g. Brand A 1L vs Brand B 1L)</label>
+            <label className="flex items-start gap-2.5 text-sm"><input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-brand" checked={c.competing} onChange={e => update({ competing: e.target.checked })} /><span>Model competing assets drawing from the same patient pool (e.g. Brand A 1L vs Brand B 1L) <InfoTip text="Adds a separate revenue stream for each product, so the assets can be compared on the same patient pool." /></span></label>
             <label className="flex items-start gap-2.5 text-sm"><input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-brand" checked={c.subnational} onChange={e => update({ subnational: e.target.checked })} />Enable subnational breakout (provinces, regions, channels)</label>
           </div>
         </fieldset>
       </Card></AgentSection>
 
-      <AgentSection id="streams"><Card title="Revenue streams" info="Split by indication, line of therapy, segment or other dimension." sub={c.aiFields.includes('inds') ? `Streams were filled by ${ASSISTANT} — review the names below.` : undefined} right={<Btn variant="secondary" size="sm" icon={<Plus size={14} />} onClick={addInd}>Add stream</Btn>}>
+      <AgentSection id="streams"><Card title="Revenue streams" info="Start from the model, add a revenue stream, then add more beside it or split one into sub-streams below it." sub={c.aiFields.includes('inds') ? `Streams were filled by ${ASSISTANT} — review the names below.` : undefined}>
         {err('inds') && <p className="mb-3 flex items-center gap-1 text-xs text-err"><AlertCircle size={12} />{err('inds')}</p>}
-        <ul className="space-y-4">
-          {c.inds.map((i, k) => <StreamCard key={i.id} i={i} k={k} c={c} error={err(`ind-${i.id}`)} update={update} onRemove={() => i.arch ? setPending(i.id) : rmInd(i.id)} />)}
-        </ul>
-        <StreamTree c={c} />
+        {sugg && (
+          <div className="mb-3 rounded-md border border-brand/30 bg-brand-soft/50 px-3 py-3 text-[13px]">
+            <p className="flex items-center gap-1.5 font-semibold"><Sparkles size={15} className="text-brand" />Suggested setup for {sugg.brand}, from institutional knowledge</p>
+            <p className="mt-1 text-text-2">{sugg.why}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px]">
+              <span className="rounded-md border border-brand/40 bg-surface px-2 py-0.5 font-semibold text-brand">Archetype: {archName(sugg.arch)}</span>
+              {modesFor(sugg.arch).filter(m => sugg.modes[m.id] && !m.id.startsWith('time') && m.id !== 'units').map(m => <span key={m.id} className="rounded-md border border-border bg-surface px-2 py-0.5 text-text-2">{m.label}: <b className="text-text">{sugg.modes[m.id]}</b></span>)}
+            </div>
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              <p className="min-w-[240px] flex-1 text-[12px] text-text-3">Every stream you add starts with this. The next steps show it pre-selected and marked Suggested; change anything that differs for a stream.</p>
+              {c.inds.some(i => i.sugg?.arch !== sugg.arch) && <Btn size="sm" onClick={() => update({ inds: c.inds.map(i => withSugg(i, sugg)) })}>Apply to all streams</Btn>}
+            </div>
+          </div>
+        )}
+        <StreamBuilder c={c} update={update} onAdd={addInd} onRemove={id => c.inds.find(i => i.id === id)?.arch ? setPending(id) : rmInd(id)} errOf={id => err(`ind-${id}`)} />
         {pending && (() => {
           const i = c.inds.find(x => x.id === pending)
           const nb = Object.keys(c.bindings).filter(k => k.startsWith(`${pending}:`)).length
           return (
             <div className="mt-4"><Banner tone="warn" title={`Remove ${i?.name || 'this stream'}?`}
               action={<div className="flex shrink-0 gap-2"><Btn size="sm" variant="secondary" onClick={() => setPending(null)}>Keep</Btn><Btn size="sm" variant="danger" onClick={() => { rmInd(pending); setPending(null) }}>Remove</Btn></div>}>
-              Clears {nb} data source setting{nb === 1 ? '' : 's'} and {i?.modules.length ?? 0} modules. Versions already available to Forecasters are untouched.
+              Clears {nb} data source setting{nb === 1 ? '' : 's'}, its {i?.modules.length ?? 0} modules and its patient flow. Versions already available to Forecasters are untouched.
             </Banner></div>
           )
         })()}
@@ -3624,206 +3630,48 @@ function StageBrand({ c, update, errs }: Ctx & { errs: Issue[] }) {
   )
 }
 
-const LEVEL_KINDS: Record<string, string[]> = {
-  'Indication': ['NSCLC', 'CRC', 'Melanoma', 'Ulcerative colitis', 'Crohn’s disease'],
-  'Line of therapy': ['1L', '2L', '3L+'],
-  'Patient segment (Biomarker)': ['Biomarker +', 'Biomarker −'],
-  'Geography': ['US', 'EU5', 'Japan', 'China'],
-  'Channel': ['Retail', 'Specialty', 'Hospital'],
-  'Age group': ['Adult', 'Pediatric'],
-  'Custom level': [],
-}
-const SEPARATORS: [string, string][] = [[' ', 'Space'], [' · ', 'Dot'], [' - ', 'Dash'], ['/', 'Slash']]
-const shortKind = (k: string) => k.replace(/ \(.*\)/, '')
-const comboList = (levels: Level[]): string[][] => levels.filter(l => l.items.length).reduce<string[][]>((acc, l) => acc.flatMap(a => l.items.map(it => [...a, it])), [[]]).filter(r => r.length)
-
-type TNode = { key: string; label: string; depth: number; kids: TNode[]; leaf?: boolean }
-function buildTree(levels: Level[], name: string, sep: string): TNode[] {
-  const act = levels.filter(l => l.items.length)
-  if (!act.length) return [{ key: 'solo', label: name || 'Stream', depth: 0, kids: [] }]
-  const rec = (d: number, path: string[]): TNode[] => act[d]!.items.map(it => {
-    const p = [...path, it]
-    return { key: p.join('|'), label: it, depth: d, kids: d + 1 === act.length ? [{ key: `${p.join('|')}#`, label: p.join(sep), depth: d + 1, kids: [], leaf: true }] : rec(d + 1, p) }
-  })
-  return rec(0, [])
-}
-const hasKids = (n: TNode) => n.kids.length > 0 && !n.leaf
-const allKeys = (ns: TNode[]): string[] => ns.flatMap(n => (hasKids(n) ? [n.key, ...allKeys(n.kids)] : []))
-
-function TreeBranch({ n, closed, toggle }: { n: TNode; closed: Set<string>; toggle: (k: string) => void }) {
-  const shut = closed.has(n.key)
-  const tone = n.leaf ? 'border-brand/40 bg-surface text-text' : n.depth === 0 ? 'border-ok/30 bg-ok-soft text-ok' : 'border-brand/20 bg-brand-soft text-brand'
-  const Icon = n.leaf ? BarChart3 : n.depth === 0 ? GitBranch : Users
-  const box = <><Icon size={13} className="shrink-0" /><span className="whitespace-nowrap">{n.label}</span>{hasKids(n) && <ChevronRight size={12} className={cx('shrink-0 transition-transform', !shut && 'rotate-90')} />}</>
-  return (
-    <div className="flex items-center">
-      {hasKids(n)
-        ? <button type="button" aria-expanded={!shut} onClick={() => toggle(n.key)} className={cx('flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12px] font-medium', tone)}>{box}</button>
-        : <span className={cx('flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[12px] font-medium', tone)}>{box}</span>}
-      {n.kids.length > 0 && !shut && (
-        <div className="flex items-center"><span className="h-px w-4 shrink-0 bg-border-strong" />
-          <ul>{n.kids.map(ch => (
-            <li key={ch.key} className="relative py-1 pl-4 before:absolute before:bottom-0 before:left-0 before:top-0 before:w-px before:bg-border-strong first:before:top-1/2 last:before:bottom-1/2">
-              <span className="absolute left-0 top-1/2 h-px w-4 bg-border-strong" /><TreeBranch n={ch} closed={closed} toggle={toggle} /></li>))}</ul></div>
-      )}
-    </div>
-  )
-}
-
-function ItemsEditor({ level, onChange }: { level: Level; onChange: (items: string[]) => void }) {
-  const [v, setV] = useState('')
-  const add = (t: string) => { const s = t.trim(); if (s && !level.items.includes(s)) onChange([...level.items, s]); setV('') }
-  const sugg = (LEVEL_KINDS[level.kind] ?? []).filter(s => !level.items.includes(s))
-  return (
-    <div className="space-y-2.5 border-t border-border px-3 py-3">
-      <div className="flex flex-wrap gap-1.5">
-        {level.items.map(it => <span key={it} className="inline-flex items-center gap-1 rounded-md bg-brand-soft px-2 py-1 text-[12px] font-medium text-brand">{it}<button type="button" aria-label={`Remove ${it}`} onClick={() => onChange(level.items.filter(x => x !== it))} className="rounded hover:bg-brand/10"><X size={12} /></button></span>)}
-        {!level.items.length && <span className="text-[12px] text-text-3">No items yet. Add at least one to include this level.</span>}
-      </div>
-      <input aria-label={`Add ${level.kind} item`} className={inputCls()} value={v} placeholder="Type an item and press Enter" onChange={e => setV(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); add(v) } }} />
-      {sugg.length > 0 && <div className="flex flex-wrap items-center gap-1.5"><span className="text-[11px] text-text-3">Suggestions</span>{sugg.map(s => <button key={s} type="button" onClick={() => add(s)} className="rounded-md border border-border px-2 py-0.5 text-[12px] text-text-2 hover:border-brand hover:text-brand">+ {s}</button>)}</div>}
-    </div>
-  )
-}
-
-function StreamCard({ i, k, c, error, update, onRemove }: { i: Ind; k: number; c: Config; error?: string; update: (p: Partial<Config>) => void; onRemove: () => void }) {
-  const [open, setOpen] = useState(k === 0)
-  const [menu, setMenu] = useState(false)
-  const [lvlOpen, setLvlOpen] = useState<string | null>(null)
-  const [kindMenu, setKindMenu] = useState(false)
-  const [adv, setAdv] = useState(false)
-  const [drag, setDrag] = useState<string | null>(null)
-  const [closed, setClosed] = useState<Set<string>>(new Set())
-  const set = (p: Partial<Ind>) => update({ inds: c.inds.map(x => x.id === i.id ? { ...x, ...p } : x) })
-  const levels = i.levels ?? []
-  const auto = i.auto !== false, sep = i.sep ?? ' '
-  const combos = comboList(levels)
-  const rows = auto ? combos : (i.snap ?? combos)
-  const stale = !auto && JSON.stringify(i.snap ?? combos) !== JSON.stringify(combos)
-  const act = levels.filter(l => l.items.length)
-  const tree = buildTree(levels, i.name, sep)
-  const setLevels = (ls: Level[]) => set({ levels: ls })
-  const addLevel = (kind: string) => { const id = `l${Date.now()}`; setLevels([...levels, { id, kind, items: [] }]); setLvlOpen(id); setKindMenu(false) }
-  const nextKind = Object.keys(LEVEL_KINDS).find(kd => !levels.some(l => l.kind === kd)) ?? 'Custom level'
-  const move = (to: string) => { if (!drag || drag === to) return; const a = levels.findIndex(l => l.id === drag), b = levels.findIndex(l => l.id === to); const ls = [...levels]; const [m] = ls.splice(a, 1); ls.splice(b, 0, m!); setLevels(ls) }
-  const toggleNode = (key: string) => setClosed(s => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n })
-  const idx = c.inds.findIndex(x => x.id === i.id)
-  const swap = (d: number) => update({ inds: c.inds.map((x, j, a) => j === idx + d ? a[idx]! : j === idx ? a[idx + d]! : x) })
-  const menuItem = 'block w-full rounded px-2.5 py-1.5 text-left text-[13px] hover:bg-background disabled:opacity-40'
-  return (
-    <li className={cx('overflow-hidden rounded-md border', error ? 'border-err' : c.active === i.id ? 'border-brand/40' : 'border-border')}>
-      <div className={cx('flex items-center gap-3 px-4 py-3', c.active === i.id ? 'bg-brand-soft/50' : 'bg-background')}>
-        <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-brand text-[13px] font-semibold text-white">{k + 1}</span>
-        <button type="button" aria-expanded={open} onClick={() => setOpen(o => !o)} className="min-w-0 flex-1 text-left"><span className="block truncate text-sm font-semibold">{i.name || `Revenue Stream ${k + 1}`}</span>{!open && <span className="block text-xs text-text-3">{rows.length} generated stream{rows.length === 1 ? '' : 's'}{error ? ` · ${error}` : ''}</span>}</button>
-        <div className="relative">
-          <Btn variant="ghost" size="sm" onClick={() => setMenu(m => !m)} icon={<span aria-hidden className="text-base leading-none">⋮</span>}><span className="sr-only">Stream actions</span></Btn>
-          {menu && <><div className="fixed inset-0 z-10" onClick={() => setMenu(false)} />
-            <div role="menu" className="absolute right-0 top-9 z-20 w-40 rounded-md border border-border bg-surface p-1 shadow-xl">
-              <button role="menuitem" className={menuItem} onClick={() => { setMenu(false); const id = `i${Date.now()}`; update({ inds: [...c.inds.slice(0, idx + 1), { ...i, id, name: `${i.name || 'Stream'} (copy)` }, ...c.inds.slice(idx + 1)], active: id }) }}>Duplicate</button>
-              <button role="menuitem" className={menuItem} disabled={idx === 0} onClick={() => { setMenu(false); swap(-1) }}>Move up</button>
-              <button role="menuitem" className={menuItem} disabled={idx === c.inds.length - 1} onClick={() => { setMenu(false); swap(1) }}>Move down</button>
-              <button role="menuitem" className={cx(menuItem, 'text-err')} disabled={c.inds.length === 1 && !!(i.name || i.arch)} onClick={() => { setMenu(false); onRemove() }}>Remove</button>
-            </div></>}
-        </div>
-        <button type="button" aria-label={open ? 'Collapse stream' : 'Expand stream'} onClick={() => setOpen(o => !o)} className="grid h-8 w-8 place-items-center rounded-md text-text-2 hover:bg-surface"><ChevronUp size={16} className={cx('transition-transform', !open && 'rotate-180')} /></button>
-      </div>
-
-      {open && (
-        <div className="space-y-5 p-4">
-          <div className="grid gap-3 @2xl:grid-cols-2">
-            <Field label="Stream name" required error={error} agent={`stream-${k}`}><input className={inputCls(!!error)} value={i.name} onFocus={() => update({ active: i.id })} onChange={ev => set({ name: ev.target.value })} placeholder={`Revenue Stream ${k + 1}`} /></Field>
-            <Field label="How it adds up" hint="Whether this stream counts on its own or sits inside another stream"><select className={inputCls()} value={i.parent || ''} onChange={ev => set({ parent: ev.target.value || undefined })}>
-              <option value="">Adds to the model total</option>{c.inds.filter(x => x.id !== i.id && !x.parent).map(x => <option key={x.id} value={x.id}>Part of {x.name || 'untitled stream'}</option>)}
-            </select></Field>
+/** The model as a tree: streams sit under the model, more go beside a stream, and sub-streams split one below it. */
+function StreamBuilder({ c, update, onAdd, onRemove, errOf }: { c: Config; update: (p: Partial<Config>) => void; onAdd: (parent?: string) => void; onRemove: (id: string) => void; errOf: (id: string) => string | undefined }) {
+  const isRoot = (i: Ind) => !i.parent || !c.inds.some(x => x.id === i.parent)
+  const rename = (id: string, name: string) => update({ inds: c.inds.map(x => x.id === id ? { ...x, name } : x) })
+  const dup = (i: Ind) => { const id = `i${Date.now()}`, k = c.inds.indexOf(i); update({ inds: [...c.inds.slice(0, k + 1), { ...i, id, name: `${i.name || 'Stream'} (copy)` }, ...c.inds.slice(k + 1)], active: id }) }
+  const link = 'inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[11px] font-medium text-brand hover:bg-brand-soft'
+  const rail = 'before:absolute before:left-0 before:right-0 before:top-0 before:h-px before:bg-border-strong first:before:left-1/2 last:before:right-1/2 only:before:hidden after:absolute after:left-1/2 after:top-0 after:h-5 after:w-px after:bg-border-strong'
+  const node = (i: Ind): ReactNode => {
+    const kids = c.inds.filter(x => x.parent === i.id), e = errOf(i.id), n = c.inds.indexOf(i)
+    return (
+      <li key={i.id} className={cx('relative flex flex-col items-center px-2 pt-5', rail)}>
+        <div className={cx('rounded-lg border bg-surface px-2 py-1.5 text-center shadow-sm', e ? 'border-err' : c.active === i.id ? 'border-brand ring-1 ring-brand/30' : 'border-border', !isRoot(i) && 'border-dashed')}>
+          <div className="flex items-center gap-1">
+            <input aria-label={`Name of stream ${n + 1}`} value={i.name} placeholder="Name this stream" size={Math.max(14, i.name.length + 2)} onFocus={() => update({ active: i.id })} onChange={ev => rename(i.id, ev.target.value)}
+              className="bg-transparent px-1 text-center text-[12.5px] font-semibold outline-none placeholder:font-normal placeholder:text-text-3" />
+            <MoreMenu label={`Actions for ${i.name || 'this stream'}`} items={[
+              { label: 'Duplicate', icon: <Copy size={13} />, onClick: () => dup(i) },
+              { label: 'Remove', icon: <Trash2 size={13} />, danger: true, onClick: () => onRemove(i.id) },
+            ]} />
           </div>
-
-          <div className="grid gap-4 @3xl:grid-cols-[minmax(0,340px)_minmax(0,1fr)]">
-            <section className="rounded-md border border-border p-4">
-              <h4 className="text-sm font-semibold">Stream structure</h4>
-              <p className="mb-3 text-xs text-text-2">Add the levels this stream splits by.</p>
-              {!levels.length && <p className="mb-3 rounded-md border border-dashed border-border-strong p-3 text-xs text-text-3">No levels yet. Add the levels this stream splits by, or leave it as a single revenue line.</p>}
-              <ul className="space-y-2">
-                {levels.map(l => (
-                  <li key={l.id} draggable onDragStart={() => setDrag(l.id)} onDragOver={e => e.preventDefault()} onDrop={() => { move(l.id); setDrag(null) }} onDragEnd={() => setDrag(null)} className={cx('flex items-start gap-2', drag === l.id && 'opacity-50')}>
-                    <span aria-label="Drag to reorder" className="mt-3 cursor-grab text-text-3"><GripVertical size={16} /></span>
-                    <div className="min-w-0 flex-1 rounded-md border border-border bg-surface">
-                      <button type="button" aria-expanded={lvlOpen === l.id} onClick={() => setLvlOpen(lvlOpen === l.id ? null : l.id)} className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left">
-                        <span><span className="block text-[13px] font-semibold">{l.kind}</span><span className="block text-xs text-text-3">{l.items.length} item{l.items.length === 1 ? '' : 's'} selected</span></span>
-                        <ChevronDown size={15} className={cx('shrink-0 text-text-2 transition-transform', lvlOpen === l.id && 'rotate-180')} /></button>
-                      {lvlOpen === l.id && <ItemsEditor level={l} onChange={items => setLevels(levels.map(x => x.id === l.id ? { ...x, items } : x))} />}
-                    </div>
-                    <button type="button" aria-label={`Remove ${l.kind} level`} onClick={() => setLevels(levels.filter(x => x.id !== l.id))} className="mt-2 grid h-8 w-8 shrink-0 place-items-center rounded-md text-err hover:bg-err-soft"><X size={15} /></button>
-                  </li>))}
-              </ul>
-              <div className="relative mt-3 inline-flex rounded-md border border-border-strong bg-surface">
-                <button type="button" onClick={() => addLevel(nextKind)} className="inline-flex items-center gap-1.5 px-3 py-2 text-[13px] font-medium hover:bg-background"><Plus size={14} />Add level</button>
-                <button type="button" aria-label="Choose level type" onClick={() => setKindMenu(m => !m)} className="border-l border-border px-2 hover:bg-background"><ChevronDown size={14} /></button>
-                {kindMenu && <><div className="fixed inset-0 z-10" onClick={() => setKindMenu(false)} />
-                  <div role="menu" className="absolute left-0 top-10 z-20 w-56 rounded-md border border-border bg-surface p-1 shadow-xl">{Object.keys(LEVEL_KINDS).map(kd => <button key={kd} role="menuitem" className="block w-full rounded px-2.5 py-1.5 text-left text-[13px] hover:bg-background" onClick={() => addLevel(kd)}>{kd}</button>)}</div></>}
-              </div>
-
-              <div className="mt-4 rounded-md border border-border">
-                <button type="button" aria-expanded={adv} onClick={() => setAdv(a => !a)} className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm font-semibold">Advanced options<ChevronDown size={15} className={cx('transition-transform', adv && 'rotate-180')} /></button>
-                {adv && <div className="border-t border-border p-3"><Field label="Name separator" hint="Joins the levels in generated stream names"><select className={inputCls()} value={sep} onChange={ev => set({ sep: ev.target.value })}>{SEPARATORS.map(([v, n]) => <option key={n} value={v}>{n}</option>)}</select></Field></div>}
-              </div>
-              <label className="mt-4 flex items-start gap-2.5 text-sm">
-                <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-brand" checked={auto} onChange={e => set(e.target.checked ? { auto: true, snap: undefined } : { auto: false, snap: combos })} />
-                <span><span className="inline-flex items-center gap-1 font-semibold">Auto-generate revenue streams from structure<span title="When off, the table below keeps its current rows until you press Regenerate."><Info size={13} className="text-text-3" /></span></span>
-                  <span className="block text-xs text-text-3">Streams will be generated for all unique combinations of the selected levels.</span></span>
-              </label>
-            </section>
-
-            <div className="min-w-0 space-y-4">
-              <section className="rounded-md border border-border p-4">
-                <div className="mb-3 flex flex-wrap items-center justify-between gap-2"><h4 className="text-sm font-semibold">Structure preview</h4>
-                  <div className="flex gap-2"><Btn variant="secondary" size="sm" onClick={() => setClosed(new Set())}>Expand all</Btn><Btn variant="secondary" size="sm" onClick={() => setClosed(new Set(allKeys(tree)))}>Collapse all</Btn></div></div>
-                <div className="overflow-x-auto pb-1">
-                  <div className="flex items-center">
-                    <span className="flex shrink-0 items-center gap-1.5 rounded-md bg-brand-dark px-3 py-2 text-[12px] font-semibold text-white"><Workflow size={13} />{c.brand || 'Model'} total</span>
-                    <span className="h-px w-4 shrink-0 bg-border-strong" />
-                    <ul>{tree.map(n => (
-                      <li key={n.key} className="relative py-1 pl-4 before:absolute before:bottom-0 before:left-0 before:top-0 before:w-px before:bg-border-strong first:before:top-1/2 last:before:bottom-1/2">
-                        <span className="absolute left-0 top-1/2 h-px w-4 bg-border-strong" /><TreeBranch n={n} closed={closed} toggle={toggleNode} /></li>))}</ul>
-                  </div>
-                </div>
-              </section>
-              <section>
-                <div className="mb-2 flex items-center justify-between"><h4 className="text-sm font-semibold">Generated revenue streams ({rows.length || 1})</h4>
-                  <button type="button" onClick={() => set({ snap: combos })} className="inline-flex items-center gap-1 text-xs font-medium text-brand hover:underline"><RefreshCw size={12} />Regenerate</button></div>
-                {stale && <p className="mb-2 rounded-md bg-warn-soft px-3 py-2 text-xs text-warn">The structure changed since these rows were generated. Press Regenerate to update them.</p>}
-                <div className="overflow-x-auto rounded-md border border-border">
-                  <table className="w-full min-w-[420px] text-left text-[13px]">
-                    <thead className="bg-background text-xs text-text-2"><tr><th className="px-3 py-2 font-semibold">#</th><th className="px-3 py-2 font-semibold">Revenue stream name</th>{act.map(l => <th key={l.id} className="px-3 py-2 font-semibold">{shortKind(l.kind)}</th>)}</tr></thead>
-                    <tbody className="divide-y divide-border">
-                      {(rows.length ? rows : [[]]).map((r, n) => <tr key={n}><td className="px-3 py-2 text-text-3">{n + 1}</td><td className="px-3 py-2 font-medium">{r.length ? r.join(sep) : (i.name || `Revenue Stream ${k + 1}`)}</td>{act.map((l, j) => <td key={l.id} className="px-3 py-2 text-text-2">{r[j] ?? '—'}</td>)}</tr>)}
-                    </tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
+          <div className="mt-0.5 flex items-center justify-center gap-1 border-t border-border pt-0.5">
+            <button type="button" onClick={() => onAdd(isRoot(i) ? undefined : i.parent)} className={link} title="Add a stream beside this one"><Plus size={11} />Stream</button>
+            <button type="button" onClick={() => onAdd(i.id)} className={link} title="Split this stream into sub-streams below it"><Plus size={11} />Sub-stream</button>
           </div>
+          {e && <p className="mt-1 max-w-[190px] text-[11px] text-err">{e}</p>}
         </div>
-      )}
-    </li>
-  )
-}
-
-function StreamTree({ c }: { c: Config }) {
-  const roots = c.inds.filter(i => !i.parent || !c.inds.some(x => x.id === i.parent))
+        {kids.length > 0 && <ul className="flex items-start justify-center">{kids.map(node)}</ul>}
+      </li>
+    )
+  }
+  const roots = c.inds.filter(isRoot)
   return (
-    <div className="mt-4 rounded-md border border-border bg-background p-4">
-      <div className="flex flex-wrap items-center justify-between gap-2"><p className="text-[11px] font-bold uppercase tracking-wider text-text-2">How the streams add up</p><span className="text-[11px] text-text-3">Dependency rules pending the agreed taxonomy and data model</span></div>
-      <div className="mt-3 flex items-start gap-3 overflow-x-auto">
-        <div className="shrink-0 rounded-md bg-brand-dark px-3 py-2 text-[12px] font-semibold text-white">{c.brand || 'Model'} total</div>
-        <div className="mt-4 h-px w-4 shrink-0 bg-border-strong" />
-        <ul className="min-w-0 space-y-1.5 border-l border-border-strong pl-3">
-          {roots.map(r => (
-            <li key={r.id}>
-              <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-surface px-2.5 py-1 text-[12px] font-medium">{r.name || 'Untitled stream'}{r.dim && <span className="text-text-3">· {r.dim}</span>}</span>
-              {c.inds.some(x => x.parent === r.id) && <ul className="ml-4 mt-1.5 space-y-1.5 border-l border-dashed border-border-strong pl-3">{c.inds.filter(x => x.parent === r.id).map(x => <li key={x.id}><span className="inline-flex items-center gap-1.5 rounded-md border border-dashed border-border-strong bg-surface px-2.5 py-1 text-[12px]">{x.name || 'Untitled stream'}{x.dim && <span className="text-text-3">· {x.dim}</span>}</span></li>)}</ul>}
-            </li>
-          ))}
-        </ul>
+    <div className="rounded-md border border-border bg-background p-4">
+      <div className="overflow-x-auto pb-1">
+        <div className="mx-auto flex w-max min-w-full flex-col items-center">
+          <span className="inline-flex items-center gap-1.5 rounded-md bg-brand-dark px-4 py-2 text-[13px] font-semibold text-white"><Workflow size={14} />{c.brand || 'Model name'}</span>
+          <span className="h-5 w-px bg-border-strong" />
+          {roots.length === 0 ? <>
+            <button type="button" onClick={() => onAdd()} className="inline-flex items-center gap-1.5 rounded-lg border border-dashed border-brand/50 bg-surface px-4 py-2 text-[13px] font-semibold text-brand hover:bg-brand-soft"><Plus size={14} />Add a revenue stream</button>
+            <p className="mt-2 max-w-sm text-center text-[12px] text-text-3">No revenue streams yet. Add one under the model, then add more beside it or split it into sub-streams below it.</p>
+          </> : <ul className="flex items-start justify-center">{roots.map(node)}</ul>}
+        </div>
       </div>
     </div>
   )
@@ -3840,10 +3688,33 @@ const ARCH_GRID: { id: ArchId; name: string; blurb: string}[] = [
 ]
 const archName = (id: ArchId | null) => ARCH_GRID.find(a => a.id === id)?.name ?? (id === 'D-06' ? 'Trend / Extrapolation' : ARCHETYPES.find(a => a.id === id)?.name ?? '')
 
+/** Institutional knowledge: the archetype and modes each known brand already runs on. Matched on the brand or asset name. */
+const KNOWN_SETUPS: { key: string; sugg: Sugg }[] = [
+  { key: 'cibinqo', sugg: { brand: 'Cibinqo', arch: 'D-01', modes: { units: 'Patients', time: 'Monthly', share: 'Curve-generated', cascade: 'Class to brand' }, why: 'A standing pool of treated atopic dermatitis patients is re-stated each month, and the brand takes a share inside its JAK class.' } },
+  { key: 'nurtec', sugg: { brand: 'Nurtec', arch: 'D-02', modes: { units: 'Scripts (TRx)', time: 'Monthly', path: 'Curve-family menu', unit: 'TRx', trend: 'Method-driven' }, why: 'The migraine prescription basket defines the market. Volume is trended forward and the brand takes a share of it.' } },
+  { key: 'elrexfio', sugg: { brand: 'Elrexfio', arch: 'D-03', modes: { units: 'Patients', time: 'Monthly', actuals: 'Aggregate actuals ingestion', retreat: 'Excluded', lot: 'Progression-Derived', persist: 'Forward DoT' }, why: 'Myeloma patients start therapy, stay on it for a time, and move from one line of therapy to the next.' } },
+  { key: 'lorbrena', sugg: { brand: 'Lorbrena', arch: 'D-03', modes: { units: 'Patients', time: 'Monthly', actuals: 'Aggregate actuals ingestion', retreat: 'Excluded', lot: 'Independent', persist: 'Aggregate Churn' }, why: 'New ALK+ lung cancer patients start and persist on therapy; each line is sized on its own.' } },
+  { key: 'vyndamax', sugg: { brand: 'Vyndamax', arch: 'D-03', modes: { units: 'Patients', time: 'Monthly', actuals: 'Aggregate actuals ingestion', retreat: 'Excluded', lot: 'Independent', persist: 'Forward DoT' }, why: 'New patients start and persist; the book is the sum of what is left from each start cohort.' } },
+  { key: 'adcetris', sugg: { brand: 'Adcetris', arch: 'D-03', modes: { units: 'Patients', time: 'Monthly', actuals: 'Aggregate actuals ingestion', retreat: 'Excluded', lot: 'Independent', persist: 'Aggregate Churn' }, why: 'Lymphoma patients start and persist on therapy, indication by indication.' } },
+  { key: 'abrysvo', sugg: { brand: 'Abrysvo', arch: 'D-05', modes: { units: 'Doses', time: 'Monthly', convention: 'Depletion (US backlog)', inflow: 'Target-seeking', reentry: 'None', catchup: 'Off' }, why: 'An eligible stock of people is drawn down by vaccination and refilled as people age in.' } },
+]
+const suggestionFor = (c: Config): Sugg | null => { const t = `${c.brand} ${c.asset}`.toLowerCase(); return KNOWN_SETUPS.find(k => t.includes(k.key))?.sugg ?? null }
+/** Starts a stream on the suggested archetype, with only the suggested modes that are valid options for it. */
+function withSugg(i: Ind, s: Sugg): Ind {
+  const base = initInd(i, s.arch)
+  const modes = Object.fromEntries(Object.entries(s.modes).filter(([k, v]) => modesFor(s.arch).some(m => m.id === k && m.options.includes(v))))
+  return { ...base, modes: { ...base.modes, ...modes }, sugg: { ...s, modes } }
+}
+// Self-check: a suggestion only keeps modes that exist for its archetype, and starting from it lands on that archetype.
+if (import.meta.env.DEV) {
+  const s = withSugg(emptyInd('t', 'Test'), { brand: 'T', arch: 'D-03', modes: { persist: 'Forward DoT', bogus: 'x', lot: 'Not an option' }, why: '' })
+  console.assert(s.arch === 'D-03' && s.modes.persist === 'Forward DoT' && !('bogus' in s.sugg!.modes) && !('lot' in s.sugg!.modes), 'withSugg: keeps only valid suggested modes')
+}
+
 function StageArchetype({ c, ind, update, updInd, setArch, notify, fix }: Ctx) {
   const [pending, setPending] = useState<ArchId | null>(null)
-  const [detail, setDetail] = useState<ArchId | null>(null)
   const sel = ind.arch
+  const known = suggestionFor(c)
   const advance = () => { const nxt = c.inds.find(i => i.id !== ind.id && !i.arch); if (nxt) update({ active: nxt.id }) }
   const pick = (id: ArchId) => { if (ind.arch === id) return; if (ind.arch) setPending(id); else { setArch(ind.id, id); advance() } }
   const others = c.inds.filter(i => i.id !== ind.id)
@@ -3882,6 +3753,22 @@ function StageArchetype({ c, ind, update, updInd, setArch, notify, fix }: Ctx) {
               {impact}
             </Banner>
           </div>}
+          {known && !pending && (ind.sugg && sel === ind.sugg.arch ? (
+            <div className="mb-3 flex items-start gap-2 rounded-md border border-brand/30 bg-brand-soft/50 px-3 py-2.5 text-[13px]">
+              <Sparkles size={15} className="mt-0.5 shrink-0 text-brand" />
+              <div className="min-w-0">
+                <p><b>Pre-selected from institutional knowledge.</b> {known.brand} runs on <b>{archName(known.arch)}</b>. {known.why}</p>
+                <p className="mt-0.5 text-text-2">Keep it, or pick another below if this stream differs. The modes in the next step start from the same source.</p>
+              </div>
+            </div>
+          ) : sel !== known.arch && (
+            <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-brand/30 bg-brand-soft/50 px-3 py-2.5 text-[13px]">
+              <Sparkles size={15} className="shrink-0 text-brand" />
+              <span className="min-w-[200px] flex-1"><b>{known.brand}</b> already runs on <b>{archName(known.arch)}</b>. {known.why}</span>
+              <Btn size="sm" variant="secondary" onClick={() => { updInd(ind.id, withSugg(ind, known)); notify({ tone: 'ok', text: `${archName(known.arch)} and its modes chosen for ${ind.name || 'this stream'}.` }) }}>Use for this stream</Btn>
+              {c.inds.length > 1 && <Btn size="sm" onClick={() => { update({ inds: c.inds.map(i => withSugg(i, known)) }); notify({ tone: 'ok', text: `${archName(known.arch)} and its modes applied to all ${c.inds.length} streams.` }) }}>Use for all streams</Btn>}
+            </div>
+          ))}
           {sel && !pending && (
             <div className="mb-3 flex items-start gap-2 rounded-md border border-ok/25 bg-ok-soft px-3 py-2.5 text-[13px]">
               <CheckCircle2 size={15} className="mt-0.5 shrink-0 text-ok" />
@@ -3903,7 +3790,6 @@ function StageArchetype({ c, ind, update, updInd, setArch, notify, fix }: Ctx) {
             {ARCH_GRID.map(a => {
               const on = sel === a.id
               const d = ARCH_DETAIL[a.id]
-              const open = detail === a.id
               return (
                 <div key={a.id} className={cx('rounded-md border transition-all', on ? 'border-brand bg-brand-soft/30 ring-1 ring-brand' : 'border-border hover:border-text-2')}>
                   <button type="button" role="radio" aria-checked={on} onClick={() => pick(a.id)}
@@ -3913,6 +3799,7 @@ function StageArchetype({ c, ind, update, updInd, setArch, notify, fix }: Ctx) {
                         <span className="text-sm font-semibold">{a.name}</span>
                         <span className="font-mono text-[10px] text-text-3">{a.id}</span>
                         <span className="sr-only">{d.status}</span>{d.status !== 'Certified' && <Badge tone="warn">{d.status}</Badge>}
+                        {known?.arch === a.id && <Badge tone="brand"><Sparkles size={10} />Suggested</Badge>}
                       </span>
                       <span className="mt-1 text-xs leading-snug text-text-2">{a.blurb}</span>
                       <span className="mt-2 flex flex-wrap items-center gap-2">
@@ -3921,19 +3808,6 @@ function StageArchetype({ c, ind, update, updInd, setArch, notify, fix }: Ctx) {
                     </span>
                     <span aria-hidden className={cx('mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 transition-colors', on ? 'border-brand' : 'border-border-strong')}>{on && <span className="h-2.5 w-2.5 rounded-full bg-brand" />}</span>
                   </button>
-                  <div className="px-3 pb-2.5">
-                    <button type="button" aria-expanded={open} onClick={() => setDetail(open ? null : a.id)} className="inline-flex items-center gap-1 text-xs font-semibold text-brand hover:underline">
-                      {open ? 'Hide details' : 'View details'}<ChevronDown size={13} className={cx('transition-transform', open && 'rotate-180')} />
-                    </button>
-                    {open && (
-                      <dl className="mt-2 grid gap-3 rounded-md bg-background p-3 text-xs @xl:grid-cols-2">
-                        <div><dt className="font-semibold text-text">Question it answers</dt><dd className="mt-0.5 text-text-2">{d.question}</dd></div>
-                        <div><dt className="font-semibold text-text">What it controls</dt><dd className="mt-0.5 text-text-2">The core volume engine, the modes available, and which modules can attach.</dd></div>
-                        <div><dt className="font-semibold text-text">Modes it loads</dt><dd className="mt-0.5 text-text-2">{modesFor(a.id).map(m => m.label).join(' · ')}</dd></div>
-                        <div><dt className="font-semibold text-text">Limits</dt><dd className="mt-0.5 text-text-2">{d.limit}</dd></div>
-                      </dl>
-                    )}
-                  </div>
                 </div>
               )
             })}
@@ -4059,6 +3933,8 @@ function StageModes({ c, ind, update, updInd, go, notify }: Ctx) {
   const modes = arch ? { ...Object.fromEntries(modesFor(arch).map(x => [x.id, modeDefault(arch, x)])), ...ind.modes } : {}
   const groups = arch ? modesFor(arch).filter(m => !m.showIf || m.showIf(modes)) : []
   const reqN = groups.filter(m => !m.optional).length
+  // Suggested modes only apply while the stream keeps the archetype they were suggested for.
+  const sugg = ind.sugg && ind.sugg.arch === arch ? ind.sugg : null
   const set = (m: Pick<ModeDef, 'id' | 'label'>, v: string) => {
     if (modes[m.id] === v) return
     const currentVal = modes[m.id]
@@ -4118,7 +3994,14 @@ function StageModes({ c, ind, update, updInd, go, notify }: Ctx) {
               </div>
               <span className="text-xs text-text-3">{reqN} required · {groups.length - reqN} optional{pending ? ` · ${pending} bridge${pending > 1 ? 's' : ''} to review` : ''}</span>
             </div>
-            
+            {sugg && (
+              <div className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-md border border-brand/30 bg-brand-soft/50 px-3 py-2.5 text-[13px]">
+                <Sparkles size={15} className="shrink-0 text-brand" />
+                <span className="min-w-[220px] flex-1"><b>Defaults from institutional knowledge for {sugg.brand}.</b> Modes tagged Suggested keep the recommended value; where you changed one, the suggestion is shown beside it.</span>
+                <Btn size="sm" variant="secondary" onClick={() => updInd(ind.id, { modes: { ...ind.modes, ...sugg.modes } })}>Reset to suggested</Btn>
+              </div>
+            )}
+
             <div className="divide-y divide-border">
               {groups.map(m => {
                 return (
@@ -4128,6 +4011,9 @@ function StageModes({ c, ind, update, updInd, go, notify }: Ctx) {
                         <span className="text-sm font-semibold text-text">{m.label}</span>
                         {m.help && <InfoTip text={m.help} />}
                         {m.optional ? <Badge>Optional</Badge> : <Badge tone="brand">Required</Badge>}
+                        {sugg?.modes[m.id] !== undefined && (modes[m.id] === sugg.modes[m.id]
+                          ? <Badge tone="ok"><Sparkles size={10} />Suggested</Badge>
+                          : <button type="button" onClick={() => set(m, sugg.modes[m.id]!)} className="text-[11.5px] font-medium text-brand hover:underline">Use suggested: {sugg.modes[m.id]}</button>)}
                       </div>
                     </div>
                     <div className="min-w-0">
@@ -4179,10 +4065,6 @@ function StageModes({ c, ind, update, updInd, go, notify }: Ctx) {
 }
 
 
-const needArch = (go: (n: number) => void, name: string) => (
-  <EmptyState icon={<Layers size={18} />} title={`No archetype for ${name || 'this indication'}`} action={<Btn size="sm" onClick={() => go(2)}>Choose an archetype</Btn>}>Buckets, modules and assumptions all come from the archetype.</EmptyState>
-)
-
 /* ───────────────────────── Step 4 · Module Map ───────────────────────── */
 
 const attachedIds = (ind: Ind) => [...ind.modules, ...requiredFor(ind.arch).filter(id => !ind.modules.includes(id))]
@@ -4192,212 +4074,6 @@ const orderedModules = (ind: Ind): Mod[] => {
   return BUCKETS.flatMap(b => mods.filter(m => m.cat === b))
 }
 
-
-/* ───────────────────────── Module map (lanes) ───────────────────────── */
-
-type ModState = 'ok' | 'missing' | 'conflict' | 'order'
-/** Validation states only where a rule exists in the taxonomy metadata: archetype compatibility and declared predecessors. */
-function modState(m: Mod, ind: Ind, seq: string[]): ModState {
-  if (!ind.arch || !validFor(m, ind.arch)) return 'conflict'
-  if (m.needs) {
-    const dep = byName(m.needs).id
-    if (!seq.includes(dep)) return 'missing'
-    if (seq.indexOf(dep) > seq.indexOf(m.id)) return 'order'
-  }
-  return 'ok'
-}
-const STATE_UI: Record<ModState, { label: string; tone: 'ok' | 'warn' | 'err'; dot: string }> = {
-  ok: { label: 'Compatible', tone: 'ok', dot: 'bg-ok' },
-  missing: { label: 'Missing predecessor', tone: 'err', dot: 'bg-err' },
-  order: { label: 'Runs before its input', tone: 'warn', dot: 'bg-warn' },
-  conflict: { label: 'Not compatible', tone: 'err', dot: 'bg-err' },
-}
-/** Lane order = calculation order. The archetype engine sits between structure and adjustments. */
-const LANE_ORDER = ['Population & top-of-funnel', 'Segmentation & structure', 'Lines of therapy & disease states', '__engine', 'Share machinery', 'Persistence, dosing & regimen', 'Cross-product & franchise', 'Events, LOE & scenarios', 'Actuals, calibration & reconciliation', 'Conversion, financial & integration']
-
-const LINE = 'bg-border-strong'
-const VLine = () => <span aria-hidden className={cx('block h-5 w-px shrink-0', LINE)} />
-type NodeTone = 'trunk' | 'seg' | 'leaf'
-const NODE_CLS: Record<NodeTone, string> = {
-  trunk: 'border-border bg-surface',
-  seg: 'border-brand/40 bg-brand-soft',
-  leaf: 'border-[#9fd3d3] bg-[#eef8f8]',
-}
-function FlowNode({ title, sub, tone, m, st, on, onPick, wide, drag }: { title: string; sub?: string; tone: NodeTone; m?: Mod; st?: ModState; on?: boolean; onPick?: () => void; wide?: boolean; drag?: boolean }) {
-  const body = <>
-    <span className="flex items-center justify-center gap-1.5 text-[13px] font-semibold leading-tight text-text">{st && st !== 'ok' && <i className={cx('h-1.5 w-1.5 shrink-0 rounded-full', STATE_UI[st].dot)} />}<span className="truncate">{title}</span></span>
-    {sub && <span className="mt-0.5 block truncate text-[11px] leading-snug text-text-2">{sub}</span>}
-  </>
-  const cls = cx('block w-full rounded-md border px-3 py-2 text-center transition-colors', NODE_CLS[tone], wide ? 'max-w-md' : '', on && 'ring-2 ring-brand', st === 'missing' || st === 'conflict' ? 'border-err/60' : st === 'order' ? 'border-warn/60' : '')
-  return m && onPick ? <button type="button" onClick={onPick} title={m.desc} draggable={drag} onDragStart={drag ? e => { e.dataTransfer.setData(DRAG_ON, m.id); e.dataTransfer.effectAllowed = 'move' } : undefined} className={cx(cls, 'hover:border-brand', drag && 'cursor-grab active:cursor-grabbing')}>{body}</button> : <div className={cls}>{body}</div>
-}
-/** Children hang off a horizontal rail; `up` draws the rail above (split), `down` below (merge). */
-function Rail({ items, up, down }: { items: ReactNode[]; up?: boolean; down?: boolean }) {
-  const n = items.length
-  return (
-    <div className="flex w-full gap-3">
-      {items.map((it, i) => (
-        <div key={i} className={cx('relative flex min-w-0 flex-1 flex-col items-center', up && 'pt-5', down && 'pb-5')}>
-          {up && <><span aria-hidden className={cx('absolute left-1/2 top-0 h-5 w-px', LINE)} />{i > 0 && <span aria-hidden className={cx('absolute -left-1.5 right-1/2 top-0 h-px', LINE)} />}{i < n - 1 && <span aria-hidden className={cx('absolute -right-1.5 left-1/2 top-0 h-px', LINE)} />}</>}
-          {it}
-          {down && <><span aria-hidden className={cx('absolute bottom-0 left-1/2 h-5 w-px', LINE)} />{i > 0 && <span aria-hidden className={cx('absolute -left-1.5 right-1/2 bottom-0 h-px', LINE)} />}{i < n - 1 && <span aria-hidden className={cx('absolute -right-1.5 left-1/2 bottom-0 h-px', LINE)} />}</>}
-        </div>
-      ))}
-    </div>
-  )
-}
-const DRAG_NEW = 'application/x-module-new'
-const DRAG_ON = 'application/x-module-on'
-const TRUNK_LANES = ['Population & top-of-funnel', 'Segmentation & structure']
-const LOT_LANE = 'Lines of therapy & disease states'
-const LEAF_LANES = ['Share machinery', 'Persistence, dosing & regimen', 'Cross-product & franchise', 'Events, LOE & scenarios']
-const MERGE_LANE = 'Conversion, financial & integration'
-const TAIL_LANE = 'Actuals, calibration & reconciliation'
-
-function ModuleLanes({ c, ind, updInd, readOnly, go, dragging, inspect: inspectProp, onInspect }: { c: Config; ind: Ind; updInd?: (id: string, p: Partial<Ind>) => void; readOnly?: boolean; go?: (n: number) => void; dragging?: Mod | null; inspect?: string | null; onInspect?: (id: string | null) => void }) {
-  const [own, setOwn] = useState<string | null>(null)
-  const inspect = onInspect ? inspectProp ?? null : own
-  const setInspect = onInspect ?? setOwn
-  const [over, setOver] = useState(false)
-  const arch = ind.arch
-  if (!arch) return null
-  const req = c.realData ? [] : requiredFor(arch) // demo: the canvas starts empty and only shows what is dragged in
-  const seq = Array.from(new Set([...ind.modules, ...req]))
-  const insp = MODULES.find(m => m.id === inspect)
-  const set = (modules: string[]) => updInd?.(ind.id, { modules })
-  const moveIn = (cat: string, id: string, d: number) => {
-    const inLane = seq.filter(x => MODULES.find(m => m.id === x)?.cat === cat)
-    const k = inLane.indexOf(id), j = k + d
-    if (j < 0 || j >= inLane.length) return
-    const a = [...seq], ia = a.indexOf(inLane[k]!), ib = a.indexOf(inLane[j]!)
-    ;[a[ia], a[ib]] = [a[ib]!, a[ia]!]
-    set(a)
-  }
-  const counts = seq.reduce((n, id) => { const st = modState(MODULES.find(m => m.id === id)!, ind, seq); n[st]++; return n }, { ok: 0, missing: 0, order: 0, conflict: 0 } as Record<ModState, number>)
-  const lane = (cat: string) => seq.map(id => MODULES.find(m => m.id === id)!).filter(m => m.cat === cat)
-  const node = (m: Mod, tone: NodeTone, sub?: string, wide?: boolean) => <FlowNode key={m.id + (sub ?? '')} title={m.name} sub={sub ?? m.desc} tone={tone} m={m} st={modState(m, ind, seq)} on={inspect === m.id} onPick={() => setInspect(inspect === m.id ? null : m.id)} wide={wide} drag={!readOnly && !req.includes(m.id)} />
-  const stack = (nodes: ReactNode[]) => nodes.flatMap((n, k) => k ? [<VLine key={`l${k}`} />, n] : [n])
-
-  // Branching comes from the model setup: first slice = segment split; LoT split only when LoT modules are attached.
-  const segSlice = c.slices.find(x => x.values.length > 1 && !/line of therapy/i.test(x.name))
-  const segs = segSlice ? segSlice.values.slice(0, 3) : []
-  const lotMods = lane(LOT_LANE)
-  const lotSlice = c.slices.find(x => /line of therapy/i.test(x.name))
-  const lots = lotMods.length ? (lotSlice?.values.slice(0, 3) ?? ['1L', '2L+']) : []
-  const leafChain = (label: string) => stack([
-    <FlowNode key="eng" title={archName(arch)} sub={`${ind.engine} · ${label}`} tone="leaf" />,
-    ...LEAF_LANES.flatMap(l => lane(l)).map(m => node(m, 'leaf', label)),
-  ])
-  const branch = (seg: string | null) => {
-    const pre = seg ?? ''
-    const body = lots.length
-      ? <Rail up down={!!lane(MERGE_LANE).length || !!seg} items={lots.map(l => <div key={l} className="flex w-full flex-col items-center">{stack([<FlowNode key="lot" title={`${pre ? pre + ' · ' : ''}${l}`} sub={lotMods.map(m => m.name).join(' · ')} tone="leaf" m={lotMods[0]} on={inspect === lotMods[0]!.id} onPick={() => setInspect(lotMods[0]!.id)} />, ...leafChain(l).map((n, k) => <Fragment key={`c${k}`}>{k === 0 && <VLine />}{n}</Fragment>)])}</div>)} />
-      : <div className="flex w-full flex-col items-center">{leafChain(seg ?? 'all patients')}</div>
-    const merge = lane(MERGE_LANE)
-    return (
-      <div className="flex w-full flex-col items-center">
-        {seg && <><FlowNode title={seg} sub={segSlice!.name} tone="seg" />{lots.length ? null : <VLine />}</>}
-        {body}
-        {!lots.length && (merge.length || seg) ? <VLine /> : null}
-        {seg
-          ? <FlowNode title={`Net sales · ${seg}`} sub={merge.map(m => m.name).join(' · ') || 'Segment total'} tone="seg" m={merge[0]} on={!!merge[0] && inspect === merge[0].id} onPick={merge[0] ? () => setInspect(merge[0]!.id) : undefined} />
-          : merge.length ? stack(merge.map(m => node(m, 'trunk', undefined, true))) : null}
-      </div>
-    )
-  }
-  const trunk = TRUNK_LANES.flatMap(l => lane(l))
-  const tail = lane(TAIL_LANE)
-  const ok = dragging ? validFor(dragging, arch) && !seq.includes(dragging.id) : false
-  const drop = (e: React.DragEvent) => {
-    e.preventDefault(); setOver(false)
-    const id = e.dataTransfer.getData(DRAG_NEW), m = MODULES.find(x => x.id === id)
-    if (m && validFor(m, arch) && !seq.includes(id)) { set([...seq, id]); setInspect(id) }
-  }
-
-  return (
-    <div className={cx('grid gap-4', readOnly && '@3xl:grid-cols-[minmax(0,1fr)_280px]')}>
-      <div className="relative min-w-0">
-        <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[11px] text-text-2">
-          {(Object.keys(STATE_UI) as ModState[]).map(k => <span key={k} className="flex items-center gap-1.5"><i className={cx('h-2 w-2 rounded-full', STATE_UI[k].dot)} />{STATE_UI[k].label} <b className="font-mono">{counts[k]}</b></span>)}
-        </div>
-        <div onDragOver={readOnly ? undefined : e => { if (e.dataTransfer.types.includes(DRAG_NEW)) { e.preventDefault(); setOver(true) } }} onDragLeave={() => setOver(false)} onDrop={readOnly ? undefined : drop}
-          className={cx('relative overflow-x-auto rounded-lg border p-5 transition-colors', readOnly ? 'border-border bg-background/60' : 'min-h-[420px] border-border bg-[radial-gradient(circle,var(--color-border-strong)_1px,transparent_1px)] bg-[length:18px_18px]', dragging && (ok ? 'border-2 border-dashed border-brand' : 'border-2 border-dashed border-err/60'), over && ok && 'bg-brand-soft/40')}>
-          {dragging && <div className="pointer-events-none sticky left-0 top-0 z-10 mb-3 flex justify-center"><span className={cx('rounded-full px-3 py-1 text-[12px] font-semibold shadow-sm', ok ? 'bg-brand text-white' : 'bg-err text-white')}>{ok ? `Drop to add ${dragging.name} · lands in ${dragging.cat}` : seq.includes(dragging.id) ? 'Already on the canvas' : `Not compatible with ${archName(arch)}`}</span></div>}
-          {!seq.length && <p className="grid min-h-[360px] place-items-center text-center text-[13px] text-text-3">Drag cards from the Module library onto this canvas to build the flow.</p>}
-          <div className={cx('mx-auto flex flex-col items-center', !seq.length && 'hidden')} style={{ minWidth: Math.max(1, segs.length || 1) * Math.max(1, lots.length || 1) * 150 }}>
-            {stack(trunk.map(m => node(m, 'trunk', undefined, true)))}
-            {trunk.length > 0 && <VLine />}
-            {segs.length
-              ? <><Rail up down items={segs.map(sg => branch(sg))} /><FlowNode title="Total net sales" sub={`Sum of ${segSlice!.name.toLowerCase()} segments`} tone="trunk" wide /></>
-              : branch(null)}
-            {tail.length > 0 && <><VLine />{stack(tail.map(m => node(m, 'trunk', undefined, true)))}</>}
-            <VLine />
-            <span className="grid h-8 w-8 place-items-center rounded-full bg-brand-dark text-white" title="Handed to the Forecaster after finalisation"><ArrowDown size={14} /></span>
-          </div>
-        </div>
-        <p className="mt-2 text-[11px] text-text-3">{readOnly ? 'Branches follow the segments and lines of therapy set up for this model.' : 'Drag cards from the library onto the canvas — each module snaps into its stage. Drag a card back to the library to remove it.'}</p>
-      </div>
-      <aside className={readOnly ? 'min-w-0 @3xl:sticky @3xl:top-4 @3xl:self-start' : cx('absolute right-3 top-10 z-20 w-72 shadow-xl', !insp && 'hidden')}>
-        {insp ? (() => {
-          const st = modState(insp, ind, seq), isReq = req.includes(insp.id)
-          const usedBy = MODULES.filter(m => m.needs === insp.name && seq.includes(m.id))
-          return (
-            <div className="rounded-lg border border-border bg-surface p-4">
-              <div className="flex items-start justify-between gap-2"><div><p className="text-[11px] text-text-3">{insp.cat}</p><p className="font-semibold">{insp.name}</p></div><button type="button" onClick={() => setInspect(null)} aria-label="Close details" className="text-text-3 hover:text-text"><X size={15} /></button></div>
-              <div className="mt-2 flex flex-wrap gap-1"><Badge tone={STATE_UI[st].tone}>{STATE_UI[st].label}</Badge>{isReq ? <Badge>Core · required</Badge> : <Badge>Optional</Badge>}</div>
-              <p className="mt-3 text-[12.5px] text-text-2">{insp.desc}</p>
-              <dl className="mt-3 space-y-1.5 text-[12px]">
-                <div className="flex justify-between gap-2"><dt className="text-text-3">Runs at position</dt><dd className="font-mono">{seq.indexOf(insp.id) + 1} of {seq.length}</dd></div>
-                <div className="flex justify-between gap-2"><dt className="text-text-3">Depends on</dt><dd className="text-right">{insp.needs ?? '—'}</dd></div>
-                <div className="flex justify-between gap-2"><dt className="text-text-3">Feeds</dt><dd className="text-right">{usedBy.map(m => m.name).join(', ') || 'Next stage'}</dd></div>
-                <div className="flex justify-between gap-2"><dt className="text-text-3">Data input</dt><dd className="text-right">{insp.data ? MODULE_INPUTS[insp.data]?.name : 'None'}</dd></div>
-                {insp.val && <div className="flex justify-between gap-2"><dt className="text-text-3">Oct 2026 value</dt><dd className="text-right font-mono">{insp.val}</dd></div>}
-                <div className="flex justify-between gap-2"><dt className="text-text-3">Taxonomy evidence</dt><dd className="font-mono">{insp.ev.join(', ')}</dd></div>
-              </dl>
-              {st === 'missing' && insp.needs && !readOnly && <Btn size="sm" className="mt-3 w-full" icon={<Plus size={13} />} onClick={() => { const d = byName(insp.needs!).id; const a = seq.filter(x => x !== d); a.splice(a.indexOf(insp.id), 0, d); set(a) }}>Attach {insp.needs} before it</Btn>}
-              {st === 'order' && !readOnly && <Btn size="sm" className="mt-3 w-full" variant="secondary" onClick={() => { const d = byName(insp.needs!).id; const a = seq.filter(x => x !== d); a.splice(a.indexOf(insp.id), 0, d); set(a) }}>Run {insp.needs} first</Btn>}
-              {!readOnly && !isReq && <Btn size="sm" variant="ghost" className="mt-2 w-full" icon={<X size={13} />} onClick={() => { set(seq.filter(x => x !== insp.id)); setInspect(null) }}>Remove from map</Btn>}
-              {!readOnly && (() => { const inLane = seq.filter(x => MODULES.find(m => m.id === x)?.cat === insp.cat); const k = inLane.indexOf(insp.id); return inLane.length > 1 && <div className="mt-2 flex gap-2"><Btn size="sm" variant="secondary" className="flex-1" disabled={k === 0} icon={<ChevronUp size={13} />} onClick={() => moveIn(insp.cat, insp.id, -1)}>Earlier</Btn><Btn size="sm" variant="secondary" className="flex-1" disabled={k === inLane.length - 1} icon={<ChevronDown size={13} />} onClick={() => moveIn(insp.cat, insp.id, 1)}>Later</Btn></div> })()}
-              {readOnly && go && <Btn size="sm" variant="secondary" className="mt-3 w-full" onClick={() => go(4)}>Edit in Module map</Btn>}
-            </div>
-          )
-        })() : (
-          <div className="rounded-lg border border-dashed border-border-strong p-4 text-[12.5px] text-text-2">
-            <p className="font-semibold text-text">Select a module to inspect it</p>
-            <p className="mt-1">See its dependencies, what it feeds, the data it needs and its run position — without leaving the map.</p>
-            <p className="mt-3 text-[11px] text-text-3">Compatibility uses the archetype rules and declared predecessors in the taxonomy. “Configuration incomplete” will appear once module-level rules are available.</p>
-          </div>
-        )}
-      </aside>
-    </div>
-  )
-}
-
-type ModFilter = 'All' | 'Available' | 'On canvas'
-
-function LibraryCard({ m, on, core, govd, shared, missing, onAdd, onDrag, onLock, onPick }: { m: Mod; on: boolean; core: boolean; govd: boolean; shared: boolean; missing: boolean; onAdd: () => void; onDrag: (m: Mod | null) => void; onLock: () => void; onPick: () => void }) {
-  return (
-    <li draggable={!on} onDragStart={e => { e.dataTransfer.setData(DRAG_NEW, m.id); e.dataTransfer.effectAllowed = 'copy'; onDrag(m) }} onDragEnd={() => onDrag(null)}
-      className={cx('group flex items-start gap-2 rounded-md border bg-surface p-2.5 transition-all', on ? 'border-brand/40 bg-brand-soft/30' : 'cursor-grab border-border shadow-sm hover:-translate-y-px hover:border-brand hover:shadow active:cursor-grabbing')}>
-      <GripVertical size={14} className={cx('mt-0.5 shrink-0', on ? 'text-transparent' : 'text-text-3 group-hover:text-brand')} aria-hidden />
-      <button type="button" onClick={onPick} className="min-w-0 flex-1 text-left" disabled={!on}>
-        <span className="block text-[13px] font-semibold leading-tight text-text">{m.name}</span>
-        <span className="mt-0.5 line-clamp-2 block text-[11px] leading-snug text-text-2">{m.desc}</span>
-        {(core || govd || shared || m.needs) && <span className="mt-1.5 flex flex-wrap gap-1">
-          {core && <Badge>Core</Badge>}
-          {govd && <Badge tone="warn"><ShieldAlert size={10} />Governed</Badge>}
-          {shared && <Badge tone="neutral">Brand-level</Badge>}
-          {m.needs && <Badge tone={missing ? 'err' : 'neutral'}>Needs {m.needs}</Badge>}
-        </span>}
-      </button>
-      {core
-        ? <button type="button" onClick={onLock} aria-label={`Why is ${m.name} required?`} className="grid h-7 w-7 shrink-0 place-items-center rounded text-text-3 hover:bg-surface-2 hover:text-brand"><Lock size={13} /></button>
-        : on
-        ? <span className="grid h-7 w-7 shrink-0 place-items-center text-brand" title="On the canvas"><Check size={15} /></span>
-        : <button type="button" onClick={onAdd} aria-label={`Add ${m.name} to the canvas`} className="grid h-7 w-7 shrink-0 place-items-center rounded border border-border text-text-2 hover:border-brand hover:bg-brand hover:text-white"><Plus size={14} /></button>}
-    </li>
-  )
-}
 
 /** Streams and their archetypes at a glance before building the module map. Selecting an archetype jumps back to Step 2 to change it. */
 function StreamArchSummary({ c, ind, update, go }: Pick<Ctx, 'c' | 'ind' | 'update' | 'go'>) {
@@ -4426,229 +4102,62 @@ function StreamArchSummary({ c, ind, update, go }: Pick<Ctx, 'c' | 'ind' | 'upda
         <span className="shrink-0 rounded-md bg-brand-dark px-3 py-1.5 text-[12px] font-semibold text-white">{c.brand || 'Model'} total</span>
         <span aria-hidden className="mt-3.5 h-px w-3 shrink-0 bg-border-strong" />
         <ul className="min-w-0 space-y-2 border-l border-border-strong pl-3">
-          {roots.map(r => (
-            <li key={r.id}>
-              {row(r, false)}
-              {c.inds.some(x => x.parent === r.id) && <ul className="ml-4 mt-2 space-y-2 border-l border-dashed border-border-strong pl-3">{c.inds.filter(x => x.parent === r.id).map(x => <li key={x.id}>{row(x, true)}</li>)}</ul>}
-            </li>
-          ))}
+          {roots.map(function branch(r: Ind): ReactNode {
+            const kids = c.inds.filter(x => x.parent === r.id)
+            return (
+              <li key={r.id}>
+                {row(r, r.parent !== undefined && !roots.includes(r))}
+                {kids.length > 0 && <ul className="ml-4 mt-2 space-y-2 border-l border-dashed border-border-strong pl-3">{kids.map(branch)}</ul>}
+              </li>
+            )
+          })}
         </ul>
       </div>
     </section>
   )
 }
 
-function StageModules({ c, ind, update, updInd, go, errs, fix }: Ctx & { errs?: Issue[] }) {
-  const [openB, setOpenB] = useState<Set<string>>(() => new Set(BUCKETS))
-  const [lockInfo, setLockInfo] = useState<Mod | null>(null)
-  const [q, setQ] = useState('')
-  const [filter, setFilter] = useState<ModFilter>('All')
-  const [dragging, setDragging] = useState<Mod | null>(null)
-  const [binOver, setBinOver] = useState(false)
-  const [inspect, setInspect] = useState<string | null>(null)
-  useEffect(() => { setInspect(null) }, [ind.id])
-  const arch = ind.arch
-  const conflicts = (errs || []).filter(e => e.ind === ind.id && e.field === 'needs')
-  const req = requiredFor(arch)
-  const valid = arch ? MODULES.filter(m => !!m.demo === !!c.realData && validFor(m, arch)) : []
-  const hidden = c.realData ? 0 : RAW.length - valid.length
-  const term = q.trim().toLowerCase()
-  const isOn = (m: Mod) => ind.modules.includes(m.id) || req.includes(m.id)
-  const shown = (m: Mod) => (!term || `${m.name} ${m.desc} ${m.cat}`.toLowerCase().includes(term)) && (filter === 'All' || (filter === 'On canvas') === isOn(m))
-  const add = (m: Mod) => { if (!isOn(m)) { updInd(ind.id, { modules: [...ind.modules, m.id] }); setInspect(m.id) } }
-  const remove = (id: string) => { if (!req.includes(id)) { updInd(ind.id, { modules: ind.modules.filter(x => x !== id) }); if (inspect === id) setInspect(null) } }
-  const shared = (m: Mod) => !!((m.data === 'price' && c.shared.price) || (m.data === 'g2n' && c.shared.g2n))
-  const invalidOn = arch ? ind.modules.map(id => MODULES.find(m => m.id === id)!).filter(m => m && !validFor(m, arch)) : []
-  const onCount = valid.filter(isOn).length
+/** Every stream as the whole-model views draw it. */
+const streamRefs = (c: Config): StreamRef[] => c.inds.map(i => ({ id: i.id, name: i.name.trim() || 'Untitled stream', partOf: c.inds.find(x => x.id === i.parent)?.name.trim() || undefined, arch: archName(i.arch), map: i.inputMap }))
+/** Cibinqo demo: the October 2026 workbook value behind each input, shown on its canvas card. */
+const CIBINQO_VALUES: Record<string, string> = Object.fromEntries(([
+  ['prev', 'Addressable patients'], ['classshare', 'Class share'], ['classpts', 'Class patients'], ['share', 'Share within class'], ['brandpts', 'Brand patients'], ['rx', 'Prescriptions per patient'],
+  ['trxpre', 'Prescriptions before compliance'], ['compliance', 'Compliance rate'], ['trxtotal', 'Total prescriptions'], ['packshare', 'Pack share, {sku}'], ['trxsku', 'Prescriptions, {sku}'],
+  ['unitsperrx', 'Units per prescription'], ['unitssku', 'Units, {sku}'], ['priceunit', 'Price per unit, {sku}'], ['audsku', 'Audited demand, {sku}'], ['audtotal', 'Total audited demand'],
+  ['unaudrate', 'Unaudited demand rate'], ['unaud', 'Unaudited demand'], ['tud', 'Underlying demand'], ['caldays', 'Calendar days'], ['dayskept', 'Days kept (4-4-5)'], ['carry', 'Prior-month carry'],
+  ['caladj', 'Calendar-adjusted demand'], ['inv', 'Inventory change'], ['grosspre', 'Gross revenue before unexplained difference'], ['ue', 'Unexplained difference rate'], ['sales', 'Gross revenue'], ['pricekept', 'Price kept after gross-to-net'],
+] as const).map(([id, card]) => [id, `Oct 2026: ${CIBINQO_CARDS.find(r => r[1] === card)![3]}`]))
 
-  if (!arch) return <div className="space-y-4"><StreamArchSummary c={c} ind={ind} update={update} go={go} /><EmptyState icon={<Layers size={18} />} title={`No archetype for ${ind.name || 'this stream'}`} action={<Btn size="sm" onClick={() => go(2)}>Choose an archetype</Btn>}>Stages and modules come from the archetype.</EmptyState></div>
+function StageModules({ c, ind, update, updInd, go, notify }: Ctx & { errs?: Issue[] }) {
+  const arch = ind.arch
   return (
     <div className="@container space-y-4">
       <StreamArchSummary c={c} ind={ind} update={update} go={go} />
-      {conflicts.map(e => <Banner key={e.msg} tone="err" title="Module conflict" action={<FixForMe onClick={() => fix([4])} />}>{e.msg}</Banner>)}
-      {invalidOn.length > 0 && (
-        <Banner tone="err" title={`${invalidOn.length} module${invalidOn.length > 1 ? 's aren’t' : ' isn’t'} compatible with ${archName(arch)}`}
-          action={<div className="flex shrink-0 gap-2"><FixForMe onClick={() => fix([4])} /><Btn size="sm" variant="secondary" onClick={() => updInd(ind.id, { modules: ind.modules.filter(id => !invalidOn.some(m => m.id === id)) })}>Remove</Btn></div>}>
-          {invalidOn.map(m => m.name).join(', ')}
-        </Banner>
-      )}
-
-      <div className="grid items-start gap-4 @3xl:grid-cols-[minmax(0,1fr)_330px]">
-        <section className="min-w-0 rounded-lg border border-border bg-surface p-4" aria-label="Model canvas">
-          <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <div><h3 className="flex items-center gap-2 text-sm font-semibold"><Workflow size={15} className="text-brand" />Canvas · {ind.name || 'Stream'}<InfoTip text="Click a card to inspect · drag to the library to remove" /></h3><p className="text-xs text-text-2">{archName(arch)} <span className="text-text-3">({ind.engine})</span> · {onCount} modules</p></div>
-          </div>
-          <ModuleLanes c={c} ind={ind} updInd={updInd} dragging={dragging} inspect={inspect} onInspect={setInspect} />
-        </section>
-
-        <aside aria-label="Module library"
-          onDragOver={e => { if (e.dataTransfer.types.includes(DRAG_ON)) { e.preventDefault(); setBinOver(true) } }} onDragLeave={() => setBinOver(false)}
-          onDrop={e => { e.preventDefault(); setBinOver(false); const id = e.dataTransfer.getData(DRAG_ON); if (id) remove(id) }}
-          className={cx('relative flex max-h-[calc(100dvh-140px)] min-w-0 flex-col overflow-hidden rounded-lg border bg-surface @3xl:sticky @3xl:top-4', binOver ? 'border-2 border-dashed border-err' : 'border-border', c.realData && 'border-l-4 border-l-brand')}>
-          {binOver && <div className="pointer-events-none absolute inset-0 z-10 grid place-items-center bg-err-soft/85 text-sm font-semibold text-err"><span className="flex items-center gap-2"><X size={16} />Drop to remove from canvas</span></div>}
-          <div className="border-b border-border p-3">
-            <div className="flex items-center justify-between"><h3 className="text-sm font-semibold">Module library</h3><span className="font-mono text-[11px] text-text-3">{valid.length} compatible</span></div>
-            <div className="relative mt-2">
-              <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-3" />
-              <input value={q} onChange={e => setQ(e.target.value)} placeholder="Search modules" aria-label="Search modules" className={cx(inputCls(), 'h-8! pl-8 text-[13px]')} />
-            </div>
-            <div className="mt-2 flex gap-1" role="radiogroup" aria-label="Show">
-              {(['All', 'Available', 'On canvas'] as ModFilter[]).map(f => <button key={f} type="button" role="radio" aria-checked={filter === f} onClick={() => setFilter(f)} className={cx('flex-1 rounded px-2 py-1 text-[12px] font-medium', filter === f ? 'bg-text text-white' : 'bg-surface-2 text-text-2 hover:text-text')}>{f}</button>)}
-            </div>
-          </div>
-          <div className="min-h-0 flex-1 space-y-1 overflow-y-auto p-2">
-            {LANE_ORDER.filter(l => l !== '__engine').map(fam => {
-              const list = valid.filter(m => m.cat === fam && shown(m))
-              if (!list.length) return null
-              const open = !!term || openB.has(fam)
-              return (
-                <section key={fam}>
-                  <button type="button" aria-expanded={open} onClick={() => setOpenB(p => { const n = new Set(p); n.has(fam) ? n.delete(fam) : n.add(fam); return n })}
-                    className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-[11px] font-bold uppercase tracking-wider text-text-2 hover:bg-surface-2">
-                    <ChevronDown size={13} className={cx('shrink-0 transition-transform', !open && '-rotate-90')} /><span className="min-w-0 flex-1 truncate">{fam}</span><span className="font-mono font-normal">{list.filter(isOn).length}/{list.length}</span>
-                  </button>
-                  {open && <ul className="space-y-1.5 px-1 pb-2 pt-1">
-                    {list.map(m => <LibraryCard key={m.id} m={m} on={isOn(m)} core={req.includes(m.id)} govd={GOVERNED.has(m.name)} shared={shared(m)}
-                      missing={!!m.needs && isOn(m) && !isOn(byName(m.needs))} onAdd={() => add(m)} onDrag={setDragging} onLock={() => setLockInfo(m)} onPick={() => setInspect(m.id)} />)}
-                  </ul>}
-                </section>
-              )
-            })}
-            {!valid.some(shown) && <p className="p-4 text-center text-[13px] text-text-3">No modules match. <button type="button" className="font-semibold text-brand hover:underline" onClick={() => { setQ(''); setFilter('All') }}>Clear</button></p>}
-          </div>
-          <p className="border-t border-border px-3 py-2 text-[11px] text-text-3">{hidden} modules not compatible with {archName(arch)} are hidden. New modules are version requests to the platform team.</p>
-        </aside>
-      </div>
-
-      {lockInfo && (
-        <div className="fixed inset-0 z-50 grid place-items-center bg-brand-dark/50 p-4" role="dialog" aria-modal="true" aria-labelledby="lock-title" onClick={() => setLockInfo(null)}>
-          <div className="rise w-full max-w-md rounded-lg bg-surface p-6 shadow-xl" onClick={e => e.stopPropagation()}>
-            <h2 id="lock-title" className="text-lg font-semibold">{lockInfo.name} is required</h2>
-            <p className="mt-2 text-sm text-text-2">The {archName(arch)} engine needs this module, so it is always on the canvas. To change it, pick a different archetype or raise a version request with the platform team.</p>
-            <div className="mt-6 flex justify-end gap-2">
-              <Btn variant="secondary" onClick={() => { setLockInfo(null); go(2) }}>Change archetype</Btn>
-              <Btn onClick={() => setLockInfo(null)}>Got it</Btn>
-            </div>
-          </div>
-        </div>
-      )}
+      {!arch ? <EmptyState icon={<Layers size={18} />} title={`No archetype for ${ind.name || 'this stream'}`} action={<Btn size="sm" onClick={() => go(2)}>Choose an archetype</Btn>}>The patient flow runs on the stream’s archetype, so pick one first.</EmptyState>
+        : <InputCanvas map={ind.inputMap} setMap={m => updInd(ind.id, { inputMap: m })} streamName={ind.name} engine={`${archName(arch)} (${ind.engine})`}
+            onApplyAll={c.inds.length > 1 ? m => { update({ inds: c.inds.map(i => ({ ...i, inputMap: { ...m } })) }); notify({ tone: 'ok', text: `This patient flow is now on all ${c.inds.length} streams.` }) } : undefined}
+            preview={{ model: c.brand, streams: streamRefs(c) }} values={c.realData ? CIBINQO_VALUES : undefined} />}
     </div>
   )
 }
 
-/* ───────────────────────── Step 5 · Data configuration ───────────────────────── */
+/* ───────────────────────── Step 5 · Data sources ───────────────────────── */
 
-const SOURCE_OPTIONS = ['IQVIA NPA weekly', 'IQVIA LAAD claims', 'Symphony PatientSource', 'Komodo Health', 'Internal Epi Library', 'UN population (WPP)', 'Internal Pricing (Model N)', 'SAP actuals (net sales)', 'CDC NIS-Teen / Adult']
-const PATHWAYS: { id: Pathway; label: string; hint: string; icon: typeof Link2 }[] = [
-  { id: 'Connected', label: 'Connected source', hint: 'Available to the platform already', icon: Link2 },
-  { id: 'File', label: 'File-based', hint: 'Uploaded each cycle, fields mapped once', icon: FileUp },
-  { id: 'Manual', label: 'Manual input', hint: 'Entered by the forecaster', icon: Keyboard },
-]
-const EXPOSURE: { id: Exposure; label: string }[] = [{ id: 'Editable', label: 'Forecaster can edit' }, { id: 'Visible', label: 'Visible, read-only' }, { id: 'Hidden', label: 'Not shown' }]
 const pathOf = (b?: Binding): Pathway => b?.path ?? 'Connected'
-const exposeOf = (b?: Binding): Exposure => b?.expose ?? (pathOf(b) === 'Manual' ? 'Editable' : 'Visible')
 
-function StageData({ c, ind, update, updInd, go }: Ctx) {
-  const live = useContext(AgentCtx).field
-  if (c.realData) {
-    // View-only: the sources of the inputs behind the modules chosen in the Module map.
-    const only = new Set(MODULES.filter(m => m.inp && c.inds.some(i => i.modules.includes(m.id))).map(m => m.inp!))
-    return only.size ? <SnowflakeSources map={undefined} only={only} /> : <EmptyState icon={<Database size={18} />} title="No inputs to show yet" action={<Btn size="sm" onClick={() => go(4)}>Go to Module map</Btn>}>Data sources appear for the modules you add in the Module map.</EmptyState>
-  }
-  const ins = inputsFor(c)
-  if (!ins.length) return <EmptyState icon={<Database size={18} />} title="No inputs to configure yet" action={<Btn size="sm" onClick={() => go(2)}>Choose archetypes</Btn>}>Inputs appear once each revenue stream has an archetype and modules.</EmptyState>
-  const groups = Array.from(new Set(ins.map(b => b.scope))).map(scope => ({
-    scope, label: scope === 'brand' ? 'Shared across all streams' : c.inds.find(i => i.id === scope)?.name || 'Untitled stream',
-    rows: ins.filter(b => b.scope === scope),
-  }))
-  const setB = (key: string, p: Partial<Binding>) => update({ bindings: { ...c.bindings, [key]: { ...c.bindings[key]!, ...p } } })
-  const n = (pw: Pathway) => ins.filter(b => pathOf(c.bindings[b.key]) === pw).length
-  const perms = ind.arch ? assumptionsFor(ind.arch).filter(a => ind.perms[a.id]) : []
-  const setP = (id: string, p: Partial<Perm>) => updInd(ind.id, { perms: { ...ind.perms, [id]: { ...ind.perms[id], ...p } } })
-  const exposed = perms.filter(a => ind.perms[a.id].open).length
+function StageData({ c, ind, update }: Ctx) {
   return (
-    <>
-      <div className="grid gap-3 @xl:grid-cols-3">
-        {PATHWAYS.map(pw => <div key={pw.id} className="flex items-start gap-3 rounded-lg border border-border bg-surface p-3.5"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-surface-2 text-text-2"><pw.icon size={15} /></span><span className="min-w-0"><span className="block text-[13px] font-semibold">{pw.label} <span className="font-mono text-text-3">{n(pw.id)}</span></span><span className="block text-[11px] text-text-3">{pw.hint}</span></span></div>)}
-      </div>
-      <div className="overflow-x-auto rounded-lg border border-border bg-surface">
-        <table className="w-full min-w-[820px] text-sm">
-          <thead>
-            <tr className="border-b border-border bg-background/60 text-left text-xs uppercase tracking-wide text-text-3">
-              <th scope="col" className="px-4 py-3 font-semibold">Input · feeds</th>
-              <th scope="col" className="px-3 py-3 font-semibold">Pathway</th>
-              <th scope="col" className="px-3 py-3 font-semibold">Source · mapping</th>
-              <th scope="col" className="px-3 py-3 font-semibold">In the Forecaster</th>
-            </tr>
-          </thead>
-          {groups.map(g => (
-            <tbody key={g.scope}>
-              {groups.length > 1 && (
-                <tr className="border-b border-border bg-surface-2/60">
-                  <th scope="rowgroup" colSpan={4} className="px-4 py-2 text-left text-xs font-semibold text-text">{g.label}<span className="ml-2 font-normal text-text-3">{g.scope === 'brand' ? 'Shared across every revenue stream' : `${g.rows.length} input${g.rows.length > 1 ? 's' : ''}`}</span></th>
-                </tr>
-              )}
-              {g.rows.map(b => {
-                const x = c.bindings[b.key], pw = pathOf(x)
-                return (
-                  <tr key={b.key} data-agent={`bind-${b.key}`} className={cx('border-b border-border align-top last:border-0', live === `bind-${b.key}` && 'agent-row')}>
-                    <td className="px-4 py-3"><p className="font-medium text-text">{b.input.name}</p><p className="text-xs text-text-3">Feeds {b.input.feeds}</p></td>
-                    <td className="px-3 py-3"><select aria-label={`Pathway for ${b.input.name}`} className={cx(inputCls(), 'h-8! text-[13px]')} value={pw} onChange={e => setB(b.key, { path: e.target.value as Pathway, expose: e.target.value === 'Manual' ? 'Editable' : x?.expose })}>{PATHWAYS.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></td>
-                    <td className="px-3 py-3 text-[13px]">
-                      {pw === 'Connected' && <><select aria-label={`Source for ${b.input.name}`} className={cx(inputCls(), 'h-8! text-[13px]')} value={x?.source || b.input.suggested} onChange={e => setB(b.key, { source: e.target.value })}>{Array.from(new Set([b.input.suggested, ...SOURCE_OPTIONS])).map(o => <option key={o} value={o}>{o}{o === b.input.suggested ? ' (suggested)' : ''}</option>)}</select><p className="mt-1 text-[11px] text-text-3">Already available to the platform</p></>}
-                      {pw === 'File' && <><input aria-label={`Mapped field for ${b.input.name}`} className={cx(inputCls(), 'h-8! text-[13px]')} value={x?.mapField ?? ''} onChange={e => setB(b.key, { mapField: e.target.value })} placeholder="Column in the file, e.g. Px_net" /><p className="mt-1 text-[11px] text-text-3">Maps to {b.input.name.toLowerCase()}</p></>}
-                      {pw === 'Manual' && <p className="text-text-2">Entered in the Forecaster workspace</p>}
-                    </td>
-                    <td className="px-3 py-3"><select aria-label={`Forecaster exposure for ${b.input.name}`} className={cx(inputCls(), 'h-8! text-[13px]')} value={exposeOf(x)} disabled={pw === 'Manual'} onChange={e => setB(b.key, { expose: e.target.value as Exposure })}>{EXPOSURE.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          ))}
-        </table>
-      </div>
-      <section className="min-w-0 overflow-hidden rounded-lg border border-border bg-surface">
-        <div className="border-b border-border px-5 pb-3 pt-4">
-          <h3 className="text-sm font-semibold">Inputs exposed to the Forecaster</h3>
-          <p className="mt-0.5 text-xs text-text-2">What forecasters can change, and within which bounds.</p>
-        </div>
-        <StreamList c={c} ind={ind} update={update} tabs sub={i => i.arch ? [`${Object.values(i.perms).filter(p => p.open).length} editable`, true] : ['No archetype', false]} />
-        <div className="p-5">
-          {!ind.arch ? <EmptyState icon={<Layers size={18} />} title="No archetype yet" action={<Btn size="sm" onClick={() => go(2)}>Choose an archetype</Btn>}>Inputs come from the archetype.</EmptyState> : (
-            <>
-              <p className="mb-3 text-xs text-text-3">{exposed} of {perms.length} editable by the Forecaster · {perms.length - exposed} locked</p>
-              <ul className="divide-y divide-border">
-                {perms.map(a => {
-                  const p = ind.perms[a.id]
-                  const bad = outOfBand(p)
-                  return (
-                    <li key={a.id} className="flex flex-wrap items-center gap-x-4 gap-y-2 py-3 first:pt-0 last:pb-0">
-                      <div className="min-w-[180px] flex-1"><p className="text-[13px] font-semibold">{a.name}</p><p className="text-xs text-text-3">Base {p.value} {a.unit}</p></div>
-                      {p.open ? (
-                        <div className="flex items-center gap-2 text-xs text-text-2">
-                          <label className="flex items-center gap-1.5">Min<input type="number" aria-label={`${a.name} minimum`} className={cx(inputCls(bad), 'h-8 w-20 px-2')} value={p.min} onChange={e => setP(a.id, { min: Number(e.target.value) })} /></label>
-                          <label className="flex items-center gap-1.5">Max<input type="number" aria-label={`${a.name} maximum`} className={cx(inputCls(bad), 'h-8 w-20 px-2')} value={p.max} onChange={e => setP(a.id, { max: Number(e.target.value) })} /></label>
-                          <span className="text-text-3">{a.unit}</span>
-                        </div>
-                      ) : <span className="flex items-center gap-1.5 text-xs text-text-3"><Lock size={12} />Locked</span>}
-                      <label className="flex items-center gap-2 text-xs text-text-2"><Switch on={p.open} onChange={v => setP(a.id, { open: v })} label={`Forecaster can edit ${a.name}`} />{p.open ? 'Editable' : 'Locked'}</label>
-                      {bad && <p className="w-full text-xs text-err">Bounds must be increasing and contain the base value ({p.value}).</p>}
-                    </li>
-                  )
-                })}
-              </ul>
-            </>
-          )}
-        </div>
-      </section>
-    </>
+    <section className="overflow-hidden rounded-lg border border-border bg-surface">
+      <StreamList c={c} ind={ind} update={update} tabs sub={i => i.arch ? [archName(i.arch), true] : ['No archetype', false]} />
+      <div className="p-4"><SnowflakeSources map={ind.inputMap} /></div>
+    </section>
   )
 }
 
 /* ───────────────────────── Step 6 · Review configuration ───────────────────────── */
 
 /** Visual model flow: setup → archetype → modes → modules → data, per stream, ending at what forecasters will see. */
-type FlowStream = { name: string; arch: string; modes: string[]; modules: string[]; data: string; dataSub?: string }
+type FlowStream = { name: string; arch: string; modes: string[]; modules: string[]; data: string; dataSub?: string; flow?: string[] }
 type FlowView = { title: string; meta: string; streams: FlowStream[]; output: string }
 function ModelFlow({ title, meta, streams, output, go }: FlowView & { go?: (n: number) => void }) {
   const node = (stage: number, label: string, value: string, sub?: string) => (
@@ -4672,6 +4181,12 @@ function ModelFlow({ title, meta, streams, output, go }: FlowView & { go?: (n: n
             {[node(1, 'Stream', s.name), node(2, 'Archetype', s.arch), node(3, 'Modes', s.modes.join(' · '), `${s.modes.length} set`),
               node(4, 'Modules', `${s.modules.length} attached`, s.modules.slice(0, 2).join(', ') + (s.modules.length > 2 ? ` +${s.modules.length - 2}` : '')), node(5, 'Data', s.data, s.dataSub)]
               .flatMap((n, k) => k ? [arrow(k), n] : [n])}
+            {!!s.flow?.length && (
+              <div className="mt-1.5 rounded-lg border border-border bg-surface px-2.5 py-2">
+                <p className="font-mono text-[10px] uppercase tracking-wide text-text-3">Patient flow · {s.flow.length} steps</p>
+                <ol className="mt-1 space-y-0.5 text-[12px]">{s.flow.map((n, k) => <li key={n} className="flex gap-1.5"><span className="w-4 shrink-0 text-right font-mono text-text-3">{k + 1}</span><span className="min-w-0 truncate" title={n}>{n}</span></li>)}</ol>
+              </div>
+            )}
           </li>
         ))}
       </ol>
@@ -4683,15 +4198,16 @@ function ModelFlow({ title, meta, streams, output, go }: FlowView & { go?: (n: n
   )
 }
 const cfgFlow = (c: Config): FlowView => {
-  const all = inputsFor(c)
+  const flows = c.inds.map(i => inputFlow(i.inputMap))
+  const total = flows.reduce((n, f) => n + f.length, 0)
   return {
     title: c.brand || 'Untitled model', meta: [c.asset, c.therapyArea, c.market].filter(Boolean).join(' · '),
-    streams: c.inds.map(i => {
-      const ins = inputsFor(c, i.id), n = (pw: Pathway) => ins.filter(x => pathOf(c.bindings[x.key]) === pw).length
+    streams: c.inds.map((i, k) => {
+      const sf = flows[k]!.filter(x => x.tables).length
       return { name: i.name || 'Untitled stream', arch: archName(i.arch) || 'No archetype', modes: i.arch ? modesFor(i.arch).map(m => i.modes[m.id]).filter(Boolean) : [], modules: orderedModules(i).map(m => m.name),
-        data: `${ins.length} input${ins.length === 1 ? '' : 's'}`, dataSub: `${n('Connected')} connected · ${n('File')} file · ${n('Manual')} manual` }
+        data: `${sf} input${sf === 1 ? '' : 's'} from Snowflake`, dataSub: 'read-only', flow: flows[k]!.map(x => x.name) }
     }),
-    output: `${all.filter(x => exposeOf(c.bindings[x.key]) === 'Editable').length} editable · ${all.filter(x => exposeOf(c.bindings[x.key]) === 'Visible').length} read-only inputs. Available only after you finalise.`,
+    output: `${total} patient-flow input${total === 1 ? '' : 's'} across ${c.inds.length} stream${c.inds.length === 1 ? '' : 's'}. Available only after you finalise.`,
   }
 }
 
@@ -4812,11 +4328,11 @@ const flowRows = (c: Config): FlowRow[] => c.inds.map((i, k) => {
   const net = vols[vols.length - 1]?.value ?? 0
   const gross = vols.find(n => n.label === 'Gross sales')?.value ?? net
   const modes = i.arch ? modesFor(i.arch).filter(m => !m.optional && (!m.showIf || m.showIf(i.modes))) : []
-  const ins = inputsFor(c, i.id)
+  const flow = inputFlow(i.inputMap), sf = flow.filter(x => x.tables).length
   return {
     id: i.id, name: i.name.trim() || `Stream ${k + 1}`, hue: FLOW_HUES[k % FLOW_HUES.length]!, arch: i.arch, gross, net,
-    modes: [modes.filter(m => i.modes[m.id]).length, modes.length], mods: i.arch ? orderedModules(i).length : 0, ins: [ins.filter(b => dataReady(c.bindings[b.key])).length, ins.length],
-    steps: [!!i.name.trim(), !!i.arch, !!i.arch && modes.every(m => i.modes[m.id]), !!i.arch && orderedModules(i).length > 0, ins.length > 0 && ins.every(b => dataReady(c.bindings[b.key]))],
+    modes: [modes.filter(m => i.modes[m.id]).length, modes.length], mods: i.arch ? orderedModules(i).length : 0, ins: [sf, flow.length],
+    steps: [!!i.name.trim(), !!i.arch, !!i.arch && modes.every(m => i.modes[m.id]), !!i.arch && flow.length > 0, !!i.arch && sf > 0],
   }
 })
 
@@ -5017,87 +4533,20 @@ function ForecastFlowPanel({ c, stage, go, onPick, open, aiOpen, onOpen, onClose
   )
 }
 
-function ForecasterFlow({ ind, go }: { ind: Ind; go: (n: number) => void }) {
-  const { nodes, checks } = forecasterFunnel(ind)
-  if (!ind.arch) return <EmptyState icon={<Workflow size={18} />} title="No archetype yet" action={<Btn size="sm" onClick={() => go(2)}>Choose an archetype</Btn>}>The forecaster funnel comes from the archetype.</EmptyState>
-  // Bars share one log scale per unit so a drop from millions to thousands stays readable.
-  const vols = nodes.filter((n): n is Extract<FunnelNode, { kind: 'vol' }> => n.kind === 'vol' && !n.masked)
-  const span = (u: string) => { const xs = vols.filter(n => (n.unit === '$') === (u === '$')).map(n => Math.max(1, n.value)); return [Math.min(...xs), Math.max(...xs)] as const }
-  const width = (n: Extract<FunnelNode, { kind: 'vol' }>) => { const [lo, hi] = span(n.unit); return hi <= lo ? 100 : 18 + 82 * Math.log(Math.max(1, n.value) / lo) / Math.log(hi / lo) }
-  return (
-    <div className="@container">
-      <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[11.5px] text-text-2">
-        <span className="inline-flex items-center gap-1.5"><Database size={12} className="text-text-3" />Data feed</span>
-        <span className="inline-flex items-center gap-1.5"><Pencil size={12} className="text-brand" />Forecaster can edit</span>
-        <span className="inline-flex items-center gap-1.5"><Lock size={12} className="text-text-3" />Set by CoE</span>
-        <span className="inline-flex items-center gap-1.5"><Sigma size={12} className="text-text-3" />Calculated</span>
-      </div>
-      <div className="grid gap-5 @3xl:grid-cols-[minmax(0,1fr)_260px]">
-        <ol className="space-y-0" aria-label={`Forecaster funnel for ${ind.name || 'this stream'}`}>
-          {nodes.map((n, k) => n.kind === 'vol' ? (
-            <li key={k}>
-              <button type="button" onClick={() => go(n.stage)} title={`Edit ${STAGES[n.stage - 1].title}`} className="group grid w-full grid-cols-[minmax(130px,190px)_minmax(0,1fr)_84px] items-center gap-3 rounded-md px-2 py-1.5 text-left hover:bg-surface-2">
-                <span className="min-w-0"><span className="flex items-center gap-1.5 text-[13px] font-semibold">{n.tag === 'data' ? <Database size={12} className="shrink-0 text-text-3" /> : <Sigma size={12} className="shrink-0 text-text-3" />}<span className="truncate">{n.label}</span></span>
-                  <span className="block truncate text-[11px] text-text-3">{n.note ?? n.src}</span></span>
-                {n.masked
-                  ? <span className="flex h-6 items-center rounded border border-dashed border-border-strong px-2 text-[11px] text-text-3">Filled by the forecaster</span>
-                  : <span className="relative h-6 overflow-hidden rounded bg-surface-2"><span className={cx('absolute inset-y-0 left-0 rounded', n.tag === 'output' ? 'bg-brand' : n.unit === '$' ? 'bg-brand/45' : 'bg-brand/25')} style={{ width: `${width(n)}%` }} /></span>}
-                <span className={cx('text-right font-mono text-[13px]', n.tag === 'output' && 'font-semibold text-brand', n.masked && 'text-text-3')}>{n.masked ? '—' : fmtFunnel(n.value, n.unit)}</span>
-              </button>
-            </li>
-          ) : (() => {
-            const p = n.perm ? ind.perms[n.perm] : undefined, open = !!p?.open
-            return (
-              <li key={k} className="ml-[18px] border-l-2 border-dashed border-border-strong py-0.5 pl-4">
-                <button type="button" onClick={() => go(n.stage)} className="flex w-full flex-wrap items-center gap-x-2 gap-y-0.5 rounded-md px-2 py-1 text-left text-[12px] hover:bg-surface-2">
-                  <span className="rounded bg-surface-2 px-1.5 py-0.5 font-mono font-semibold text-text">{n.disp.startsWith('×') || n.disp.startsWith('÷') || n.disp.startsWith('−') || n.disp.startsWith('+') ? n.disp : `× ${n.disp}`}</span>
-                  <span className="font-medium text-text">{n.label}</span>
-                  {open ? <span className="inline-flex items-center gap-1 text-brand"><Pencil size={11} />Forecaster edits{p ? ` · ${p.min}–${p.max}` : ''}</span> : <span className="inline-flex items-center gap-1 text-text-3"><Lock size={11} />{p ? 'Locked' : 'Module default'}</span>}
-                  <span className="text-text-3">· {n.module}{n.note ? ` · ${n.note}` : ''}</span>
-                </button>
-              </li>
-            )
-          })())}
-        </ol>
-        <div className="space-y-2">
-          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-3">Does the logic hold?<InfoTip text="Starting values are illustrative, from input defaults and module benchmarks. Only limited data is connected at configuration, so upstream patient pools are left for the forecaster to fill after you finalise." /></p>
-          <ul className="space-y-2">{checks.map((c, k) => (
-            <li key={k} className="flex gap-2 rounded-md border border-border px-3 py-2 text-[12.5px]">
-              {c.tone === 'ok' ? <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-ok" /> : c.tone === 'warn' ? <AlertTriangle size={14} className="mt-0.5 shrink-0 text-warn" /> : <Info size={14} className="mt-0.5 shrink-0 text-text-3" />}
-              <span className="min-w-0 flex-1">{c.msg}</span>
-              {c.tone !== 'ok' && <EditLink stage={c.stage} go={go} />}
-            </li>
-          ))}</ul>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-function EditLink({ stage, go }: { stage: number; go: (n: number) => void }) {
-  return <button type="button" onClick={() => go(stage)} className="shrink-0 text-xs font-semibold text-brand hover:underline">Edit<span className="sr-only"> {STAGES[stage - 1].title}</span></button>
-}
-
 function StagePreview({ c, ind, go, issues, warns, fix }: Ctx & { issues: Issue[][]; warns: { msg: string; stage: number }[] }) {
   const errs = STAGES.slice(0, REVIEW - 1).flatMap(s => issues[s.id - 1].map(i => ({ ...i, stage: s.id })))
-  const ins = inputsFor(c)
-  const done = ins.filter(b => dataReady(c.bindings[b.key])).length
   const all = [...errs.map(e => ({ ...e, tone: 'err' as const })), ...warns.map(w => ({ ...w, tone: 'warn' as const }))]
   const [code, setCode] = useState(false)
+  const editMap = <MoreMenu label="Edit a section" items={[{ label: 'Edit the module map', icon: <Pencil size={13} />, onClick: () => go(4) }]} />
   return (
     <>
-      <Card title={`Forecaster flow · ${ind.name || 'Stream'}`} info="The funnel the forecaster will work in. Select a step to change it."
-        right={<ChartActions target="export-forecaster-flow" title={`Forecaster flow · ${ind.name || 'Stream'}`} subtitle={c.brand} />}>
-        <div id="export-forecaster-flow" className="bg-surface"><ForecasterFlow ind={ind} go={go} /></div>
-      </Card>
-
       <Card title="Configuration flow" info="Select any step to change it." right={<ChartActions target="export-config-flow" title="Configuration flow" subtitle={c.brand} />}>
         <div id="export-config-flow" className="bg-surface"><ModelFlow {...cfgFlow(c)} go={go} /></div>
       </Card>
 
-      <Card title="Configuration check" sub={errs.length ? `${errs.length} blocking · ${warns.length} to review` : warns.length ? `Valid · ${warns.length} to review` : 'Valid. Nothing to review.'}
-        right={errs.length ? <div className="flex items-center gap-2"><Badge tone="err">Not ready to finalise</Badge><FixForMe onClick={() => fix(STAGES.slice(0, REVIEW - 1).map(s => s.id))} /></div> : <Badge tone="ok"><Check size={10} />Ready to finalise</Badge>}>
-        {errs.length + warns.length === 0 ? <p className="flex items-center gap-2 text-sm text-ok"><CheckCircle2 size={16} />Every step checks out.</p> : (
+      {all.length > 0 && (
+        <Card title="Configuration check" sub={errs.length ? `${errs.length} blocking · ${warns.length} to review` : `Valid · ${warns.length} to review`}
+          right={errs.length ? <div className="flex items-center gap-2"><Badge tone="err">Not ready to finalise</Badge><FixForMe onClick={() => fix(STAGES.slice(0, REVIEW - 1).map(s => s.id))} /></div> : <Badge tone="ok"><Check size={10} />Ready to finalise</Badge>}>
           <ul className="divide-y divide-border">
             {all.map((x, k) => (
               <li key={k} className="flex flex-wrap items-center gap-x-3 gap-y-1 py-2.5 text-[13px] first:pt-0 last:pb-0">
@@ -5108,44 +4557,25 @@ function StagePreview({ c, ind, go, issues, warns, fix }: Ctx & { issues: Issue[
               </li>
             ))}
           </ul>
-        )}
+        </Card>
+      )}
+
+      <Card title="Model flow" info="Every revenue stream as a tree, with the flow each one runs on. Each stream has its own branch, even when streams run the same flow." right={editMap}>
+        <ModelFlowTree model={c.brand} streams={streamRefs(c)} />
       </Card>
 
-      <Card title="Configuration summary" info="Generated from your selections. Use the menu to jump back and edit a section." right={<MoreMenu label="Edit a section" items={[1, 3, 4, 5].map(st => ({ label: `Edit ${STAGES[st - 1].title.toLowerCase()}`, icon: <Pencil size={13} />, onClick: () => go(st) }))} />}>
-        <dl className="grid gap-x-6 gap-y-3 text-[13px] @xl:grid-cols-2">
-          {[['Model', `${c.brand} · ${c.asset}`, 1], ['Asset type · therapy area', `${c.subjectType} · ${c.therapyArea}`, 1], ['Lifecycle stage', c.lifecycle, 1],
-            ['Data configuration', PATHWAYS.map(pw => `${ins.filter(x => pathOf(c.bindings[x.key]) === pw.id).length} ${pw.label.toLowerCase()}`).join(' · '), 5],
-            ['Required inputs', `${ins.filter(x => pathOf(c.bindings[x.key]) !== 'Manual').length} from sources`, 5],
-            ['Forecaster-visible fields', `${ins.filter(x => exposeOf(c.bindings[x.key]) === 'Editable').length} editable · ${ins.filter(x => exposeOf(c.bindings[x.key]) === 'Visible').length} read-only`, 5]].map(([k, v]) => (
-            <div key={k as string} className="flex items-start justify-between gap-3 border-b border-border pb-2"><div className="min-w-0"><dt className="text-xs text-text-3">{k}</dt><dd className="font-medium">{v}</dd></div></div>
-          ))}
-        </dl>
-        <div className="mt-4 space-y-3">
-          {c.inds.map(i => (
-            <div key={i.id} className="rounded-md border border-border p-3">
-              <p className="text-sm font-semibold">{i.name || 'Untitled stream'} <span className="font-normal text-text-2">· {archName(i.arch) || 'No archetype'}</span></p>
-              <div className="mt-2 grid gap-2 text-[12px] @xl:grid-cols-3">
-                <div className="flex justify-between gap-2"><span className="min-w-0"><span className="block text-text-3">Modes</span>{i.arch ? modesFor(i.arch).map(m => i.modes[m.id]).filter(Boolean).join(' · ') : '—'}</span></div>
-                <div className="flex justify-between gap-2"><span><span className="block text-text-3">Modules</span>{orderedModules(i).length} attached · {requiredFor(i.arch).length} core</span></div>
-                <div className="flex justify-between gap-2"><span><span className="block text-text-3">Forecaster inputs</span>{Object.values(i.perms).filter(p => p.open).length} editable · {Object.values(i.perms).filter(p => !p.open).length} locked</span></div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </Card>
-
-      <Card title={`Module map · ${ind.name || 'Stream'}`} info="Structure and calculation order for this stream." right={<div className="flex items-center gap-3"><ChartActions target="export-module-map" title={`Module map · ${ind.name || 'Stream'}`} subtitle={c.brand} /></div>}>
-        <div id="export-module-map" className="@container bg-surface"><ModuleLanes c={c} ind={ind} readOnly go={go} /></div>
+      <Card title={`Patient flow · ${ind.name || 'Stream'}`} info="Built in the Module map: the inputs you placed, in model order, with their group class and source." right={editMap}>
+        <PatientFlowList map={ind.inputMap} onEdit={() => go(4)} />
       </Card>
 
       <Card title="Configuration document" info="What is saved as a version when you finalise.">
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 ">
-              <p className="min-w-[220px] flex-1 text-[13px] text-text-2">Finalising saves {c.version} as a configuration document.</p>
-              <Btn variant="secondary" size="sm" onClick={() => setCode(v => !v)}>{code ? 'Hide configuration' : 'View configuration as code'}</Btn>
-            </div>
-            {code && <pre className="max-h-80 overflow-auto rounded-md bg-text p-4 text-[12px] text-white">{JSON.stringify({ model: c.brand, asset: c.asset, version: c.version, streams: c.inds.map(i => ({ name: i.name, parent: c.inds.find(x => x.id === i.parent)?.name, archetype: i.arch, engine: i.engine, modes: i.modes, modules: i.modules.map(id => MODULES.find(m => m.id === id)?.name) })), inputs: ins.map(b => ({ input: b.input.name, pathway: pathOf(c.bindings[b.key]), forecaster: exposeOf(c.bindings[b.key]) })) }, null, 2)}</pre>}
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="min-w-[220px] flex-1 text-[13px] text-text-2">Finalising saves {c.version} as a configuration document.</p>
+            <Btn variant="secondary" size="sm" onClick={() => setCode(v => !v)}>{code ? 'Hide configuration' : 'View configuration as code'}</Btn>
           </div>
+          {code && <pre className="max-h-80 overflow-auto rounded-md bg-text p-4 text-[12px] text-white">{JSON.stringify({ model: c.brand, asset: c.asset, version: c.version, streams: c.inds.map(i => ({ name: i.name, parent: c.inds.find(x => x.id === i.parent)?.name, archetype: i.arch, engine: i.engine, modes: i.modes, modules: i.modules.map(id => MODULES.find(m => m.id === id)?.name), patientFlow: inputFlow(i.inputMap).map(x => ({ input: x.name, groupClass: x.lane, snowflakeSources: x.tables })) })) }, null, 2)}</pre>}
+        </div>
       </Card>
     </>
   )
@@ -5163,11 +4593,8 @@ function StagePublish({ c, go, update, notify, issues, warns, errs, finalSig, on
   const [fail, setFail] = useState(false)
   const blocking = STAGES.slice(0, LAST - 1).filter(s => issues[s.id - 1].length)
   const ready = blocking.length === 0 && issues[LAST - 1].length === 0
-  const ins = inputsFor(c)
   const assignees = [...(c.selfForecast ? [`${ME} (you)`] : []), ...c.forecasters]
-  const editable = ins.filter(b => exposeOf(c.bindings[b.key]) === 'Editable')
-  const visible = ins.filter(b => exposeOf(c.bindings[b.key]) === 'Visible')
-  const done = ins.filter(b => dataReady(c.bindings[b.key])).length
+  const flowInputs = c.inds.reduce((n, i) => n + inputFlow(i.inputMap).length, 0)
   const finalised = finalSig === sigOf(c)
   const changed = !!finalSig && !finalised
 
@@ -5202,18 +4629,6 @@ function StagePublish({ c, go, update, notify, issues, warns, errs, finalSig, on
           })}
         </ul>
         {warns.length > 0 && <p className="mt-3 text-xs text-text-3">{warns.length} item{warns.length > 1 ? 's' : ''} to review on the Review configuration step. They don’t block finalising.</p>}
-      </Card>
-
-      <Card title="What becomes available to the Forecaster" info="The structure forecasters work in.">
-        <div className="grid gap-5 @2xl:grid-cols-3">
-          <div><p className="text-[11px] font-bold uppercase tracking-wider text-text-2">Model structure</p>
-            <ul className="mt-2 space-y-1.5 text-[13px]">{c.inds.map(i => <li key={i.id}><span className="font-medium">{i.name || 'Untitled stream'}</span><span className="block text-xs text-text-3">{archName(i.arch)} · {Array.from(new Set([...i.modules, ...requiredFor(i.arch)])).length} modules</span></li>)}</ul></div>
-          <div><p className="text-[11px] font-bold uppercase tracking-wider text-text-2">Editable inputs <span className="font-mono text-text-3">{editable.length}</span></p>
-            <ul className="mt-2 space-y-1 text-[13px] text-text-2">{editable.length ? editable.map(b => <li key={b.key} className="flex gap-1.5"><LockOpen size={13} className="mt-0.5 shrink-0 text-brand" />{b.input.name}</li>) : <li className="text-text-3">None</li>}</ul></div>
-          <div><p className="text-[11px] font-bold uppercase tracking-wider text-text-2">Read-only inputs <span className="font-mono text-text-3">{visible.length}</span></p>
-            <ul className="mt-2 space-y-1 text-[13px] text-text-2">{visible.length ? visible.map(b => <li key={b.key} className="flex gap-1.5"><Lock size={13} className="mt-0.5 shrink-0 text-text-3" />{b.input.name}</li>) : <li className="text-text-3">None</li>}</ul></div>
-        </div>
-        {ins.length > done && <p className="mt-4 flex items-start gap-2 text-xs text-warn"><AlertTriangle size={14} className="mt-0.5 shrink-0" />{ins.length - done} file-based input{ins.length - done > 1 ? 's have' : ' has'} no mapped field yet. <button type="button" className="font-semibold text-brand hover:underline" onClick={() => go(5)}>Configure</button></p>}
       </Card>
 
       <Card title="Who can use it" info="Access is set per model.">
@@ -5264,7 +4679,7 @@ function StagePublish({ c, go, update, notify, issues, warns, errs, finalSig, on
             <p className="mt-2 text-sm text-text-2">The configuration is validated and saved as {c.version}. Forecasters don’t see it until you then make it available. Later changes start a new version.</p>
             <dl className="mt-4 space-y-1.5 rounded-md bg-background p-3 text-[13px]">
               {c.inds.map(i => <div key={i.id} className="flex justify-between gap-3"><dt className="text-text-2">{i.name}</dt><dd className="text-right font-medium">{archName(i.arch)} · {i.engine}</dd></div>)}
-              <div className="flex justify-between gap-3"><dt className="text-text-2">Inputs</dt><dd className="text-right font-medium">{editable.length} editable · {visible.length} read-only</dd></div>
+              <div className="flex justify-between gap-3"><dt className="text-text-2">Patient-flow inputs</dt><dd className="text-right font-medium">{flowInputs} across {c.inds.length} stream{c.inds.length === 1 ? '' : 's'}</dd></div>
               <div className="flex justify-between gap-3"><dt className="text-text-2">Available to</dt><dd className="text-right font-medium">{assignees.join(', ')}</dd></div>
             </dl>
             <div className="mt-6 flex justify-end gap-2">
