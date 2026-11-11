@@ -42,16 +42,10 @@ const CUR = yearOf(ACT - 1)
 const yAvg = (s: number[], y: number) => s.slice(idxOf(y, 0), idxOf(y, 0) + 12).reduce((a, b) => a + b, 0) / 12
 
 /** Baseline trend: the locked statistical trend per metric. Nothing here is edited; changes start in the Forecast workspace. */
-export function BaselineTrend({ onWorkspace, onEvents }: { onWorkspace: () => void; onEvents: () => void }) {
+export function BaselineTrend({ onWorkspace }: { onWorkspace: () => void }) {
   const [id, setId] = useState('rev')
   const m = METRICS.find(x => x.id === id)!
   const series: ChartSeries = useMemo(() => ({ actual: m.actual, unbiased: m.trend, lo: m.lo, hi: m.hi }), [m])
-
-  const step = (n: string, t: string, s: string, on?: boolean, go?: () => void) => (
-    <button type="button" disabled={!go} onClick={go} className={cx('min-w-0 px-4 py-2.5 text-left transition-colors', on ? 'bg-brand-soft/70' : 'bg-surface hover:bg-surface-2')}>
-      <span className={cx('block truncate text-[13px] font-semibold', on && 'text-brand')}>{n} {t}</span><span className="block truncate text-[12px] text-text-3">{s}</span>
-    </button>
-  )
   // Trend of each standard metric, below the main chart: weighted gross price, underlying demand, Δ inventory, exchange rate and the Unexplained difference in dollars and as a % of gross.
   const std = STANDARD.reduce((o, x) => ({ ...o, [x.id]: x }), {} as Record<string, Metric>)
   const uePts = (g: number[], p: number[]) => g.map((v, i) => v * p[i]! / 100)
@@ -73,28 +67,20 @@ export function BaselineTrend({ onWorkspace, onEvents }: { onWorkspace: () => vo
         <h2 className="text-[26px] font-semibold tracking-tight">Baseline trend</h2><p className="mt-1 text-[15px] text-text-2">What the latest trends say the full year looks like.</p>
       </header>
 
-      <div className="grid divide-x divide-border overflow-hidden rounded-lg border border-border sm:grid-cols-3" role="list" aria-label="How the baseline becomes a forecast">
-        {step('①', 'Statistical baseline', 'this tab · locked', true)}
-        {step('②', 'Override → new baseline', 'Forecast workspace', false, onWorkspace)}
-        {step('③', 'Overlay events', 'Events → Scenarios', false, onEvents)}
-      </div>
-
       {/* One layer: the trend chart, the "can you depend on it" verdict, and the assumptions that drive the trend. */}
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px_260px]">
-        <Card className="min-w-0">
+        <Card frame className="min-w-0" title={m.label} info={m.desc} right={<ChartActions target="baseline-trend-main" title={`${m.label} · baseline trend`} />}>
           <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             <label className="flex items-center gap-2 text-[13px] font-medium">Metric
               <select aria-label="Metric" value={id} onChange={e => setId(e.target.value)} className={cx(field, 'w-64 font-semibold')}>
                 {(['Outcome', 'Assumption', 'Standard'] as const).map(g => <optgroup key={g} label={GROUP_LABEL[g]}>{METRICS.filter(x => x.group === g).map(x => <option key={x.id} value={x.id}>{x.label}</option>)}</optgroup>)}
               </select></label>
-            <p className="ml-auto hidden text-[12px] text-text-3 2xl:block">{m.desc}</p>
           </div>
           <div className="mb-1 flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-text-2">
             <span className="inline-flex items-center gap-1.5"><svg width="22" height="8" aria-hidden><line x1="0" x2="22" y1="4" y2="4" stroke="#15172e" strokeWidth="2.5" /></svg>Actuals</span>
-            <span className="inline-flex items-center gap-1.5"><svg width="22" height="8" aria-hidden><line x1="0" x2="22" y1="4" y2="4" stroke="#767676" strokeWidth="2" strokeDasharray="5 4" /></svg>Statistical trend</span>
             {m.lo && <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-5 rounded-sm" style={{ background: 'rgb(138 143 168 / .25)' }} />Confidence band</span>}
           </div>
-          <div data-tour="chart"><ForecastChart key={m.id} title={`${m.label} · baseline trend`} s={series} fmt={m.fmt} dp={m.dp} unit={m.unit} height={330} context="Statistical baseline · read-only" /></div>
+          <div data-tour="chart"><ForecastChart key={m.id} title={`${m.label} · baseline trend`} s={series} fmt={m.fmt} dp={m.dp} unit={m.unit} height={330} context="Statistical baseline · read-only" ownActions domId="baseline-trend-main" /></div>
         </Card>
         <TrendPanel key={m.id} series={m.actual} label={m.label} fmt={m.fmt} pct={m.unit === '%'} />
         <aside data-tour="assumptions" aria-label="Underlying assumptions behind the trend" className="rounded-2xl border border-border bg-surface shadow-card p-4">
@@ -114,7 +100,7 @@ export function BaselineTrend({ onWorkspace, onEvents }: { onWorkspace: () => vo
         <div className="mb-2 flex flex-wrap items-baseline gap-x-3"><h3 className="text-[15px] font-semibold">Standard metric trends</h3><p className="text-[12.5px] text-text-3">Trend only. The detail behind each one (SKU prices, target weeks on hand, the Unexplained %) and any override is in the <button type="button" onClick={onWorkspace} className="font-semibold text-brand hover:underline">Forecast workspace</button>.</p></div>
         <div className="grid gap-4 lg:grid-cols-2">
           {TRENDS.map(t => (
-            <Card key={t.title} title={t.title} info={t.sub} right={<div className="flex items-center gap-2"><Tag tone="neutral"><Lock size={10} />Trend</Tag><ChartActions target={`baseline-trend-${t.m.id}`} title={`${t.title} · baseline trend`} /></div>}>
+            <Card key={t.title} frame title={t.title} info={t.sub} right={<div className="flex items-center gap-2"><Tag tone="neutral"><Lock size={10} />Trend</Tag><ChartActions target={`baseline-trend-${t.m.id}`} title={`${t.title} · baseline trend`} /></div>}>
               <ForecastChart title={`${t.title} · baseline trend`} s={{ actual: t.m.actual, unbiased: t.m.trend, lo: t.m.lo, hi: t.m.hi }} fmt={t.m.fmt} dp={t.m.dp} unit={t.m.unit} height={230} context="Statistical baseline · read-only" canSave={false} ownActions domId={`baseline-trend-${t.m.id}`} />
             </Card>))}
         </div>
