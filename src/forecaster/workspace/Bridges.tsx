@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { MONTHS, POP, RX_PER_PT, idxOf, scenarioLayer } from './engine'
 import type { DriverId, EventDef, Layer, Scenario } from './engine'
 import type { Calc } from './Stages'
-import { Card, Seg, cx, field } from './ui'
+import { Card, Seg, cx, field, PageTitle } from './ui'
 import { GTN } from './Modules'
 import { BUDGET } from './Performance'
 
@@ -76,10 +76,7 @@ export function BridgesView({ scenarios, calc, events, selId }: { scenarios: Sce
 
   return (
     <div className="space-y-5">
-      <div>
-        <h2 className="text-[22px] font-semibold tracking-tight">Financial bridges</h2>
-        <p className="mt-0.5 text-sm text-text-2">What moved net revenue between two forecasts. Read-only; follows your scenarios and events.</p>
-      </div>
+      <PageTitle title="Financial bridges" info="What moved net revenue between two forecasts. Read-only; follows your scenarios and events." />
 
       <Card>
         <div className="flex flex-wrap items-end gap-4">

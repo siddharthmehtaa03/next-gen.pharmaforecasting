@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { ACT, mLabel } from './engine'
-import { cx } from './ui'
+import { InfoTip, cx } from './ui'
 
 type Verdict = 'Reliable' | 'Watch' | 'Don’t rely on trend'
 type Row = { i: number; actual: number; trend: number; naive: number }
@@ -57,7 +57,7 @@ export function TrendPanel({ series, label, fmt, pct = false }: { series: number
   return (
     <section ref={ref} data-tour="trend" aria-label={`Trend reliability for ${label}`} className="relative rounded-xl border border-border bg-surface p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-[13.5px] font-semibold">Can you depend on the trend?</p>
+        <p className="flex items-center gap-1.5 text-[13.5px] font-semibold">Can you depend on the trend?<InfoTip text={`Backtest of the last ${c.rows.length} months, refitting the trend each month. Sharpens as snapshots accrue.${ACT < 18 ? ' Fewer than 18 months of actuals: indicative.' : ''}`} /></p>
         <button type="button" aria-expanded={open} onClick={() => setOpen(v => !v)} className="text-[12.5px] font-medium text-text-2 hover:text-text">{open ? 'Hide evidence' : 'Show evidence →'}</button>
       </div>
       {open && (
@@ -78,7 +78,7 @@ export function TrendPanel({ series, label, fmt, pct = false }: { series: number
           <div key={k} className="rounded-xl border border-border px-3.5 py-3"><p className={cx('text-[15px] font-semibold tabular-nums', cls)}>{v}</p><p className="mt-0.5 text-[12px] text-text-3">{k}</p></div>
         ))}
       </div>
-      <p className="mt-2.5 text-[11.5px] text-text-3">Backtest of the last {c.rows.length} months, refitting the trend each month.{ACT < 18 ? ' Fewer than 18 months of actuals: indicative.' : ''}</p>
+      {c.run >= 1 && <p className="mt-3 text-[13px] text-text">Trend has {c.dir}-forecast {c.run} month{c.run === 1 ? '' : 's'} running.</p>}
     </section>
   )
 }

@@ -22,6 +22,7 @@ const lockedPrice: ModelCfg = { ...DEFAULT_MODEL, outputs: ['rev', 'trx'], modul
 
 export const BRANDS: BrandRow[] = [
   { id: 'nurtec', brand: 'Nurtec', stream: 'US net revenue', cycle: 'AOP 2027', status: 'In progress', updated: 'Oct 2 · J. Andersen', model: DEFAULT_MODEL, versions: [{ v: 'v3', note: 'LE3 submission · Part D formulary win added to Base Case.', date: 'Aug 22', by: 'J. Andersen' }, { v: 'v2', note: 'LE2 submission · share curve recalibrated to claims.', date: 'May 14', by: 'J. Andersen' }, { v: 'v1', note: 'First AOP 2027 draft from the model baseline.', date: 'Feb 3', by: 'K. Brandt' }] },
+  { id: 'adcetris', brand: 'Adcetris', stream: 'US net revenue', cycle: 'AOP 2027', status: 'Not started', updated: 'Nov 3 · You', model: DEFAULT_MODEL },
   { id: 'vyndaq', brand: 'Vyndaq', stream: 'US net revenue', cycle: 'AOP 2027', status: 'In review', updated: 'Sep 28 · K. Brandt', model: DEFAULT_MODEL, versions: [{ v: 'v2', note: 'Sent for review · pediatric label event set to 60%.', date: 'Sep 28', by: 'K. Brandt' }, { v: 'v1', note: 'LE3 submission.', date: 'Aug 19', by: 'K. Brandt' }] },
   { id: 'zavzpret', brand: 'Zavzpret', stream: 'US net revenue', cycle: 'AOP 2027', status: 'Not started', updated: 'Sep 15 · A. Nguyen', model: DEFAULT_MODEL },
   { id: 'abrysvo', brand: 'Lumera', stream: 'EU5 net revenue', cycle: 'AOP 2027', status: 'In progress', updated: 'Oct 1 · M. Tran', model: noAccess, versions: [{ v: 'v1', note: 'LE3 submission · EU5 price corridor applied.', date: 'Aug 30', by: 'M. Tran' }] },
@@ -263,7 +264,7 @@ export default function ForecasterHome({ onOpen, notify }: { onOpen: (b: BrandRo
 
   return (
     <div className="min-h-full bg-bg">
-      <main className="mx-auto max-w-[1240px] px-10 py-8">
+      <main className="mx-auto px-10 py-8">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-[28px] font-semibold tracking-tight">Your forecasts</h1>
         </div>

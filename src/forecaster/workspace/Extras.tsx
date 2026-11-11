@@ -18,7 +18,7 @@ export function FunnelTable({ calc, scenarios }: { calc: Calc; scenarios: Scenar
   const rows = useMemo(() => YEARS.map(y => funnelOf(layer, y)), [layer])
   const labels = rows[0]!
   return (
-    <div className="mx-auto max-w-[1240px] space-y-4 px-6 py-8">
+    <div className="mx-auto space-y-4 px-10 py-8">
       <div className="flex flex-wrap items-center gap-3">
         <Seg label="Funnel view" value={mode} onChange={setMode} options={[{ id: 'funnel', label: 'Patient funnel' }, { id: 'channel', label: 'Retail / non-retail' }]} />
         <select aria-label="Scenario" value={src} onChange={e => setSrc(e.target.value)} className={cx(field, 'w-auto min-w-[200px]')}>
@@ -28,7 +28,7 @@ export function FunnelTable({ calc, scenarios }: { calc: Calc; scenarios: Scenar
         <Tag tone="brand">2025 actuals to 2028 plan</Tag>
       </div>
       {mode === 'funnel' ? (
-        <Card title="Annual patient funnel" sub="Patients to revenue by year. Rates are year averages; volumes follow from them.">
+        <Card title="Annual patient funnel" info="Patients to revenue by year. Rates are year averages; volumes follow from them.">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[640px] border-collapse">
               <thead><tr className="border-b border-border"><th className="px-3 py-2 text-left text-[12px] font-semibold text-text-2">Step</th>{YEARS.map(y => <th key={y} className={th}>{y}</th>)}<th className={th}>CAGR</th></tr></thead>
@@ -57,7 +57,7 @@ const RETAIL = [0.72, 0.68, 0.64, 0.6]
 function ChannelTable({ layer }: { layer: Calc[string]['layer'] }) {
   const rev = revenue(layer)
   return (
-    <Card title="Retail and non-retail channels" sub="Illustrative split of net revenue and TRx. Real splits depend on the vaccine archetype and model setup.">
+    <Card title="Retail and non-retail channels" info="Illustrative split of net revenue and TRx. Real splits depend on the vaccine archetype and model setup.">
       <div className="overflow-x-auto">
         <table className="w-full min-w-[560px] border-collapse">
           <thead><tr className="border-b border-border"><th className="px-3 py-2 text-left text-[12px] font-semibold text-text-2">Channel</th>{YEARS.map(y => <th key={y} className={th}>{y}</th>)}</tr></thead>
@@ -82,13 +82,13 @@ export function CountryCompare({ calc, scenarios }: { calc: Calc; scenarios: Sce
   const layer = (sc ? calc[sc.id] : calc.__working)!.layer
   const rev = revenue(layer)
   return (
-    <div className="mx-auto max-w-[1240px] space-y-4 px-6 py-8">
+    <div className="mx-auto space-y-4 px-10 py-8">
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Countries">
         {COUNTRIES.map(([c]) => { const on = sel.includes(c); return <button key={c} type="button" aria-pressed={on} onClick={() => setSel(s => on ? s.filter(x => x !== c) : [...s, c])}
           className={cx('rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors', on ? 'border-brand bg-brand-soft text-brand' : 'border-border-strong text-text-2 hover:border-brand/60')}>{c}</button> })}
         <Tag tone="warn">Illustrative scaling of the US model</Tag>
       </div>
-      <Card title="Submitted forecasts side by side" sub={`Net revenue by country, ${sc?.name ?? 'working forecast'}. Read-only comparison.`}>
+      <Card title="Submitted forecasts side by side" info={`Net revenue by country, ${sc?.name ?? 'working forecast'}. Read-only comparison.`}>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[560px] border-collapse">
             <thead><tr className="border-b border-border"><th className="px-3 py-2 text-left text-[12px] font-semibold text-text-2">Country</th>{YEARS.map(y => <th key={y} className={th}>{y}</th>)}</tr></thead>
@@ -113,8 +113,8 @@ export function PipelineView() {
   const curve = (a: typeof ASSETS[number], y: number) => y < a.launch ? 0 : Math.min(1, (y - a.launch + 1) / a.ramp)
   const rows = ASSETS.map((a, i) => yrs.map(y => a.peak * curve(a, y) * pos[i]! / 100))
   return (
-    <div className="mx-auto max-w-[1240px] space-y-4 px-6 py-8">
-      <Card title="Pipeline to launch" sub="Risk-adjusted revenue by asset: peak revenue × launch ramp × probability of success. Edit success rates to see the effect.">
+    <div className="mx-auto space-y-4 px-10 py-8">
+      <Card title="Pipeline to launch" info="Risk-adjusted revenue by asset: peak revenue × launch ramp × probability of success. Edit success rates to see the effect.">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] border-collapse">
             <thead><tr className="border-b border-border"><th className="px-3 py-2 text-left text-[12px] font-semibold text-text-2">Asset</th><th className={th}>Success %</th>{yrs.map(y => <th key={y} className={th}>{y}</th>)}</tr></thead>

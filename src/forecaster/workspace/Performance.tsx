@@ -3,7 +3,7 @@ import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, Respo
 import { ACT, MONTHS, OUTPUTS, UNBIASED, idxOf, yearOf } from './engine'
 import type { Layer, Scenario } from './engine'
 import type { Calc } from './Stages'
-import { COLOR, Card, Seg, Tag, cx, field } from './ui'
+import { COLOR, Card, Seg, Tag, cx, field, PageTitle } from './ui'
 import { bridgeOf } from './Modules'
 
 /* Performance summary (Analytics): how the forecast is tracking against budget, last year and its own trend.
@@ -74,9 +74,7 @@ export function PerformanceView({ brand, scenarios, calc, selId, uePct }: { bran
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-[22px] font-semibold tracking-tight">Performance summary</h2>
-          <p className="mt-0.5 text-sm text-text-2">{brand} · {label} · {sc.name}. Follows your scenarios and events; nothing here edits the forecast.</p></div>
+        <PageTitle title="Performance summary" info={`${brand} · ${label} · ${sc.name}. Follows your scenarios and events; nothing here edits the forecast.`} />
       </div>
 
       <Card>
@@ -110,7 +108,7 @@ export function PerformanceView({ brand, scenarios, calc, selId, uePct }: { bran
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <Card title={`Trend · ${def.label} · ${year}`} sub="Selected scenario against budget and last year. The shaded band is the selected window."
+        <Card title={`Trend · ${def.label} · ${year}`} info="Selected scenario against budget and last year. The shaded band is the selected window."
           right={<div className="flex flex-wrap gap-3 text-[12px] text-text-2">{[['Scenario', COLOR.working, ''], ['Budget', '#b7791f', ''], ['Last year', '#8f9199', '4 3']].map(([n, c, dash]) => <span key={n} className="inline-flex items-center gap-1.5"><svg width="18" height="6" aria-hidden><line x1="0" x2="18" y1="3" y2="3" stroke={c} strokeWidth={2} strokeDasharray={dash} /></svg>{n}</span>)}</div>}>
           <div className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
@@ -128,7 +126,7 @@ export function PerformanceView({ brand, scenarios, calc, selId, uePct }: { bran
           </div>
         </Card>
 
-        <Card title="Attainment by scenario" sub={`Net sales, ${label}. The bar is attainment of budget.`} pad={false}>
+        <Card title="Attainment by scenario" info={`Net sales, ${label}. The bar is attainment of budget.`} pad={false}>
           <table className="w-full text-[13px]">
             <thead><tr className="border-b border-border text-left text-[12px] text-text-3"><th className="px-4 py-2 font-medium">Scenario</th><th className="px-2 py-2 text-right font-medium">Net sales</th><th className="px-2 py-2 text-right font-medium">vs Bud</th><th className="px-2 py-2 text-right font-medium">vs LY</th><th className="px-4 py-2 text-right font-medium">FY{year} vs Bud</th></tr></thead>
             <tbody>{scenarios.map((s, k) => {
@@ -148,7 +146,7 @@ export function PerformanceView({ brand, scenarios, calc, selId, uePct }: { bran
         </Card>
       </div>
 
-      <Card title={`Insights · ${label}`} sub="Generated from the numbers above for the selected scenario.">
+      <Card title={`Insights · ${label}`} info="Generated from the numbers above for the selected scenario.">
         <p className="rounded-lg border-l-2 border-brand bg-brand-soft/40 px-4 py-3 text-[13.5px]"><b className="font-semibold">Executive anchor:</b> {brand} net revenue for {label} is {$m(cur.net)} in {sc.name}: {pct(pc(cur.net, bud.net))} against Budget ({$d(cur.net - bud.net)}) and {pct(pc(cur.net, ly.net))} against last year, led by {lead[0]} ({$d(lead[1])}).</p>
         <div className="mt-4 grid gap-x-8 gap-y-4 md:grid-cols-2">{insights.map(([h, t]) => <div key={h}><p className="text-[12.5px] font-semibold text-brand">{h}</p><p className="mt-0.5 text-[13px] leading-relaxed text-text-2">{t}</p></div>)}</div>
       </Card>
@@ -190,7 +188,7 @@ function RevenueRiver({ k, label, scenario }: { k: K; label: string; scenario: s
   const pos: Record<string, { x: number; y: number; h: number; o: number; i: number }> = {}
   cols.forEach(c => { let y = TOP; c.forEach(n => { const h = Math.max(2, n.v * scale); pos[n.id] = { x: X[n.col]!, y, h, o: 0, i: 0 }; y += h + GAP }) })
   return (
-    <Card title={`The revenue river · ${label}`} sub="Flows are window sums for the selected scenario." right={<Tag tone="neutral">{scenario}</Tag>}>
+    <Card title={`The revenue river · ${label}`} info="Flows are window sums for the selected scenario." right={<Tag tone="neutral">{scenario}</Tag>}>
       <div className="overflow-x-auto">
         <svg viewBox={`0 0 ${VW} ${H + TOP + 10}`} className="min-w-[900px]" role="img" aria-label={`Revenue river for ${label}: demand to net sales`}>
           {['Market demand', 'Capture', 'Patient metrics', 'Value', 'Ships', 'Survives'].map((t, i) => <text key={t} x={X[i]} y={14} className="fill-[#8f9199] text-[11px] font-medium">{t}</text>)}

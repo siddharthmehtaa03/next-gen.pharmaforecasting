@@ -107,7 +107,9 @@ export const EVENT_TYPES: EventType[] = ['Market Event', 'Product Event', 'Prici
 export type EventCurve = 'step' | 'ramp' | 's'
 export const EVENT_CURVE_LABEL: Record<EventCurve, string> = { step: 'Immediate step', ramp: '6-month ramp', s: 'S-curve (9 mo)' }
 export type Impact = { metric: DriverId; dir: 'up' | 'down'; mag: number; curve: EventCurve; duration: number | null }
-export type EventDef = { id: string; name: string; type: EventType; date: number; prob: number; impacts: Impact[]; notes: string; sub?: string; mfn?: string }
+export type EventDef = { id: string; name: string; type: EventType; date: number; prob: number; impacts: Impact[]; notes: string; sub?: string; mfn?: string
+  /** Months between repeats; a regular price action is one event. */
+  every?: 6 | 12 }
 /** CR-001: event types filtered by category. The first option is the default when the category changes. */
 export const EVENT_SUBTYPES: Record<EventType, string[]> = {
   'Market Event': ['Competitive Entrant', 'Regulatory Change', 'Access/HTA Decision', 'Disease Awareness Campaign', 'Epidemiology Shift', 'Supply Chain Disruption', 'Other Market Event'],
@@ -121,10 +123,10 @@ const evFrac = (k: number, c: EventCurve) => c === 'step' ? 1 : c === 'ramp' ? M
 
 export function applyEvents(layer: Layer, events: EventDef[]): Layer {
   const out = { ...layer }
-  for (const ev of events) for (const im of ev.impacts) {
+  for (const ev of events) for (let at = ev.date; at < N; at += ev.every ?? N) for (const im of ev.impacts) {
     const d = DRV[im.metric], s = [...out[im.metric]], sign = im.dir === 'up' ? 1 : -1
-    for (let i = Math.max(ev.date, ACT); i < N; i++) {
-      const k = i - ev.date
+    for (let i = Math.max(at, ACT); i < N; i++) {
+      const k = i - at
       if (im.duration !== null && k >= im.duration) break
       const v = s[i]! * (1 + sign * im.mag / 100 * (ev.prob / 100) * evFrac(k, im.curve))
       s[i] = d.pct ? Math.min(100, v) : v
@@ -177,18 +179,28 @@ export function goalSeek(l: Layer, id: DriverId, target: number): { delta: numbe
 export type Scenario = { id: string; name: string; color?: string; active: string[]; adj: Partial<Record<DriverId, number>>; locked: boolean; ovr?: Override[] }
 export const SEED_EVENTS: EventDef[] = [
   { id: 'ev1', name: 'Part D formulary win', type: 'Market Event', date: idxOf(2027, 0), prob: 70, notes: 'Preferred-tier placement on two national Part D plans.', impacts: [{ metric: 'access', dir: 'up', mag: 4, curve: 'ramp', duration: null }, { metric: 'share', dir: 'up', mag: 3, curve: 'ramp', duration: null }] },
-  { id: 'ev2', name: 'January WAC increase', type: 'Pricing Event', date: idxOf(2027, 0), prob: 85, notes: 'Pricing committee option: 2.5% list increase, partly offset by gross-to-net.', impacts: [{ metric: 'price', dir: 'up', mag: 2.5, curve: 'step', duration: null }] },
-  { id: 'ev3', name: 'Pediatric label expansion', type: 'Product Event', date: idxOf(2027, 6), prob: 50, notes: 'Regulatory decision expected mid-2027.', impacts: [{ metric: 'diag', dir: 'up', mag: 1.5, curve: 's', duration: null }, { metric: 'share', dir: 'up', mag: 4, curve: 's', duration: null }] },
+  // shortcut: list (WAC) events move the net price driver until Phase 2 forecasts weighted gross price.
+  { id: 'ev2', name: 'January WAC increase', type: 'Pricing Event', sub: 'List Price (WAC) Change', date: idxOf(2027, 0), prob: 85, notes: 'Pricing committee option: 2.5% list increase, partly offset by gross-to-net.', impacts: [{ metric: 'price', dir: 'up', mag: 2.5, curve: 'step', duration: null }] },
+  { id: 'ev4', name: 'ODT 1x8 · October WAC action', type: 'Pricing Event', sub: 'List Price (WAC) Change', date: idxOf(2027, 9), prob: 20, notes: 'List action on the ODT 1x8 pack.', impacts: [{ metric: 'price', dir: 'up', mag: 2, curve: 'step', duration: null }] },
+  { id: 'ev5', name: 'Biannual list price step', type: 'Pricing Event', sub: 'List Price (WAC) Change', date: idxOf(2027, 6), prob: 80, every: 6, notes: 'Regular list step every six months.', impacts: [{ metric: 'price', dir: 'up', mag: 0.5, curve: 'step', duration: null }] },
+  { id: 'ev6', name: 'Ascent renegotiation fails', type: 'Pricing Event', sub: 'Gross-to-Net / Rebate Change', date: idxOf(2027, 6), prob: 30, notes: 'Rebate renegotiation with Ascent fails. Moves net, not gross.', impacts: [] },
+  { id: 'ev3', name: 'Pediatric label expansion', type: 'Product Event', sub: 'Label Change', date: idxOf(2027, 6), prob: 50, notes: 'Regulatory decision expected mid-2027.', impacts: [{ metric: 'diag', dir: 'up', mag: 1.5, curve: 's', duration: null }, { metric: 'share', dir: 'up', mag: 4, curve: 's', duration: null }] },
 ]
+// Self-check: a repeating +0.5% price step compounds past a single one by the end of the horizon.
+if (import.meta.env.DEV) {
+  const one: EventDef = { id: 't', name: 't', type: 'Pricing Event', date: ACT, prob: 100, notes: '', impacts: [{ metric: 'price', dir: 'up', mag: 0.5, curve: 'step', duration: null }] }
+  const base = { ...UNBIASED }, a = applyEvents(base, [one]).price[N - 1]!, b = applyEvents(base, [{ ...one, every: 6 }]).price[N - 1]!
+  console.assert(b > a && a > base.price[N - 1]!, 'applyEvents: recurring event must compound')
+}
 export const SEED_SCENARIOS: Scenario[] = [
   { id: 'sc1', name: 'Trended Statistical', active: [], adj: {}, locked: false },
   { id: 'sc2', name: 'Base Case', active: ['ev1', 'ev2'], adj: {}, locked: false },
-  { id: 'sc3', name: 'Optimistic', active: ['ev1', 'ev2', 'ev3'], adj: { share: 0.5 }, locked: false, ovr: [
+  { id: 'sc3', name: 'Optimistic', active: ['ev1', 'ev2', 'ev4', 'ev3'], adj: { share: 0.5 }, locked: false, ovr: [
     { id: 'ov-seed1', driver: 'share', kind: 'target', start: ACT, end: idxOf(2028, 11), value: 14, curve: 's', years: {}, note: 'Brand team view: peak share of 14% reached by Dec 2028.' },
   ] },
-  { id: 'sc4', name: 'Pessimistic', active: [], adj: { share: -0.5 }, locked: false },
+  { id: 'sc4', name: 'Pessimistic', active: ['ev6'], adj: { share: -0.5 }, locked: false },
   { id: 'sc5', name: 'GCA', active: ['ev1'], adj: {}, locked: false },
-  { id: 'sc6', name: 'Finance', active: ['ev2'], adj: {}, locked: false },
+  { id: 'sc6', name: 'Finance', active: ['ev2', 'ev5'], adj: {}, locked: false },
 ]
 
 /* ── Scenario overrides ──

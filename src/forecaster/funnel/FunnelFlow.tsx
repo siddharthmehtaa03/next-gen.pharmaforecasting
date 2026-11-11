@@ -212,7 +212,7 @@ export default function FunnelFlow({ notify, onLegacy }: { notify: Notify; onLeg
 function ModelsHome({ onOpen, onLegacy }: { onOpen: (id: string) => void; onLegacy: () => void }) {
   return (
     <div className="min-h-dvh bg-background">
-      <main className="mx-auto max-w-[1100px] px-5 py-10 sm:px-8">
+      <main className="mx-auto px-10 py-10">
         <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Forecaster</p>
         <h1 className="mt-1 text-[28px] font-semibold tracking-tight">My models</h1>
         <p className="mt-1 max-w-2xl text-sm text-text-2">Models are the organising object. Cycle and version are attributes. The flow and governance tier for each model are set by the CoE in the configurator.</p>
@@ -278,7 +278,7 @@ function Flow({ row, notify, onBack }: { row: ModelRow; notify: Notify; onBack: 
     <div className="min-h-dvh bg-background pb-20">
       {/* model header */}
       <div className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-5 py-3 sm:px-8">
+        <div className="mx-auto flex flex-wrap items-center justify-between gap-3 px-10 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <button type="button" onClick={onBack} aria-label="Back to my models" className="grid h-9 w-9 place-items-center rounded-md text-text-2 hover:bg-surface-2"><ArrowLeft size={16} /></button>
             <div className="min-w-0">
@@ -293,7 +293,7 @@ function Flow({ row, notify, onBack }: { row: ModelRow; notify: Notify; onBack: 
           </div>
         </div>
         {/* stage rail */}
-        <div className="mx-auto max-w-[1400px] overflow-x-auto px-5 pb-3 sm:px-8">
+        <div className="mx-auto overflow-x-auto px-10 pb-3">
           <ol className="flex min-w-[760px] items-stretch gap-1.5">
             {STAGES.map((s, k) => {
               const on = s.id === stage
@@ -311,7 +311,7 @@ function Flow({ row, notify, onBack }: { row: ModelRow; notify: Notify; onBack: 
         </div>
       </div>
 
-      <div className={cx('mx-auto grid max-w-[1400px] gap-5 px-5 py-6 sm:px-8', panel ? 'lg:grid-cols-[230px_minmax(0,1fr)_340px]' : 'lg:grid-cols-[230px_minmax(0,1fr)]')}>
+      <div className={cx('mx-auto grid gap-5 px-10 py-6', panel ? 'lg:grid-cols-[230px_minmax(0,1fr)_340px]' : 'lg:grid-cols-[230px_minmax(0,1fr)]')}>
         <aside className="lg:sticky lg:top-6 lg:self-start"><FunnelNav model={model} sel={stage === 'baseline' || nodeFilter ? sel : null} onPick={pick} devs={devs} tier={tier} /></aside>
 
         <main className="min-w-0 space-y-5">
@@ -332,7 +332,7 @@ function Flow({ row, notify, onBack }: { row: ModelRow; notify: Notify; onBack: 
 
       {/* always-on bar */}
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex max-w-[1400px] flex-wrap items-center justify-between gap-3 px-5 py-2.5 sm:px-8">
+        <div className="mx-auto flex flex-wrap items-center justify-between gap-3 px-10 py-2.5">
           <div className="flex flex-wrap items-center gap-5 text-[13px]">
             <span><span className="text-text-3">FY{FY} net revenue </span><b className="font-mono">{fmt('rev', rev)}</b></span>
             <span><span className="text-text-3">vs baseline </span><b className={cx('font-mono', rev >= revB ? 'text-ok' : 'text-err')}>{rev >= revB ? '+' : '−'}{fmt('rev', Math.abs(rev - revB))}</b></span>

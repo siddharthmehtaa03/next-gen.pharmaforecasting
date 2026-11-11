@@ -1,8 +1,9 @@
+import { CalendarPlus, PencilLine, RotateCcw } from 'lucide-react'
 import { useState } from 'react'
 import { FY, POP, RX_PER_PT, fmtRev, fyAvg } from './engine'
 import type { DriverId, Scenario } from './engine'
 import type { Calc } from './Stages'
-import { Btn, Card, Seg, Toggle, cx, field } from './ui'
+import { Btn, Card, Seg, Toggle, cx, field, PageTitle, MoreMenu } from './ui'
 
 type RowId = 'prev' | DriverId
 const ROWS: { id: RowId; label: string; defG: number; fmt: (v: number) => string }[] = [
@@ -71,12 +72,7 @@ export function LrfView({ scenarios, calc, selId, setSelId, onEvent }: {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-[22px] font-semibold tracking-tight">LRF assumptions</h2>
-        <p className="mt-0.5 max-w-3xl text-sm text-text-2">
-          The long-range forecast (LRF) — the same patient funnel as Assumptions, but set annually. Each metric defaults to its year-over-year growth rate, held constant across all years. Override any rate, or layer an event.
-        </p>
-      </div>
+      <PageTitle title="LRF assumptions" info="The long-range forecast (LRF): the same patient funnel as the Forecast workspace, set annually. Each metric defaults to its year-over-year growth rate, held constant across all years. Override any rate, or layer an event." />
 
       <Card pad={false}>
         <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
@@ -96,7 +92,7 @@ export function LrfView({ scenarios, calc, selId, setSelId, onEvent }: {
           <Seg label="Growth mode" value={mode} onChange={m => { setMode(m); setHoldConst(m === 'constant') }} options={[{ id: 'constant', label: 'Constant %G' }, { id: 'perYear', label: 'Per-year %G' }]} />
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Btn variant="ghost" size="sm" onClick={() => setRates(defRates())}>Reset rates to default</Btn>
+          <MoreMenu label="LRF actions" items={[{ label: 'Reset rates to default', icon: <RotateCcw size={14} />, onClick: () => setRates(defRates()) }]} />
           <Btn variant="secondary" size="sm" onClick={() => setExpanded(v => !v)}>
             {expanded ? '− Collapse FY2030 – FY2036 (Years 4–10)' : '+ Expand to FY2030 – FY2036 (Years 4–10) ▸'}
           </Btn>
@@ -168,10 +164,11 @@ export function LrfView({ scenarios, calc, selId, setSelId, onEvent }: {
                         <button type="button" onClick={() => setExpanded(true)} title="Expand FY2030–FY2036" className="font-mono text-text-3 hover:text-brand">···</button>
                       </td>
                     )}
-                    <td className="px-4 py-3 text-right text-[12.5px]">
-                      <button type="button" onClick={() => { setMode('perYear'); setHoldConst(false) }} className="font-medium text-brand hover:underline">override</button>
-                      <span className="mx-1 text-text-3">·</span>
-                      <button type="button" onClick={onEvent} className="font-medium text-brand hover:underline">event</button>
+                    <td className="px-4 py-2 text-right">
+                      <span className="inline-flex"><MoreMenu label={`${r.label} actions`} items={[
+                        { label: 'Override per year', icon: <PencilLine size={14} />, onClick: () => { setMode('perYear'); setHoldConst(false) } },
+                        { label: 'Add an event', icon: <CalendarPlus size={14} />, onClick: onEvent },
+                      ]} /></span>
                     </td>
                   </tr>
                 )

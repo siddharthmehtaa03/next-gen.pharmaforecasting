@@ -1,6 +1,6 @@
 import { ACT, OUTPUTS, UNBIASED, fmtRev, idxOf, mLong, yearOf } from './engine'
 import type { OutputId } from './engine'
-import { Card, Stat, cx } from './ui'
+import { Card, Stat, cx, PageTitle } from './ui'
 
 // Actuals are the reference series before ACT; the last actual month is ACT - 1.
 const ACTS = Object.fromEntries((['rev', 'trx', 'pts'] as const).map(o => [o, OUTPUTS[o].fn(UNBIASED).slice(0, ACT)])) as Record<OutputId, number[]>
@@ -36,10 +36,9 @@ export function ActualsView() {
   }
   return (
     <div className="space-y-5">
-      <div><h2 className="text-[22px] font-semibold tracking-tight">Actuals</h2>
-        <p className="mt-0.5 text-sm text-text-2">Reported monthly actuals through {mLong(LAST)}. Locked: they anchor every forecast and cannot be edited.</p></div>
+      <PageTitle title="Actuals" info={`Reported monthly actuals through ${mLong(LAST)}. Locked: they anchor every forecast and cannot be edited.`} />
       <ActualKpis />
-      <Card title="Monthly actuals" sub="Change is against the same month last year." pad={false}>
+      <Card title="Monthly actuals" info="Change is against the same month last year." pad={false}>
         <div className="overflow-x-auto">
           <table className="w-full text-[13px]">
             <thead><tr className="border-b border-border bg-surface-2 text-[11px] uppercase tracking-wide text-text-3">

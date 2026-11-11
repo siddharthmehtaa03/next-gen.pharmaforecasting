@@ -1,11 +1,11 @@
 import { Fragment, useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, Check, ChevronDown, CircleCheck, CircleAlert, CircleMinus, GitBranch, Lock, Plus, Save, Target, Trash2, X, Zap } from 'lucide-react'
 import {
-  ACT, CURVE_LABEL, DRV, FC_YEARS, FY, HORIZON_LABEL, MEASURE_LABEL, N, OUTPUTS, OVR_LABEL, UNBIASED,
+  ACT, BASELINE, CURVE_LABEL, DRV, FC_YEARS, FY, HORIZON_LABEL, MEASURE_LABEL, N, OUTPUTS, OVR_LABEL, UNBIASED,
   adjusted, applyEvents, applyOverrides, bridge, describeOverride, fmtDelta, fmtRev, fmtV, funnelOf, fyAvg, goalSeekOrdered, idxOf, mLong, measure,
 } from './engine'
 import type { Curve, DriverId, EventDef, Goal, GoalStep, Horizon, Layer, ModelCfg, OutputId, OvrKind, Override, Scenario } from './engine'
-import { Btn, COLOR, Card, ForecastChart, Label, Legend, Seg, Tag, cx, field } from './ui'
+import { Btn, COLOR, Card, ForecastChart, Label, Legend, Seg, Tag, cx, field, PageTitle, InfoTip } from './ui'
 import type { ChartSeries } from './ui'
 import { NumField, Period } from './Drivers'
 import type { Notify } from './Drivers'
@@ -51,6 +51,7 @@ export function FunnelCompare({ scenarios, calc, selId, onSelect, model, default
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <Seg label="Year" value={String(year)} onChange={v => setYear(+v)} options={FC_YEARS.map(y => ({ id: String(y), label: `FY${y}` }))} />
+        <InfoTip text={`Rates are FY${year} averages. Each driver’s dollar figure is its share of the net revenue gap, swapping drivers in funnel order, so the figures add up to the total.`} />
         <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Scenarios to compare">
           {scenarios.map((s, k) => (
             <button key={s.id} type="button" aria-pressed={picks.includes(s.id)} onClick={() => toggle(s.id)}
@@ -127,7 +128,6 @@ export function FunnelCompare({ scenarios, calc, selId, onSelect, model, default
           </tbody>
         </table>
       </div>
-      <p className="text-[12px] text-text-3">Rates are FY{year} averages. Each driver’s dollar figure is its share of the net revenue gap, swapping drivers in funnel order, so the figures add up to the total.</p>
     </div>
   )
 }
@@ -156,7 +156,7 @@ export function ScenarioOverrides({ sel, setScenarios, work, events, model, noti
   const before = draft ? applyOverrides(pre, list.filter(x => x.id !== draft.id)) : null
   const pv: ChartSeries | null = draft && before ? { actual: UNBIASED[draft.driver], working: before[draft.driver], scenario: applyOverrides(before, [draft])[draft.driver], scenarioName: 'With this override' } : null
   return (
-    <Card title={`${sel.name} overrides`} sub="Scenario-only values by month or year. Not events."
+    <Card title={`${sel.name} overrides`} info="Scenario-only values by month or year. Not events."
       right={<Btn variant="secondary" disabled={lock || !!draft || !editable.length} onClick={() => setDraft(blankOvr(editable.includes('share') ? 'share' : editable[0]!, pre))} icon={<Plus size={14} />}>Add override</Btn>}>
       {list.length ? (
         <ul className="divide-y divide-border">{list.map(o => (
@@ -317,13 +317,12 @@ export function SensitivityStage({ scenarios, setScenarios, calc, selId, setSelI
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h2 className="text-[22px] font-semibold tracking-tight">What if assumptions were different?</h2>
-          <p className="mt-0.5 text-sm text-text-2">Test changes on a scenario. Nothing is saved until you keep it.</p></div>
+        <PageTitle title="What if assumptions were different?" info="Test changes on a scenario. Nothing is saved until you keep it." />
         {yearSeg}
       </div>
 
       <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <Card title="Assumption changes" sub="Each change applies over its own period." fill className="lg:order-last">
+        <Card title="Assumption changes" info="Each change applies over its own period." fill className="lg:order-last">
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="block"><Label className="mb-1">Scenario</Label>
               <select aria-label="Scenario" value={sel.id} onChange={e => setSelId(e.target.value)} className={cx(field, 'font-medium')}>{scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
@@ -375,7 +374,7 @@ export function SensitivityStage({ scenarios, setScenarios, calc, selId, setSelI
           </div>
         </Card>
 
-        <Card title={view === 'chart' ? `Net revenue · ${sel.name}` : 'What moves net revenue most'} sub={view === 'chart' ? 'As it is, with the changes, and reversed.' : `Swings around ${sel.name} as it is. Only the assumptions you change on the left move.`} fill
+        <Card title={view === 'chart' ? `Net revenue · ${sel.name}` : 'What moves net revenue most'} info={view === 'chart' ? 'As it is, with the changes, and reversed.' : `Swings around ${sel.name} as it is. Only the assumptions you change on the left move.`} fill
           right={<div className="flex items-center gap-2"><Seg label="View" value={view} onChange={setView} options={[{ id: 'chart', label: 'Net revenue' }, { id: 'tornado', label: 'Tornado' }]} />{view === 'tornado' && <ChartActions target="export-tornado" title="What moves net revenue most" subtitle={`${sel.name} · FY${year}`} />}</div>}>
           <div className="flex min-h-[480px] flex-1 flex-col">
           {view === 'chart' ? <>
@@ -439,7 +438,7 @@ export function SensitivityStage({ scenarios, setScenarios, calc, selId, setSelI
         </Card>
       </div>
 
-      <Card title={`Key outputs · FY${year}`} sub="The scenario as it is against the changes above.">
+      <Card title={`Key outputs · FY${year}`} info="The scenario as it is against the changes above.">
         <div className={cx('grid gap-6', plural && 'lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]')}>
           <table className="w-full text-[13px]">
             <thead><tr className="border-b border-border text-[11px] uppercase tracking-wide text-text-3"><th className="py-2 text-left font-semibold">Output</th><th className="py-2 text-right font-semibold">As it is</th><th className="py-2 text-right font-semibold">With change{plural ? 's' : ''}</th><th className="py-2 text-right font-semibold">Difference</th><th className="py-2 text-right font-semibold">Reversed</th></tr></thead>
@@ -494,7 +493,7 @@ export function GoalSeekPanel({ base, sel, setScenarios, model, notify }: { base
   return (
     <div className="space-y-5">
       <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <Card title="Targets" sub="Solved in order, each by moving one assumption." fill className="lg:order-last">
+        <Card title="Targets" info="Solved in order, each by moving one assumption." fill className="lg:order-last">
           <ol className="space-y-2.5">
             {goals.map((g, k) => {
               const isOpen = openG === g.id
@@ -519,6 +518,7 @@ export function GoalSeekPanel({ base, sel, setScenarios, model, notify }: { base
                       <NumField label={`To (${unit(g)})`} value={g.max} step={g.metric === 'rev' ? 5 : 0.5} onChange={v => patch(g.id, { max: v })} />
                       <label className="block"><Label className="mb-1">By moving</Label><select value={g.lever} onChange={e => patch(g.id, { lever: e.target.value as DriverId })} className={field}>{editable.map(id => <option key={id} value={id}>{DRV[id].label}</option>)}</select></label>
                       <p className="self-end pb-2 text-[12px] text-text-3">Now <b className="font-mono text-text">{fmtM(g.metric, measure(g.metric, base, g.h))}</b>{g.min > g.max && <span className="text-err"> · From must be below To</span>}</p>
+                      <p className="text-[12px] text-text-3 sm:col-span-2">{(() => { const y = g.h === 'all' ? FY : g.h, r = RANGES[g.lever]; return `Statistical range FY${y}: ${fmtV(g.lever, fyAvg(BASELINE[g.lever].lo, y))} – ${fmtV(g.lever, fyAvg(BASELINE[g.lever].hi, y))} · ${r.conf.toLowerCase()} confidence · ${r.src}` })()}</p>
                     </div>
                   )}
                 </li>
@@ -532,7 +532,7 @@ export function GoalSeekPanel({ base, sel, setScenarios, model, notify }: { base
           <div className="mt-auto flex justify-end border-t border-border pt-4"><Btn onClick={run} disabled={!valid} icon={<Target size={15} />}>Run goal seek</Btn></div>
         </Card>
 
-        <Card title={`Net revenue · ${sel.name}`} sub={res ? 'Current path against the path after goal seek.' : 'Run goal seek to see the new path.'} fill>
+        <Card title={`Net revenue · ${sel.name}`} info={res ? 'Current path against the path after goal seek.' : 'Run goal seek to see the new path.'} fill>
           <div className="mb-1"><Legend s={chart} /></div>
           <ForecastChart title="Goal seek" s={chart} fmt={v => fmtRev(v, 1)} dp={0} unit="$M" height={360} canSave={false} toolbar={false} />
           {res && <div className="mt-auto flex flex-wrap items-center justify-end gap-3 pt-4">
@@ -543,7 +543,7 @@ export function GoalSeekPanel({ base, sel, setScenarios, model, notify }: { base
       </div>
 
       {res && (
-        <Card title="What it takes" sub="Each step, in order, and where every target ends up.">
+        <Card title="What it takes" info="Each step, in order, and where every target ends up.">
           <table className="w-full text-[13px]">
             <thead><tr className="border-b border-border text-[11px] uppercase tracking-wide text-text-3"><th className="w-8 py-2 text-left font-semibold">#</th><th className="py-2 text-left font-semibold">Target</th><th className="py-2 text-left font-semibold">Move</th><th className="py-2 text-right font-semibold">Before</th><th className="py-2 text-right font-semibold">After</th><th className="py-2 text-right font-semibold">After all steps</th></tr></thead>
             <tbody>{res.steps.map((s, k) => { const f = res.final[k]!; return (

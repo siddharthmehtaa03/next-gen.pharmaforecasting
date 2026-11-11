@@ -84,7 +84,7 @@ function Shell({ frame, initialTab, embedded }: { frame: ReactNode; initialTab: 
 
       {!e.ready && <p className="flex items-center justify-center gap-2 py-24 text-sm text-text-2"><Sparkles size={15} className="animate-pulse text-brand" />Loading the LES workbook…</p>}
       {e.ready && !original && Page && (
-        <main key={tab} className="mx-auto w-full max-w-[1280px] px-5 py-6">
+        <main key={tab} className="mx-auto w-full px-10 py-6">
           {!embedded && <h1 className="font-display text-[26px] font-semibold tracking-tight">{tab}</h1>}
           <div className="mt-4"><Page /></div>
         </main>

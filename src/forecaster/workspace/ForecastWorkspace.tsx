@@ -152,7 +152,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
       {!presenting && (
         <div className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur">
           {/* Two levels: a few global tabs, and one sub-tab row for the active group. */}
-          <nav data-tour="tabs" aria-label="Forecast sections" className="mx-auto max-w-[1240px] px-10">
+          <nav data-tour="tabs" aria-label="Forecast sections" className="mx-auto px-10">
             <div role="tablist" className="flex flex-wrap items-center gap-0.5 py-2">
               {GROUPS.filter(g => g.id !== 'Scenario').map(g => (
                 <button key={g.id} type="button" role="tab" aria-selected={g.id === group} onClick={() => g.id !== group && go(g.items[0] as View)}
@@ -178,7 +178,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
           </nav>
           {subs.length > 1 && (
             <div>
-              <div data-tour="subtabs" role="tablist" aria-label={`${group} views`} className="mx-auto flex max-w-[1240px] gap-1 overflow-x-auto px-10 py-2">
+              <div data-tour="subtabs" role="tablist" aria-label={`${group} views`} className="mx-auto flex gap-1 overflow-x-auto px-10 py-2">
                 {subs.map((v, k) => {
                   const isAn = ANALYTICS.includes(v), on = isAn ? an === v : !an && view === v
                   const badge = v === 'Assumptions' ? modified : v === 'Summary' ? scenarios.length : v === 'Events' ? events.length : 0
@@ -196,7 +196,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
             </div>
           )}
           {st && (
-            <div className="mx-auto max-w-[1240px] px-10 pb-3 pt-3">
+            <div className="mx-auto px-10 pb-3 pt-3">
               <AgentBanner assistant={assistant} running={st.running} step={st.step} progress={st.progress} title={st.title} onStop={agent.stop} onDismiss={() => agent.setStatus(null)}
                 actions={<>{view !== 'Review' && st.after !== undefined && <AgentButton onClick={() => go('Review')}>Review the forecast</AgentButton>}{agent.undo && <AgentButton variant="outline" icon={<RotateCcw size={13} />} onClick={agent.undo}>Undo</AgentButton>}</>}>
                 {st.body}
@@ -207,18 +207,18 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
       )}
 
       {an === 'Financial Bridges' ? (
-        <div className="mx-auto max-w-[1240px] px-10 py-8"><BridgesView scenarios={scenarios} calc={calc} events={events} selId={selId} /></div>
+        <div className="mx-auto px-10 py-8"><BridgesView scenarios={scenarios} calc={calc} events={events} selId={selId} /></div>
       ) : an === 'Performance Dashboard' ? (
-        <div className="mx-auto max-w-[1240px] px-10 py-8"><PerformanceView brand={brand} scenarios={scenarios} calc={calc} selId={selId} uePct={ueFy(ue)} /></div>
+        <div className="mx-auto px-10 py-8"><PerformanceView brand={brand} scenarios={scenarios} calc={calc} selId={selId} uePct={ueFy(ue)} /></div>
       ) : an ? (
-        <div className="mx-auto max-w-[1240px] px-10 py-8">
+        <div className="mx-auto px-10 py-8">
           <div className="grid place-items-center rounded-lg border border-dashed border-border-strong bg-surface-2/50 px-6 py-16 text-center">
             <div><p className="text-[15px] font-semibold">{an}</p><p className="mt-1 text-[13px] text-text-3">Tab content is defined in a follow-up change request.</p>
               <Btn variant="secondary" className="mt-4" onClick={() => go(view)}>Back to {LABEL[view].toLowerCase()}</Btn></div>
           </div>
         </div>
       ) : <>
-      <div className={cx('mx-auto max-w-[1240px] px-10', view === 'Overview' ? 'pb-8 pt-6' : 'py-8', mapView && !presenting && cx('grid gap-6', mapOpen ? 'lg:grid-cols-[minmax(0,1fr)_300px]' : 'lg:grid-cols-[minmax(0,1fr)_44px]'))}>
+      <div className={cx('mx-auto px-10', view === 'Overview' ? 'pb-8 pt-6' : 'py-8', mapView && !presenting && cx('grid gap-6', mapOpen ? 'lg:grid-cols-[minmax(0,1fr)_300px]' : 'lg:grid-cols-[minmax(0,1fr)_44px]'))}>
         {mapView && <aside className="lg:sticky lg:top-[98px] lg:order-last lg:self-start">{mapOpen
           ? <ForecastMap sel={sel} onSel={pick} edits={edits} working={work.layer} model={model} metric={metric} mod={mod} onMod={m => { if (m !== mod && leaveOk()) setMod(m) }} uePct={ueFy(ue)} onCollapse={() => setMapOpen(false)} />
           : <button type="button" onClick={() => setMapOpen(true)} aria-label="Expand forecast map" title="Expand forecast map"
@@ -247,7 +247,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
       </>}
       {!presenting && (
         <div data-tour="bottombar" className="sticky bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur">
-          <div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-3 px-10 py-3">
+          <div className="mx-auto flex flex-wrap items-center gap-3 px-10 py-3">
             <span className={cx('text-[13px]', driverDirty ? 'font-medium text-warn' : 'text-text-3')} aria-live="polite">
               {driverDirty ? 'You have unapplied changes to this assumption.' : !an && STEPS.includes(view) ? `Step ${STEPS.indexOf(view) + 1} of ${STEPS.length} · ${LABEL[view]}` : (an ?? LABEL[view])}
             </span>

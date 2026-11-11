@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Bookmark, Info } from 'lucide-react'
+import { Bookmark, EllipsisVertical, Info } from 'lucide-react'
 import { ChartActions } from '../../chart/ChartActions'
 import { useInsights } from './insightsCtx'
 import { ACT, N, START_YEAR, mLabel, mLong } from './engine'
@@ -13,6 +13,40 @@ export const field = 'h-9 w-full rounded-lg border border-border bg-surface px-2
 export function Btn({ children, variant = 'primary', onClick, icon, disabled, size = 'md', title, className }: { children?: ReactNode; variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; onClick?: () => void; icon?: ReactNode; disabled?: boolean; size?: 'sm' | 'md'; title?: string; className?: string }) {
   return <button type="button" title={title} onClick={onClick} disabled={disabled} className={cx('inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45', size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-[13px]', variant === 'primary' && 'bg-brand text-white hover:bg-brand-dark', variant === 'secondary' && 'border border-border-strong bg-surface hover:border-text', variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text', variant === 'danger' && 'text-err hover:bg-err-soft', className)}>{icon}{children}</button>
 }
+export type MenuItem = { label: string; icon?: ReactNode; onClick: () => void; disabled?: boolean; danger?: boolean }
+/** Three-dot menu for row and card actions (edit, copy, delete…), same trigger as the chart actions menu. */
+export function MoreMenu({ items, label = 'More actions', align = 'right' }: { items: MenuItem[]; label?: string; align?: 'left' | 'right' }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!open) return
+    const off = (e: Event) => { if (e instanceof KeyboardEvent ? e.key === 'Escape' : !ref.current?.contains(e.target as Node)) setOpen(false) }
+    document.addEventListener('mousedown', off); document.addEventListener('keydown', off)
+    return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', off) }
+  }, [open])
+  return (
+    <div ref={ref} className="relative shrink-0">
+      <button type="button" title={label} aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(v => !v)}
+        className="grid h-8 w-8 place-items-center rounded-lg border border-border bg-surface text-text-2 transition-colors hover:border-border-strong hover:text-text"><EllipsisVertical size={15} /></button>
+      {open && (
+        <div role="menu" className={cx('rise absolute top-full z-50 mt-1 min-w-44 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-xl', align === 'right' ? 'right-0' : 'left-0')}>
+          {items.map(it => (
+            <button key={it.label} type="button" role="menuitem" disabled={it.disabled} onClick={() => { setOpen(false); it.onClick() }}
+              className={cx('flex w-full items-center gap-2 whitespace-nowrap px-3 py-1.5 text-left text-[13px] hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent', it.danger ? 'text-err hover:!bg-err-soft' : 'text-text')}>{it.icon}{it.label}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+/** Small info icon whose hover/focus tooltip holds a description, so headings stay one line. */
+export function InfoTip({ text, size = 13 }: { text: string; size?: number }) {
+  return <button type="button" title={text} aria-label={text} className="inline-grid shrink-0 place-items-center align-middle normal-case tracking-normal text-text-3 hover:text-text-2"><Info size={size} /></button>
+}
+/** Page heading with its description tucked behind an info icon. */
+export function PageTitle({ title, info, size = 22 }: { title: ReactNode; info?: string; size?: 22 | 26 }) {
+  return <h2 className={cx('flex items-center gap-2 font-semibold tracking-tight', size === 26 ? 'text-[26px]' : 'text-[22px]')}>{title}{info && <InfoTip text={info} size={15} />}</h2>
+}
 /** `fill` stretches the card to its grid row and its body to the card, so paired cards line up. */
 export function Card({ title, sub, info, right, children, className, pad = true, fill, frame }: { title?: ReactNode; sub?: string
   /** Shown as a hover tooltip off a small info icon next to the title, instead of printing as a permanent subtitle line. */
@@ -23,7 +57,7 @@ export function Card({ title, sub, info, right, children, className, pad = true,
     <section className={cx('min-w-0 rounded-lg border border-border', frame ? 'bg-surface-2' : 'bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.04)]', fill && 'flex h-full flex-col', className)}>
       {title && <header className={cx('flex flex-wrap items-start justify-between gap-3 pb-0.5', frame ? 'px-3 pt-2.5' : 'px-4 pt-3.5')}>
         <div className="min-w-0">
-          <h3 className={cx('flex items-center gap-1.5 font-semibold', frame ? 'text-[11px] uppercase tracking-wider text-text-3' : 'text-[13.5px]')}>{title}{info && <button type="button" title={info} aria-label={info} className="shrink-0 normal-case text-text-3 hover:text-text-2"><Info size={13} /></button>}</h3>
+          <h3 className={cx('flex items-center gap-1.5 font-semibold', frame ? 'text-[11px] uppercase tracking-wider text-text-3' : 'text-[13.5px]')}>{title}{info && <InfoTip text={info} />}</h3>
           {sub && <p className="mt-0.5 text-[12.5px] text-text-3">{sub}</p>}
         </div>{right}</header>}
       <div className={cx(pad && (frame ? 'px-2.5 pb-2.5 pt-2' : title ? 'px-4 pb-4 pt-3' : 'p-4'), fill && 'flex flex-1 flex-col')}>

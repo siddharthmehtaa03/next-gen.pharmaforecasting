@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ArrowRight, Lock, RotateCcw } from 'lucide-react'
 import { ACT, FY, MONTHS, START_YEAR, fmtRev } from './engine'
-import { Btn, Card, Seg, Tag, cx, field } from './ui'
+import { Btn, Card, Seg, Tag, cx, field, PageTitle } from './ui'
 
 /* Default modules every model carries (Default Modules + Gross Price Workflow docs).
    shortcut: the engine forecasts net revenue only; gross, Δ inventory and TUD are derived here with illustrative ratios
@@ -44,7 +44,7 @@ export function RequiredFunnel({ net, ue }: { net: number; ue: number[] }) {
   )
   const arrow = <ArrowRight size={14} className="hidden shrink-0 self-center text-text-3 md:block" aria-hidden />
   return (
-    <Card title={`Revenue funnel · FY${FY}`} sub="Required lines in every model. Total underlying demand is calculated: change it upstream." right={<Tag tone="neutral">USD · FX 1.0 (US-only)</Tag>}>
+    <Card title={`Revenue funnel · FY${FY}`} info="Required lines in every model. Total underlying demand is calculated: change it upstream." right={<Tag tone="neutral">USD · FX 1.0 (US-only)</Tag>}>
       <div className="flex flex-wrap items-stretch gap-2">
         {box('Total underlying demand', fmtB(tud), 'calculated', 'neutral', 'upstream only', true)}{arrow}
         {box('+ Δ Inventory', `${inv >= 0 ? '+' : '−'}${fmtB(Math.abs(inv))}`, 'target WOH', 'warn', '≈2.26 weeks on hand')}{arrow}
@@ -60,7 +60,7 @@ export function RequiredFunnel({ net, ue }: { net: number; ue: number[] }) {
 export function UnexplainedPct({ ue, setUe, readOnly }: { ue: number[]; setUe: (v: number[]) => void; readOnly?: boolean }) {
   const fy = ueFy(ue), breach = Math.abs(fy) > UE_TRIGGER
   return (
-    <Card title={`Unexplained difference · % of gross by month, ${CUR}`} sub={`Prior-year FY ${UE_PRIOR}% is the target. ${MONTHS[0]}–${MONTHS[YTD - 1]} actuals are held; the rest backfill so the full year lands on it. Any forecast month is editable.`}
+    <Card title={`Unexplained difference · % of gross by month, ${CUR}`} info={`Prior-year FY ${UE_PRIOR}% is the target. ${MONTHS[0]}–${MONTHS[YTD - 1]} actuals are held; the rest backfill so the full year lands on it. Any forecast month is editable. FY${CUR + 1} onward holds this full-year % in every month. Unexplained $ = % × gross.`}
       right={readOnly ? <Tag tone="neutral"><Lock size={10} />View only</Tag> : <Btn size="sm" variant="ghost" icon={<RotateCcw size={13} />} onClick={() => setUe(ueDefault())}>Reset to default</Btn>}>
       <div className="grid grid-cols-6 gap-1.5 sm:grid-cols-12">
         {ue.map((v, m) => (
@@ -78,7 +78,6 @@ export function UnexplainedPct({ ue, setUe, readOnly }: { ue: number[]; setUe: (
         <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded-sm border border-[#F0D98A] bg-[#FFF9E0]" />Forecast (editable)</span>
         <span className={cx('ml-auto rounded px-2 py-0.5 font-semibold', breach ? 'bg-err-soft text-err' : 'bg-ok-soft text-ok')}>FY {fy.toFixed(1)}% · {breach ? `outside ±${UE_TRIGGER}% trigger` : `within ±${UE_TRIGGER}% trigger`}</span>
       </div>
-      <p className="mt-2 text-[11.5px] text-text-3">FY{CUR + 1} onward holds this full-year % in every month. Unexplained $ = % × gross.</p>
     </Card>
   )
 }
@@ -105,7 +104,7 @@ export function GrossPriceSkus({ readOnly }: { readOnly?: boolean }) {
   const wgp = level === 'brand' && brandPrice !== null ? brandPrice : wgpSku
   const set = (id: string, p: Partial<Sku>) => setSkus(xs => xs.map(s => (s.id === id ? { ...s, ...p } : s)))
   return (
-    <Card title="Weighted gross price · by SKU" sub="Brand price is the pack-weighted average of each revenue SKU’s list price. Free packs are excluded from the weighting."
+    <Card title="Weighted gross price · by SKU" info="Brand price is the pack-weighted average of each revenue SKU’s list price. Free packs are excluded from the weighting. Only List / WAC events move gross price; GTN events land on net. Add price changes as dated events in Events."
       right={readOnly ? <Tag tone="neutral"><Lock size={10} />View only</Tag> : <Seg label="Edit level" value={level} onChange={setLevel} options={[{ id: 'sku', label: 'By SKU' }, { id: 'brand', label: 'Weighted brand' }]} />}>
       {level === 'sku' ? (
         <div className="overflow-x-auto">
@@ -134,7 +133,6 @@ export function GrossPriceSkus({ readOnly }: { readOnly?: boolean }) {
         <div><p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Price per tablet</p><p className="font-mono text-[19px] font-medium">{usd(wgp / PILLS)}</p><p className="text-[11.5px] text-text-3">÷ {PILLS} tablets per pack</p></div>
         <div><p className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-text-3"><Lock size={10} />Net sales price</p><p className="font-mono text-[19px] font-medium">{usd(wgp * (1 - GTN))}</p><p className="text-[11.5px] text-text-3">Calculated: gross × (1 − {Math.round(GTN * 100)}% GtN)</p></div>
       </div>
-      <p className="mt-3 text-[11.5px] text-text-3">Only List / WAC events move gross price; GTN events land on net. Add price changes as dated events in Events.</p>
     </Card>
   )
 }
@@ -153,10 +151,7 @@ export function ModuleView({ id, net, ue, setUe, editable, onEdit }: { id: ModId
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-[22px] font-semibold tracking-tight">{m.label}</h2>
-          <p className="mt-0.5 max-w-2xl text-sm text-text-2">{DESC[id]}</p>
-        </div>
+        <div className="min-w-0"><PageTitle title={m.label} info={DESC[id]} /></div>
         {m.edit && !editable && <Btn onClick={onEdit}>Edit in Forecast workspace</Btn>}
       </div>
       {id === 'gp' && <GrossPriceSkus readOnly={!editable} />}

@@ -8,7 +8,7 @@ import { ChartActions } from '../../chart/ChartActions'
 import { ArrowDown, ArrowUp, Check, Info, Lock, Pencil, Plus, Sparkles, X } from 'lucide-react'
 import { DRV, FC_YEARS, FY, describeOverride, fmtRev, fmtV, funnelOf, fySum, mLong, revenue, scenarioLayer } from './engine'
 import type { DriverId, EventDef, FunnelRow, Layer, ModelCfg, Override, Scenario } from './engine'
-import { Btn, COLOR, Label, Seg, Tag, Toggle, cx, field } from './ui'
+import { Btn, COLOR, Label, Seg, Tag, Toggle, cx, field, PageTitle, MoreMenu } from './ui'
 import type { Notify } from './Drivers'
 
 /* Scenario summary: every scenario as a column with its own funnel, the parameters behind it and the gap to the
@@ -170,8 +170,7 @@ export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, 
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h2 className="text-[22px] font-semibold tracking-tight">All scenarios side by side</h2>
-          <p className="mt-0.5 text-sm text-text-2">Every scenario’s funnel and figures, compared against <b className="font-semibold text-text">{base.name}</b>.</p></div>
+        <PageTitle title="All scenarios side by side" info={`Every scenario’s funnel and figures, compared against ${base.name}.`} />
         <div className="flex flex-wrap items-center gap-2">
             <Seg label="Year" value={String(year)} onChange={v => setYear(+v)} options={FC_YEARS.map(y => ({ id: String(y), label: `FY${y}` }))} />
             <select aria-label="Compare against" title="Scenario the others are compared against" value={base.id} onChange={e => setBaseId(e.target.value)} className={cx(field, 'h-8 w-auto max-w-[170px] pr-7 text-[13px]')}>{scenarios.map(s => <option key={s.id} value={s.id}>vs {s.name}</option>)}</select>
@@ -193,7 +192,7 @@ export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, 
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: c }} />
                   <span title={s.name} className={cx('min-w-0 truncate text-[13.5px] font-semibold', s.id === selId && 'text-brand')}>{s.name}</span>
                   {s.locked && <Lock size={11} className="shrink-0 text-ok" aria-label="Final" />}
-                  <button type="button" onClick={() => openEdit(s.id)} aria-label={`Edit ${s.name}`} title="Edit scenario" className="grid h-6 w-6 shrink-0 place-items-center rounded text-text-3 hover:bg-surface-2 hover:text-brand"><Pencil size={12} /></button>
+                  <MoreMenu label={`${s.name} actions`} items={[{ label: 'Edit scenario', icon: <Pencil size={14} />, onClick: () => openEdit(s.id) }]} />
                 </div>
                 <div className="mt-1 flex flex-wrap items-center justify-center gap-1.5">
                   {isBase ? <span className="rounded bg-brand-soft px-1.5 py-0.5 text-[10.5px] font-semibold text-brand">Comparison</span>

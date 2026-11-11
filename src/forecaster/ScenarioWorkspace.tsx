@@ -322,7 +322,7 @@ export function ScenarioWorkspace(p: WorkspaceProps) {
   }
 
   return (
-    <div className="rise mx-auto w-full max-w-[1200px] px-5 py-7 sm:px-6">
+    <div className="rise mx-auto w-full px-10 py-7">
       <button type="button" onClick={p.onBack} className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-text-2 hover:text-brand"><ArrowLeft size={15} />{p.cycleName}</button>
       <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Scenario workspace · {p.brand}</p>
       <div className="mt-1 flex flex-wrap items-end justify-between gap-3">

@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { Lock } from 'lucide-react'
 import { ACT, ACTUALS, BASELINE, DRIVERS, DRV, FY, OUTPUTS, UNBIASED, fmtRev, fmtV, idxOf, revenue, yearOf } from './engine'
 import type { DriverId, Layer, OutputId } from './engine'
-import { Card, ForecastChart, Tag, cx, field } from './ui'
+import { Card, ForecastChart, InfoTip, PageTitle, Tag, cx, field } from './ui'
 import type { ChartSeries } from './ui'
 import { ChartActions } from '../../chart/ChartActions'
 import { TrendPanel } from './Trend'
@@ -63,9 +63,7 @@ export function BaselineTrend({ onWorkspace }: { onWorkspace: () => void }) {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h2 className="text-[26px] font-semibold tracking-tight">Baseline trend</h2><p className="mt-1 text-[15px] text-text-2">What the latest trends say the full year looks like.</p>
-      </header>
+      <header><PageTitle size={26} title="Baseline trend" info="What the latest trends say the full year looks like. Illustrative values. Every chart has a Monthly / Quarterly / Annual toggle; hover for value, %G YoY, period on period and % of Budget. FX layer = 1.0 for a US-only brand such as Nurtec." /></header>
 
       {/* One layer: the trend chart, the "can you depend on it" verdict, and the assumptions that drive the trend. */}
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px_260px]">
@@ -84,7 +82,7 @@ export function BaselineTrend({ onWorkspace }: { onWorkspace: () => void }) {
         </Card>
         <TrendPanel key={m.id} series={m.actual} label={m.label} fmt={m.fmt} pct={m.unit === '%'} />
         <aside data-tour="assumptions" aria-label="Underlying assumptions behind the trend" className="rounded-2xl border border-border bg-surface shadow-card p-4">
-          <div className="mb-2 flex flex-wrap items-center gap-2"><p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Underlying assumptions behind the trend</p><Tag tone="neutral">Crucible link later</Tag></div>
+          <div className="mb-2 flex flex-wrap items-center gap-2"><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-3">Underlying assumptions behind the trend<InfoTip text="What the model assumes for each driver to produce the trend. Detail comes once Crucible is connected." /></p><Tag tone="neutral">Crucible link later</Tag></div>
           <ul className="divide-y divide-border">
             {DRIVERS.map(d => (
               <li key={d.id} className={cx('py-2', m.driver === d.id && '-mx-2 rounded bg-brand-soft/50 px-2')}>
@@ -92,12 +90,11 @@ export function BaselineTrend({ onWorkspace }: { onWorkspace: () => void }) {
                 <p className="text-[11px] text-text-3">FY{FY} trend · FY{CUR - 1} actual {prevOf(d)} · Crucible model</p>
               </li>))}
           </ul>
-          <p className="mt-2 text-[11px] text-text-3">What the model assumes for each driver to produce the trend. Detail comes once Crucible is connected.</p>
         </aside>
       </div>
 
       <section data-tour="bridge" aria-label="Standard metric trends">
-        <div className="mb-2 flex flex-wrap items-baseline gap-x-3"><h3 className="text-[15px] font-semibold">Standard metric trends</h3><p className="text-[12.5px] text-text-3">Trend only. The detail behind each one (SKU prices, target weeks on hand, the Unexplained %) and any override is in the <button type="button" onClick={onWorkspace} className="font-semibold text-brand hover:underline">Forecast workspace</button>.</p></div>
+        <h3 className="mb-2 flex items-center gap-1.5 text-[15px] font-semibold">Standard metric trends<InfoTip text="Trend only. The detail behind each one (SKU prices, target weeks on hand, the Unexplained %) and any override is in the Forecast workspace." /></h3>
         <div className="grid gap-4 lg:grid-cols-2">
           {TRENDS.map(t => (
             <Card key={t.title} frame title={t.title} info={t.sub} right={<div className="flex items-center gap-2"><Tag tone="neutral"><Lock size={10} />Trend</Tag><ChartActions target={`baseline-trend-${t.m.id}`} title={`${t.title} · baseline trend`} /></div>}>
@@ -105,7 +102,6 @@ export function BaselineTrend({ onWorkspace }: { onWorkspace: () => void }) {
             </Card>))}
         </div>
       </section>
-      <p className="text-[11.5px] text-text-3">Illustrative values · Monthly / Quarterly / Annual toggle on every chart (hover for value, %G YoY, month on month or quarter on quarter, and % of Budget) · FX layer = 1.0 for a US-only brand such as Nurtec.</p>
     </div>
   )
 }

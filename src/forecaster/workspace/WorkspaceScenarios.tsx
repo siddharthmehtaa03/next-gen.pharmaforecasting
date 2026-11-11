@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
-import { Copy, EllipsisVertical, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { Copy, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { ACTUALS, DRV, FC_YEARS, UNBIASED, fmtDelta, fmtRev, fmtV, fyAvg, fySum } from './engine'
 import type { DriverId, EventDef, Layer, ModelCfg, Scenario } from './engine'
-import { Btn, Card, ForecastChart, Legend, cx, field } from './ui'
+import { Btn, Card, ForecastChart, Legend, MoreMenu, cx, field, PageTitle } from './ui'
 import type { ChartSeries } from './ui'
 import { NumField } from './Drivers'
 import type { CompareProps, Notify } from './Drivers'
@@ -38,35 +38,21 @@ export function ScenarioBar({ scenarios, setScenarios, scope, setScope, year, se
     if (!sc || scenarios.length < 2 || !window.confirm(`Delete “${sc.name}”? Its events, adjustments and overrides go with it.`)) return
     setScenarios(ss => ss.filter(s => s.id !== sc.id)); setScope(FORECAST); notify({ tone: 'info', text: `${sc.name} deleted.` })
   }
-  const [menu, setMenu] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!menu) return
-    const off = (e: Event) => { if (e instanceof KeyboardEvent ? e.key === 'Escape' : !menuRef.current?.contains(e.target as Node)) setMenu(false) }
-    document.addEventListener('mousedown', off); document.addEventListener('keydown', off)
-    return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', off) }
-  }, [menu])
-  const item = 'flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent'
+  const total = (id: string) => fmtRev(fySum((calc[id] ?? calc.__working!).rev, year))
   return (
     <div data-tour="scenario-bar" className="space-y-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-border bg-surface px-5 py-3 shadow-card">
         <div className="flex min-w-0 items-center gap-2.5">
           <span className="text-[11px] font-semibold uppercase tracking-wider text-text-3">Working on</span>
-          <select aria-label="Working on" value={scope} onChange={e => { setScope(e.target.value); setForm(null) }} className={cx(field, 'h-10 w-56 font-semibold text-text')}>
-            <option value={FORECAST}>Active forecast</option>
-            {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}{s.locked ? ' · Final' : ''}</option>)}
+          <select aria-label="Working on" value={scope} onChange={e => { setScope(e.target.value); setForm(null) }} className={cx(field, 'h-10 w-72 font-semibold text-text')}>
+            <option value={FORECAST}>Active forecast · {total('__working')}</option>
+            {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}{s.locked ? ' · Final' : ''} · {total(s.id)}</option>)}
           </select>
-          <div ref={menuRef} className="relative">
-            <button type="button" title="Scenario actions" aria-label="Scenario actions" aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(v => !v)}
-              className="grid h-9 w-9 place-items-center rounded-full text-text-2 transition-colors hover:bg-surface-2 hover:text-text"><EllipsisVertical size={16} /></button>
-            {menu && (
-              <div role="menu" className="rise absolute left-0 top-full z-50 mt-1 w-44 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-xl">
-                <button type="button" role="menuitem" className={item} disabled={!sc} onClick={() => { setMenu(false); dup() }}><Copy size={14} />Duplicate</button>
-                <button type="button" role="menuitem" className={item} disabled={!sc || lock} onClick={() => { setMenu(false); sc && setForm({ mode: 'rename', name: sc.name, from: FORECAST }) }}><Pencil size={14} />Rename</button>
-                <button type="button" role="menuitem" className={cx(item, 'text-err hover:!bg-err-soft')} disabled={!sc || lock || scenarios.length < 2} onClick={() => { setMenu(false); del() }}><Trash2 size={14} />Delete</button>
-              </div>
-            )}
-          </div>
+          <MoreMenu label="Scenario actions" align="left" items={[
+            { label: 'Duplicate', icon: <Copy size={14} />, disabled: !sc, onClick: dup },
+            { label: 'Rename', icon: <Pencil size={14} />, disabled: !sc || lock, onClick: () => sc && setForm({ mode: 'rename', name: sc.name, from: FORECAST }) },
+            { label: 'Delete', icon: <Trash2 size={14} />, danger: true, disabled: !sc || lock || scenarios.length < 2, onClick: del },
+          ]} />
         </div>
         <div className="ml-auto flex items-center gap-4">
           <Btn size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => setForm({ mode: 'new', name: `Scenario ${scenarios.length + 1}`, from: FORECAST })}>New scenario</Btn>
@@ -105,15 +91,12 @@ export function ScenarioDriverView({ id, scenario, setScenarios, work, layer, ev
   const setAdj = (x: number) => setScenarios(ss => ss.map(s => { if (s.id !== scenario.id) return s; const adj = { ...s.adj }; if (Number.isFinite(x) && x) adj[id] = x; else delete adj[id]; return { ...s, adj } }))
   return (
     <div className="space-y-5">
-      <div className="min-w-0">
-        <h2 className="text-[26px] font-semibold tracking-tight">{d.label}</h2>
-        <p className="mt-0.5 max-w-2xl text-sm text-text-2">{d.desc}</p>
-      </div>
+      <div className="min-w-0"><PageTitle title={d.label} info={d.desc} /></div>
       <Card title={`${d.label} · ${scenario.name}`} sub={d.unit === '%' ? 'Percent' : d.unit} right={<Legend s={series} />}>
         {compare?.header && <div className="mb-3 space-y-3">{compare.header}</div>}
         <ForecastChart title={`${d.label} · ${scenario.name}`} s={series} fmt={x => fmtV(id, x)} dp={d.dp} unit={d.unit} height={300} range={compare?.range} />
       </Card>
-      <Card title="Scenario adjustment" sub={`Shift ${d.label.toLowerCase()} across the whole forecast for ${scenario.name} only. For a path by date, add an override below.`}
+      <Card title="Scenario adjustment" info={`Shift ${d.label.toLowerCase()} across the whole forecast for ${scenario.name} only. For a path by date, add an override below.`}
         right={v !== 0 && !lock ? <Btn variant="ghost" size="sm" icon={<RotateCcw size={13} />} onClick={() => setAdj(0)}>Reset</Btn> : undefined}>
         <div className="flex flex-wrap items-end gap-6">
           <div className="w-40"><NumField label={`Adjustment (${d.pct ? 'pts' : '%'})`} value={v} step={d.pct ? 0.1 : 0.5} onChange={x => !lock && setAdj(x)} /></div>
@@ -136,7 +119,7 @@ export function ScenarioChanges({ scenarios, calc, events, model, scope, year, o
   const sign = (n: number, t: string) => `${n >= 0 ? '+' : '−'}${t}`
   const head = (k: string, on: boolean) => cx('px-3 py-2.5 text-right font-semibold', on && 'bg-brand-soft/60 text-brand', k)
   return (
-    <Card title="Scenario changes" sub={`What each scenario changes against the active forecast, FY${year}. Select a value to view and update it above.`} pad={false}>
+    <Card title="Scenario changes" info={`What each scenario changes against the active forecast, FY${year}. Select a value to view and update it above.`} pad={false}>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] text-[13px]">
           <thead><tr className="border-b border-border bg-surface-2 text-[11px] uppercase tracking-wide text-text-3">

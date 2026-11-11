@@ -6,7 +6,7 @@ import {
   applyEdit, defaultEdit, fmtV, fyAvg, idxOf, mLong, revenue, yearOf, fySum,
 } from './engine'
 import type { Curve, DriverId, Edit, Layer, Method, ModelCfg, OutputId } from './engine'
-import { Btn, Card, ForecastChart, Label, Legend, Seg, Tag, Toggle, cx, field } from './ui'
+import { Btn, Card, ForecastChart, Label, Legend, Seg, Tag, Toggle, cx, field, PageTitle, InfoTip, MoreMenu } from './ui'
 import { AgentFrame } from '../../chat/Agent'
 import { TrendPanel } from './Trend'
 import { MODS, bridgeOf, fmtB } from './Modules'
@@ -53,7 +53,7 @@ export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, on
   return (
     <nav aria-label="Forecast map" className="rounded-lg border border-border bg-surface p-4">
       <div className="mb-3 flex items-center justify-between gap-2"><Label>Forecast map</Label>
-        <span className="ml-auto text-[11px] text-text-3">{model.modules.length} modules · from model</span>
+        <span className="ml-auto flex items-center gap-1.5 text-[11px] text-text-3">{model.modules.length} modules · from model<InfoTip text="Modules, order and editable inputs come from the model published by the CoE. Formulas are locked." /></span>
         {onCollapse && <button type="button" onClick={onCollapse} aria-label="Collapse forecast map" title="Collapse" className="-mr-1 grid h-7 w-7 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><PanelRightClose size={15} /></button>}</div>
       <div className="mx-auto flex w-full items-center justify-between gap-2 rounded-md border border-dashed border-border-strong bg-surface-2 px-3 py-2.5">
         <span className="min-w-0"><span className="block text-[10px] font-semibold uppercase tracking-wider text-text-3">Starting point</span><span className="block truncate text-[13px] font-semibold">{model.start.label}</span></span>
@@ -83,7 +83,6 @@ export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, on
         <span className="min-w-0"><span className="block text-[11px] text-text-3">Outcome</span><span className="block truncate text-[13px] font-medium text-text">{out.label}</span></span>
         <span className="font-mono text-[13px] font-medium text-text">{out.fmt(fySum(out.fn(working)))}</span>
       </button>
-      <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-snug text-text-3"><Users size={12} className="mt-px shrink-0" />Modules, order and editable inputs come from the model published by the CoE. Formulas are locked.</p>
     </nav>
   )
 }
@@ -150,7 +149,7 @@ function RevenueView({ workingLayer, scenarioLayer, scenarioName, model, metric,
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h2 className="text-[22px] font-semibold tracking-tight">{o.label}</h2><p className="mt-0.5 max-w-2xl text-sm text-text-2">Combines every module in the forecast map. It is not edited directly. Change an assumption, or turn on events in a scenario, to move it. The reference baseline never moves.</p></div>
+        <PageTitle title={o.label} info="Combines every module in the forecast map. It is not edited directly. Change an assumption, or turn on events in a scenario, to move it. The reference baseline never moves." />
         <OutputSelect model={model} metric={metric} onChange={setMetric} />
       </div>
       <Card title={`Monthly ${o.label.toLowerCase()}`} sub={o.unit} right={<Legend s={s} />}><ForecastChart title={`${o.label} forecast`} s={s} fmt={v => o.fmt(v, 1)} dp={0} unit={o.unit} height={320} /></Card>
@@ -230,10 +229,7 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h2 className="text-[22px] font-semibold tracking-tight">{d.label}</h2>
-          <p className="mt-0.5 max-w-2xl text-sm text-text-2">{d.desc} <span className="text-text-3">Source: Data Science baseline · monthly · brand level.</span></p>
-        </div>
+        <div className="min-w-0"><PageTitle title={d.label} info={`${d.desc} Source: Data Science baseline · monthly · brand level.`} /></div>
         {mode === 'overview' && !locked && <Btn variant="secondary" onClick={onOpenAssumptions} icon={<PencilLine size={14} />}>Edit assumption</Btn>}
       </div>
 
@@ -251,8 +247,13 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
 
       {editing && (
         <AgentFrame on={agent.section === 'assume'} label={`${agent.name} is adjusting ${d.label.toLowerCase()}`}>
-        <Card title="Adjust assumption" sub="Override permitted values or change the projection method. The calculation formula stays locked and the reference baseline never changes."
-          right={dirty ? <Tag tone="warn">Unapplied changes</Tag> : applied ? <Tag tone="brand">Applied</Tag> : undefined}>
+        <Card title="Adjust assumption" info="Override permitted values or change the projection method. The calculation formula stays locked and the reference baseline never changes."
+          right={<div className="flex items-center gap-2">{dirty ? <Tag tone="warn">Unapplied changes</Tag> : applied ? <Tag tone="brand">Applied</Tag> : null}
+            <MoreMenu label="Assumption actions" items={[
+              { label: 'Upload Excel', icon: <Upload size={14} />, onClick: () => fileRef.current?.click() },
+              { label: paste !== null ? 'Close paste box' : 'Paste from Excel', icon: <ClipboardPaste size={14} />, onClick: () => setPaste(p => p === null ? '' : null) },
+              { label: 'Reset to system value', icon: <RotateCcw size={14} />, disabled: !applied && !dirty, onClick: reset },
+            ]} /></div>}>
           <div className="space-y-5">
             <div><Label className="mb-1.5">Projection method</Label>
               <Seg label="Method" value={eff.method} onChange={m => patch({ method: m as Method })} options={(Object.keys(METHOD_LABEL) as Method[]).map(m => ({ id: m, label: METHOD_LABEL[m] }))} /></div>
@@ -274,13 +275,8 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
                 <span><b className="font-medium">Hold flat after end</b><span className="text-text-2"> · {eff.hold ? 'the end value carries forward' : 'the series rejoins the reference baseline'}</span></span></label>
             )}
 
-            <div className="flex flex-wrap items-center gap-2 border-t border-border pt-4">
-              <Label className="mr-1">Bring in values</Label>
-              <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.txt" className="hidden" onChange={e => onFile(e.target.files?.[0])} />
-              <Btn variant="secondary" icon={<Upload size={14} />} onClick={() => fileRef.current?.click()}>Upload Excel</Btn>
-              <Btn variant={paste !== null ? 'primary' : 'secondary'} icon={<ClipboardPaste size={14} />} onClick={() => setPaste(p => p === null ? '' : null)}>Paste from Excel</Btn>
-              {eff.method === 'direct' && eff.source !== 'manual' && <Tag tone="brand">From {eff.source === 'excel' ? 'file' : 'paste'}</Tag>}
-            </div>
+            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.txt" className="hidden" onChange={e => onFile(e.target.files?.[0])} />
+            {eff.method === 'direct' && eff.source !== 'manual' && <Tag tone="brand">Values from {eff.source === 'excel' ? 'file' : 'paste'}</Tag>}
             {paste !== null && (
               <div className="rounded-md border border-border bg-surface-2 p-3">
                 <textarea autoFocus value={paste} onChange={e => setPaste(e.target.value)} rows={3} placeholder={`Paste a row or column of monthly values, starting ${mLong(eff.start)}`} className="w-full resize-y rounded-md border border-border-strong bg-surface p-2.5 font-mono text-[12px] outline-none focus:border-brand" />
@@ -302,9 +298,6 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
             <label className="block"><Label className="mb-1" hint="optional">Notes on change</Label>
               <textarea value={draft.notes} onChange={e => patch({ notes: e.target.value })} rows={2} placeholder="What changed, and why? Shown on the Review screen." className="w-full resize-y rounded-md border border-border-strong bg-surface p-2.5 text-sm outline-none focus:border-brand" /></label>
 
-            <div className="flex justify-start border-t border-border pt-3">
-              <Btn variant="ghost" icon={<RotateCcw size={15} />} disabled={!applied && !dirty} onClick={reset}>Reset to system value</Btn>
-            </div>
           </div>
         </Card>
         </AgentFrame>
@@ -349,7 +342,7 @@ function AssumptionGrid({ id, preview, cellState, onCell, onCancel }: {
     <div className="overflow-hidden rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-2.5">
         <b className="text-[13px] font-semibold">{d.label} · {d.unit === '%' ? 'percent' : d.unit}</b>
-        <span className="text-[11.5px] text-text-3">{hidden ? 'hidden · every month or every year' : <>grey = actual · <i className="mx-0.5 inline-block h-1.5 w-1.5 rounded-full bg-brand align-middle" /> assumption you can type over · blue fill = overridden · dashed underline = recalculated</>}</span>
+        {!hidden && <InfoTip text="Grey = actual · dot = assumption you can type over · blue fill = overridden · dashed underline = recalculated." />}
         <span className="ml-auto flex items-center gap-2">
           {!hidden && <span role="group" aria-label="Grid period" className="inline-flex rounded-md border border-border bg-surface-2 p-0.5">
             {(['monthly', 'annual'] as const).map(p => <button key={p} type="button" aria-pressed={period === p} onClick={() => setPeriod(p)} className={cx('rounded px-2.5 py-1 text-[10.5px] font-semibold capitalize', period === p ? 'bg-surface text-text shadow-sm' : 'text-text-2 hover:text-text')}>{p}</button>)}

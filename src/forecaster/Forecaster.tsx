@@ -416,7 +416,7 @@ function ForecastFlow({ onHome, notify, brand, model, cycle, cycleName, cycleRow
         </aside>
 
         <main className="min-w-0">
-          <div key={step} className="rise mx-auto w-full max-w-[1040px] px-5 py-7 sm:px-6">
+          <div key={step} className="rise mx-auto w-full px-10 py-7">
             <p className="font-mono text-xs uppercase tracking-widest text-brand">Step {step} of {N}</p>
             <h1 className="mt-1 text-[28px] font-semibold tracking-tight">{STEP_META[curStep].title}</h1>
 
@@ -489,7 +489,7 @@ function ForecastFlow({ onHome, notify, brand, model, cycle, cycleName, cycleRow
 function ActionBar({ children }: { children: ReactNode }) {
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border-strong bg-surface/95 shadow-[0_-6px_20px_-12px_rgba(0,0,0,0.25)] backdrop-blur">
-      <div className="mx-auto flex min-h-[68px] w-full max-w-[1200px] flex-wrap items-center gap-x-8 gap-y-2 px-5 py-3 sm:px-6">{children}</div>
+      <div className="mx-auto flex min-h-[68px] w-full flex-wrap items-center gap-x-8 gap-y-2 px-10 py-3">{children}</div>
     </div>
   )
 }
@@ -841,7 +841,7 @@ function CycleWorkspace({ brand, cycleName, sub, tab, setTab, ctx, selected, row
   const [from, setFrom] = useState('')
   const statusOf = (r: ScenarioRow) => subAt[r.base] ? 'Submitted' : r.status
   return (
-    <div className="rise mx-auto w-full max-w-[1240px] px-6 py-8">
+    <div className="rise mx-auto w-full px-10 py-8">
       <button type="button" onClick={onBack} className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-text-2 hover:text-brand"><ArrowLeft size={15} />My forecasts</button>
       <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Cycle workspace · {brand}</p>
       <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
@@ -1557,7 +1557,7 @@ export function LegacyForecaster({ onHome, notify }: { onHome: () => void; notif
           </ul>
         </nav>
 
-        <main className="mx-auto w-full min-w-0 max-w-[1240px] px-6 py-8">
+        <main className="mx-auto w-full min-w-0 px-10 py-8">
           {section === 'knowledge' && <KnowledgeBank kb={kb} setKb={setKb} onOpen={(brand, cycle) => { const b = brands.find(x => x.brand === brand); const cy = b?.cycles.find(c => c.name === cycle); if (b && cy) openCycle(b, cy.id) }} />}
 
           {section === 'forecasts' && (
