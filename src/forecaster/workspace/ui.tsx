@@ -88,7 +88,9 @@ const roll = (a: number[] | undefined, y: number, agg: 'sum' | 'avg', n = 12) =>
 const BUDGET_YEAR = START_YEAR + Math.floor((ACT - 1) / 12), BUDGET_UPLIFT = 1.02
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 
-export function ForecastChart({ s, fmt, height = 300, dp = 1, unit, title = 'Forecast chart', context, toolbar, defaultGrain = 'month', canSave = true }: { s: ChartSeries; fmt: (v: number) => string; height?: number; dp?: number; unit?: string; title?: string; context?: string; toolbar?: boolean; defaultGrain?: Grain; canSave?: boolean }) {
+export function ForecastChart({ s, fmt, height = 300, dp = 1, unit, title = 'Forecast chart', context, toolbar, defaultGrain = 'month', canSave = true, ownActions, domId }: { s: ChartSeries; fmt: (v: number) => string; height?: number; dp?: number; unit?: string; title?: string; context?: string; toolbar?: boolean; defaultGrain?: Grain; canSave?: boolean
+  /** Set when the caller renders its own ChartActions (e.g. next to a card-header badge) instead of this chart's own floating one. */
+  ownActions?: boolean; domId?: string }) {
   const ins = useInsights()
   const showBar = toolbar ?? height >= 250
   const agg: 'sum' | 'avg' = unit === '$M' ? 'sum' : 'avg'
@@ -162,12 +164,12 @@ export function ForecastChart({ s, fmt, height = 300, dp = 1, unit, title = 'For
           <span className="mr-auto text-[12px] text-text-3" aria-live="polite">{status}</span>
           {ins && canSave && <Btn variant="secondary" icon={<Bookmark size={14} />} onClick={() => { ins.save({ title, scenario: s.scenarioName, snap: { series: s, unit: unit ?? '', dp, fmt, grain } }); flash('Saved to Insights.') }}>Save to Insights</Btn>}
           <Seg label="Time aggregation" value={grain} onChange={setGrain} options={[{ id: 'month', label: 'Monthly' }, { id: 'quarter', label: 'Quarterly' }, { id: 'year', label: 'Annual' }]} />
-          <ChartActions target={() => ref.current} title={title} subtitle={[context, scope].filter(Boolean).join(' · ')} onPptx={exportPptx} />
+          {!ownActions && <ChartActions target={() => ref.current} title={title} subtitle={[context, scope].filter(Boolean).join(' · ')} onPptx={exportPptx} />}
         </div>
       )}
       <div className="relative">
-      {!showBar && height >= 160 && <ChartActions className="absolute right-0 top-0 z-10" target={() => ref.current} title={title} subtitle={[context, scope].filter(Boolean).join(' · ')} onPptx={exportPptx} />}
-      <div ref={ref} style={{ height }} role="img" aria-label={`${title}, ${scope}`}>
+      {!ownActions && !showBar && height >= 160 && <ChartActions className="absolute right-0 top-0 z-10" target={() => ref.current} title={title} subtitle={[context, scope].filter(Boolean).join(' · ')} onPptx={exportPptx} />}
+      <div ref={ref} id={domId} style={{ height }} role="img" aria-label={`${title}, ${scope}`}>
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 0, left: 0 }}>
             <CartesianGrid stroke={COLOR.grid} vertical={false} />
