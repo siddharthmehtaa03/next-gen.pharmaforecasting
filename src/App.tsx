@@ -17,6 +17,7 @@ import { AgentBanner, AgentButton, AgentDemoCard } from './chat/Agent'
 import type { CopilotProps } from './forecaster/workspace/agent'
 import { FRAME_ID, scrollFrameTop } from './frame'
 import { ChartActions } from './chart/ChartActions'
+import { MoreMenu } from './forecaster/workspace/ui'
 import { SnowflakeSources } from './ConfigInputs'
 import pfizerMark from './assets/pfizer-mark-color.png'
 import pfizerLogo from './assets/pfizer-logo-color.png'
@@ -419,6 +420,7 @@ type ModelRow = {
   fx?: FixtureId; tag?: string; name?: string; diff?: { kind: '+' | '−' | '~'; text: string }[]
 }
 const SEED_MODELS: ModelRow[] = [
+  { id: 'v', brand: 'Velsipity', inds: [{ name: 'Ulcerative colitis', arch: '' }], market: 'US', cycle: 'OP 2027', version: 'v1.0 draft', status: 'Draft', fresh: 'Current', issues: 3, updated: 'Today, 09:12', by: 'You', step: 2, versions: [] },
   { id: 'a', brand: 'Cibinqo', inds: [{ name: 'Atopic dermatitis', arch: 'Prevalent-Share' }], market: 'US', cycle: 'OP 2027', version: 'v1.0 draft', status: 'Draft', fresh: 'Current', issues: 3, updated: 'Today, 09:12', by: 'You', step: 2, versions: [] },
   { id: 'd', brand: 'Abrysvo', inds: [{ name: 'RSV — older adults', arch: 'Market Stock-Flow' }], market: 'US', cycle: 'OP 2027', version: 'v1.3 draft', status: 'Draft', fresh: 'Partial', issues: 2, updated: 'Sep 24', by: 'You', step: 5,
     versions: [{ v: 'v1.2', date: 'Jun 12', by: 'You', note: 'Seasonal dose-basket for 2026/27.', scenarios: 9 }] },
@@ -537,6 +539,11 @@ function AgentSection({ id, children, pad }: { id: string; children: ReactNode; 
   )
 }
 
+/** Description behind a small info icon (hover or focus shows it), so headings stay one line. A span, not a button, so it is safe inside <label>. */
+function InfoTip({ text }: { text: string }) {
+  return <span tabIndex={0} role="img" title={text} aria-label={text} className="inline-flex shrink-0 cursor-help text-text-3 outline-none hover:text-text-2 focus-visible:text-brand"><Info size={13} /></span>
+}
+
 function Field({ label, hint, error, children, required, ai, className, agent }: { label: string; hint?: string; error?: string; children: ReactNode; required?: boolean; ai?: boolean; className?: string; agent?: string }) {
   const now = useContext(AgentCtx).field
   const live = !!agent && now === agent
@@ -544,13 +551,12 @@ function Field({ label, hint, error, children, required, ai, className, agent }:
     <label className={cx('block min-w-0', live && 'agent-field', className)} data-agent={agent}>
       <span className="mb-1.5 flex items-center gap-2 text-[13px] font-semibold text-text">
         <span>{label}{required && <span className="text-err"> *</span>}</span>
+        {hint && <InfoTip text={hint} />}
         {live ? <span className="inline-flex items-center gap-1 rounded bg-[#2f9e73]/10 px-1.5 py-0.5 text-[10px] font-semibold text-[#0f5a43]"><Loader2 size={10} className="animate-spin" />{ASSISTANT} is typing</span>
           : null}
       </span>
       {children}
-      {error ? (
-        <span className="mt-1.5 flex items-center gap-1 text-xs text-err"><AlertCircle size={12} />{error}</span>
-      ) : hint ? <span className="mt-1.5 block text-xs text-text-3">{hint}</span> : null}
+      {error && <span className="mt-1.5 flex items-center gap-1 text-xs text-err"><AlertCircle size={12} />{error}</span>}
     </label>
   )
 }
@@ -598,12 +604,13 @@ function Banner({ tone, title, children, action }: { tone: 'info' | 'ok' | 'warn
   )
 }
 
-function Card({ title, sub, right, children, className }: { title?: ReactNode; sub?: string; right?: ReactNode; children: ReactNode; className?: string }) {
+/** `info` is a description shown behind an info icon next to the title; `sub` stays visible and is for live status (counts, validation). */
+function Card({ title, sub, info, right, children, className }: { title?: ReactNode; sub?: string; info?: string; right?: ReactNode; children: ReactNode; className?: string }) {
   return (
     <section className={cx('rounded-xl border border-border bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.04)]', className)}>
       {title && (
         <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5 pb-1 pt-4">
-          <div className="min-w-0 flex-1"><h3 className="text-[14px] font-semibold text-text">{title}</h3>{sub && <p className="mt-0.5 text-[12.5px] text-text-3">{sub}</p>}</div>
+          <div className="min-w-0 flex-1"><h3 className="flex items-center gap-1.5 text-[14px] font-semibold text-text">{title}{info && <InfoTip text={info} />}</h3>{sub && <p className="mt-0.5 text-[12.5px] text-text-3">{sub}</p>}</div>
           {right && <div className="shrink-0">{right}</div>}
         </header>
       )}
@@ -2298,11 +2305,13 @@ function RowActionMenu({
   onRename,
   onDuplicate,
   onDelete,
+  onHistory,
   label = 'Model',
 }: {
   onRename: () => void
   onDuplicate: () => void
   onDelete: () => void
+  onHistory?: () => void
   label?: string
 }) {
   const [open, setOpen] = useState(false)
@@ -2346,6 +2355,17 @@ function RowActionMenu({
           aria-label={`${label} actions`}
           className="rise absolute right-0 top-9 z-30 w-40 rounded-xl border border-border bg-surface p-1 shadow-xl"
         >
+          {onHistory && (
+            <button
+              type="button"
+              role="menuitem"
+              onClick={() => { setOpen(false); onHistory() }}
+              className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[13px] text-text hover:bg-surface-2"
+            >
+              <History size={13} className="text-text-2" />
+              Version history
+            </button>
+          )}
           <button
             type="button"
             role="menuitem"
@@ -2534,11 +2554,10 @@ function ModelsHome({ fixtures, models, setModels, onOpen, onResume, notify, ai,
   }
 
   return (
-    <main className={cx('mx-auto w-full max-w-[1320px] flex-1 px-10 py-8 transition-[padding]', ai && 'xl:pr-[420px]')}>
+    <main className={cx('mx-auto w-full flex-1 px-10 py-8 transition-[padding]', ai && 'xl:pr-[420px]')}>
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-[28px] font-semibold tracking-tight">Model workspace</h1>
-          <p className="mt-1 text-text-2">Models you created or have been given access to. Open one to continue configuring it.</p>
+          <h1 className="flex items-center gap-2 text-[28px] font-semibold tracking-tight">Model workspace<InfoTip text="Models you created or have been given access to. Open one to continue configuring it. Only models within your authorised brands and geographies are listed; others can be requested." /></h1>
         </div>
         <Btn icon={<Plus size={16} />} className="shrink-0" onClick={() => setCreating(true)}>New model</Btn>
       </header>
@@ -2562,7 +2581,6 @@ function ModelsHome({ fixtures, models, setModels, onOpen, onResume, notify, ai,
               <select aria-label="Filter by status" value={filter} onChange={e => setFilter(e.target.value as typeof filter)} className={cx(inputCls(), 'w-auto!')}><option value="All">Any status</option><option value="Draft">Draft</option><option value="Finalised">Finalised</option><option value="Published">Available to Forecaster</option></select>
               {anyFilter && <Btn variant="ghost" size="sm" onClick={clearAll}>Clear</Btn>}
             </div>
-            <p className="flex items-center gap-1.5 text-xs text-text-3"><Lock size={12} />Only models within your authorised brands and geographies are listed. Others can be requested.</p>
           </div>
 
           <div className="mt-3 overflow-x-auto rounded-lg border border-border bg-surface">
@@ -2588,7 +2606,7 @@ function ModelsHome({ fixtures, models, setModels, onOpen, onResume, notify, ai,
                         </th>
                       )
                     })}
-                    <th className="w-[104px] px-3 py-2.5 text-right font-semibold"><span className="sr-only">Actions</span></th>
+                    <th className="w-[56px] px-3 py-2.5 text-right font-semibold"><span className="sr-only">Actions</span></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2626,23 +2644,11 @@ function ModelsHome({ fixtures, models, setModels, onOpen, onResume, notify, ai,
                           <span className="truncate max-w-[70px]">{m.by}</span>
                         </span>
                       </td>
-                      <td className="w-[104px] px-3 py-2.5 text-right whitespace-nowrap" onClick={e => e.stopPropagation()}>
+                      <td className="w-[56px] px-3 py-2.5 text-right whitespace-nowrap" onClick={e => e.stopPropagation()}>
                         <div className="flex items-center justify-end gap-1">
-                          {m.versions.length > 0 ? (
-                            <button
-                              type="button"
-                              onClick={() => setVersions(m)}
-                              title="Version history"
-                              aria-label="Version history"
-                              className="grid h-8 w-8 shrink-0 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text transition-colors"
-                            >
-                              <History size={14} />
-                            </button>
-                          ) : (
-                            <span className="h-8 w-8 shrink-0 inline-block" aria-hidden="true" />
-                          )}
                           <RowActionMenu
                             label={m.brand}
+                            onHistory={m.versions.length > 0 ? () => setVersions(m) : undefined}
                             onRename={() => setRenamingModel(m)}
                             onDuplicate={() => duplicateModel(m)}
                             onDelete={() => setDeletingModel(m)}
@@ -2726,10 +2732,11 @@ function NewModelDialog({ models, onClose, onStart }: { models: ModelRow[]; onCl
         {mode === 'copy' && <p className="rounded-md bg-surface-2 px-3.5 py-3 text-[13px] text-text-2">Templates are models previously saved in the library. Copying one keeps its archetypes, modes and modules as your starting point, and you can change anything in the steps that follow.</p>}
         {mode === 'copy' && models.length > 0 && (
           <div>
-            <Field label="Template" hint={src ? `${src.inds.length} indication${src.inds.length > 1 ? 's' : ''} · ${Array.from(new Set(src.inds.map(i => i.arch))).join(' + ')} · ${src.version}` : undefined}>
+            <Field label="Template">
               <select className={inputCls()} value={from} onChange={e => setFrom(e.target.value)}>
                 {models.map(m => <option key={m.id} value={m.id}>{m.brand} {m.market} · {m.version}</option>)}
               </select>
+              {src && <span className="mt-1.5 block text-xs text-text-3">{src.inds.length} indication{src.inds.length > 1 ? 's' : ''} · {Array.from(new Set(src.inds.map(i => i.arch))).join(' + ')} · {src.version}</span>}
             </Field>
           </div>
         )}
@@ -3242,8 +3249,10 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
           <button type="button" onClick={() => setSharing(true)} title="Collaborators" className="hidden items-center -space-x-1.5 sm:flex">
             {c.team.slice(0, 4).map(m => <span key={m.name} className="grid h-7 w-7 place-items-center rounded-full border-2 border-surface bg-brand-soft text-[10px] font-semibold text-brand">{m.name.split(/[\s.]+/).filter(Boolean).map(x => x[0]).slice(0, 2).join('')}</span>)}
           </button>
-          <Btn variant="secondary" size="sm" icon={<Users size={14} />} onClick={() => setSharing(true)}>Share</Btn>
-          <Btn variant="ghost" size="sm" icon={<History size={14} />} onClick={() => setHistory(true)} title="Change history"><span className="hidden 2xl:inline">History</span></Btn>
+          <MoreMenu label="Model actions" items={[
+            { label: 'Share', icon: <Users size={14} />, onClick: () => setSharing(true) },
+            { label: 'Change history', icon: <History size={14} />, onClick: () => setHistory(true) },
+          ]} />
           <Btn variant="primary" size="sm" onClick={() => { notify({ tone: 'ok', text: 'Configuration saved. Resume it from your workspace.' }); onExit() }}>Save & exit</Btn>
         </div>
       </div>
@@ -3298,12 +3307,11 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
               </div>
             </div>
           )}
-          <div key={stage} className={cx("rise @container relative mx-auto w-full flex-1 px-5 py-7 sm:px-10", stage === 4 ? "max-w-none" : "max-w-[1080px]")}>
+          <div key={stage} className={cx("rise @container relative mx-auto w-full flex-1 px-10 py-7", stage === 4 ? "max-w-none" : "")}>
             <p className="font-mono text-xs uppercase tracking-widest text-brand">Step {stage} of {LAST}</p>
             <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-              <h1 className="text-[28px] font-semibold tracking-tight">{S.title}</h1>
+              <h1 className="flex items-center gap-2 text-[28px] font-semibold tracking-tight">{S.title}<InfoTip text={S.desc} /></h1>
             </div>
-            <p className="mt-1 text-sm text-text-2">{S.desc}</p>
 
             {fixNote && (
               <div className="mt-6">
@@ -3381,7 +3389,7 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
           </div>
           {stage < LAST && (
             <footer className="sticky bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur">
-              <div className={cx("mx-auto flex items-center gap-3 px-5 py-3 sm:px-10", stage === 4 ? "max-w-none" : "max-w-[1080px]")}>
+              <div className={cx("mx-auto flex items-center gap-3 px-10 py-3", stage === 4 ? "max-w-none" : "")}>
                 <Btn variant="ghost" icon={<ArrowLeft size={16} />} disabled={stage === 1} onClick={() => go(stage - 1)}>Back</Btn>
                 <span className="ml-auto hidden truncate text-[13px] text-text-3 md:block">
                   {issues[stage - 1].length ? `${issues[stage - 1].length} item${issues[stage - 1].length > 1 ? 's' : ''} left on this step` : <span className="flex items-center gap-1 text-ok"><CheckCircle2 size={14} />Ready</span>}
@@ -3520,7 +3528,10 @@ function SummaryPanel({ c, issues, visited, go }: { c: Config; issues: Issue[][]
   return (
     <aside className="hidden border-l border-border bg-surface wide:block">
       <div className="sticky top-[50px] max-h-[calc(100dvh-122px)] overflow-y-auto p-5">
-        <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Model summary</p>
+        <div className="flex items-center justify-between gap-2">
+          <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Model summary</p>
+          <MoreMenu label="Edit a section" items={rows.map(r => ({ label: `Edit ${r.label.toLowerCase()}`, icon: <Pencil size={13} />, onClick: () => go(r.stage) }))} />
+        </div>
         <dl className="mt-4 divide-y divide-border">
           {rows.map(r => {
             const bad = visited.has(r.stage) && issues[r.stage - 1].length > 0
@@ -3528,7 +3539,6 @@ function SummaryPanel({ c, issues, visited, go }: { c: Config; issues: Issue[][]
               <div key={r.label} className="group py-3">
                 <dt className="flex items-center justify-between text-xs text-text-3">
                   <span className="flex items-center gap-1">{r.label}{bad && <AlertCircle size={11} className="text-err" />}</span>
-                  <button type="button" onClick={() => go(r.stage)} className="font-semibold text-brand hover:underline">Edit</button>
                 </dt>
                 <dd className="mt-0.5 text-[13px] font-medium text-text">{r.value}</dd>
               </div>
@@ -3536,8 +3546,7 @@ function SummaryPanel({ c, issues, visited, go }: { c: Config; issues: Issue[][]
           })}
         </dl>
         <div className="mt-4 rounded-md bg-background p-3 text-xs text-text-2">
-          <p className="font-semibold text-text">Tier: {c.grade}</p>
-          <p className="mt-1">Tiers only move down in use — a screening model can never be promoted into a valuation.</p>
+          <p className="flex items-center gap-1.5 font-semibold text-text">Tier: {c.grade}<InfoTip text="Tiers only move down in use — a screening model can never be promoted into a valuation." /></p>
         </div>
       </div>
     </aside>
@@ -3561,7 +3570,7 @@ function StageBrand({ c, update, errs }: Ctx & { errs: Issue[] }) {
   return (
     <>
 
-      <AgentSection id="subject"><Card title="Forecast subject" sub="Required fields are marked *.">
+      <AgentSection id="subject"><Card title="Forecast subject" info="Required fields are marked *.">
         <div className="grid gap-5 @xl:grid-cols-2">
           <Field label="Model name" required error={err('brand')} ai={ai('brand')} agent="brand"><input className={inputCls(!!err('brand'))} value={c.brand} onChange={e => setF('brand', e.target.value)} placeholder="e.g. Velsipity US model" /></Field>
           <Field label="Brand or asset name" required error={err('asset')} ai={ai('asset')} agent="asset"><input className={inputCls(!!err('asset'))} value={c.asset} onChange={e => setF('asset', e.target.value)} placeholder="e.g. Velsipity" /></Field>
@@ -3593,7 +3602,7 @@ function StageBrand({ c, update, errs }: Ctx & { errs: Issue[] }) {
         </fieldset>
       </Card></AgentSection>
 
-      <AgentSection id="streams"><Card title="Revenue streams" sub={c.aiFields.includes('inds') ? `Streams were filled by ${ASSISTANT} — review the names below.` : 'Split by indication, line of therapy, segment or other dimension.'} right={<Btn variant="secondary" size="sm" icon={<Plus size={14} />} onClick={addInd}>Add stream</Btn>}>
+      <AgentSection id="streams"><Card title="Revenue streams" info="Split by indication, line of therapy, segment or other dimension." sub={c.aiFields.includes('inds') ? `Streams were filled by ${ASSISTANT} — review the names below.` : undefined} right={<Btn variant="secondary" size="sm" icon={<Plus size={14} />} onClick={addInd}>Add stream</Btn>}>
         {err('inds') && <p className="mb-3 flex items-center gap-1 text-xs text-err"><AlertCircle size={12} />{err('inds')}</p>}
         <ul className="space-y-4">
           {c.inds.map((i, k) => <StreamCard key={i.id} i={i} k={k} c={c} error={err(`ind-${i.id}`)} update={update} onRemove={() => i.arch ? setPending(i.id) : rmInd(i.id)} />)}
@@ -4117,9 +4126,9 @@ function StageModes({ c, ind, update, updInd, go, notify }: Ctx) {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="text-sm font-semibold text-text">{m.label}</span>
+                        {m.help && <InfoTip text={m.help} />}
                         {m.optional ? <Badge>Optional</Badge> : <Badge tone="brand">Required</Badge>}
                       </div>
-                      <p className="mt-0.5 text-xs text-text-2">{m.help}</p>
                     </div>
                     <div className="min-w-0">
                     <select className={cx(inputCls(m.id === 'time' && modes.time === 'Custom' && !!customTimeErr(modes) && touched), 'w-full')} value={modes[m.id]} onChange={e => set(m, e.target.value)} aria-label={m.label}>
@@ -4411,8 +4420,7 @@ function StreamArchSummary({ c, ind, update, go }: Pick<Ctx, 'c' | 'ind' | 'upda
   return (
     <section aria-label="Streams and archetypes" className="@container rounded-lg border border-border bg-background p-4">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold">Streams and archetypes</h3>
-        <span className="text-[11.5px] text-text-3">Select a stream to map it, or an archetype to change it.</span>
+        <h3 className="flex items-center gap-1.5 text-sm font-semibold">Streams and archetypes<InfoTip text="Select a stream to map it, or an archetype to change it." /></h3>
       </div>
       <div className="flex items-start gap-3 overflow-x-auto">
         <span className="shrink-0 rounded-md bg-brand-dark px-3 py-1.5 text-[12px] font-semibold text-white">{c.brand || 'Model'} total</span>
@@ -4468,8 +4476,7 @@ function StageModules({ c, ind, update, updInd, go, errs, fix }: Ctx & { errs?: 
       <div className="grid items-start gap-4 @3xl:grid-cols-[minmax(0,1fr)_330px]">
         <section className="min-w-0 rounded-lg border border-border bg-surface p-4" aria-label="Model canvas">
           <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-            <div><h3 className="flex items-center gap-2 text-sm font-semibold"><Workflow size={15} className="text-brand" />Canvas · {ind.name || 'Stream'}</h3><p className="text-xs text-text-2">{archName(arch)} <span className="text-text-3">({ind.engine})</span> · {onCount} modules</p></div>
-            <span className="text-[11px] text-text-3">Click a card to inspect · drag to the library to remove</span>
+            <div><h3 className="flex items-center gap-2 text-sm font-semibold"><Workflow size={15} className="text-brand" />Canvas · {ind.name || 'Stream'}<InfoTip text="Click a card to inspect · drag to the library to remove" /></h3><p className="text-xs text-text-2">{archName(arch)} <span className="text-text-3">({ind.engine})</span> · {onCount} modules</p></div>
           </div>
           <ModuleLanes c={c} ind={ind} updInd={updInd} dragging={dragging} inspect={inspect} onInspect={setInspect} />
         </section>
@@ -5053,7 +5060,7 @@ function ForecasterFlow({ ind, go }: { ind: Ind; go: (n: number) => void }) {
           })())}
         </ol>
         <div className="space-y-2">
-          <p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Does the logic hold?</p>
+          <p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-text-3">Does the logic hold?<InfoTip text="Starting values are illustrative, from input defaults and module benchmarks. Only limited data is connected at configuration, so upstream patient pools are left for the forecaster to fill after you finalise." /></p>
           <ul className="space-y-2">{checks.map((c, k) => (
             <li key={k} className="flex gap-2 rounded-md border border-border px-3 py-2 text-[12.5px]">
               {c.tone === 'ok' ? <CheckCircle2 size={14} className="mt-0.5 shrink-0 text-ok" /> : c.tone === 'warn' ? <AlertTriangle size={14} className="mt-0.5 shrink-0 text-warn" /> : <Info size={14} className="mt-0.5 shrink-0 text-text-3" />}
@@ -5061,7 +5068,6 @@ function ForecasterFlow({ ind, go }: { ind: Ind; go: (n: number) => void }) {
               {c.tone !== 'ok' && <EditLink stage={c.stage} go={go} />}
             </li>
           ))}</ul>
-          <p className="text-[11.5px] text-text-3">Starting values are illustrative, from input defaults and module benchmarks. Only limited data is connected at configuration, so upstream patient pools are left for the forecaster to fill after you finalise.</p>
         </div>
       </div>
     </div>
@@ -5080,12 +5086,12 @@ function StagePreview({ c, ind, go, issues, warns, fix }: Ctx & { issues: Issue[
   const [code, setCode] = useState(false)
   return (
     <>
-      <Card title={`Forecaster flow · ${ind.name || 'Stream'}`} sub="The funnel the forecaster will work in. Select a step to change it."
+      <Card title={`Forecaster flow · ${ind.name || 'Stream'}`} info="The funnel the forecaster will work in. Select a step to change it."
         right={<ChartActions target="export-forecaster-flow" title={`Forecaster flow · ${ind.name || 'Stream'}`} subtitle={c.brand} />}>
         <div id="export-forecaster-flow" className="bg-surface"><ForecasterFlow ind={ind} go={go} /></div>
       </Card>
 
-      <Card title="Configuration flow" sub="Select any step to change it." right={<ChartActions target="export-config-flow" title="Configuration flow" subtitle={c.brand} />}>
+      <Card title="Configuration flow" info="Select any step to change it." right={<ChartActions target="export-config-flow" title="Configuration flow" subtitle={c.brand} />}>
         <div id="export-config-flow" className="bg-surface"><ModelFlow {...cfgFlow(c)} go={go} /></div>
       </Card>
 
@@ -5105,13 +5111,13 @@ function StagePreview({ c, ind, go, issues, warns, fix }: Ctx & { issues: Issue[
         )}
       </Card>
 
-      <Card title="Configuration summary" sub="Generated from your selections. Edit jumps back to the section.">
+      <Card title="Configuration summary" info="Generated from your selections. Use the menu to jump back and edit a section." right={<MoreMenu label="Edit a section" items={[1, 3, 4, 5].map(st => ({ label: `Edit ${STAGES[st - 1].title.toLowerCase()}`, icon: <Pencil size={13} />, onClick: () => go(st) }))} />}>
         <dl className="grid gap-x-6 gap-y-3 text-[13px] @xl:grid-cols-2">
           {[['Model', `${c.brand} · ${c.asset}`, 1], ['Asset type · therapy area', `${c.subjectType} · ${c.therapyArea}`, 1], ['Lifecycle stage', c.lifecycle, 1],
             ['Data configuration', PATHWAYS.map(pw => `${ins.filter(x => pathOf(c.bindings[x.key]) === pw.id).length} ${pw.label.toLowerCase()}`).join(' · '), 5],
             ['Required inputs', `${ins.filter(x => pathOf(c.bindings[x.key]) !== 'Manual').length} from sources`, 5],
-            ['Forecaster-visible fields', `${ins.filter(x => exposeOf(c.bindings[x.key]) === 'Editable').length} editable · ${ins.filter(x => exposeOf(c.bindings[x.key]) === 'Visible').length} read-only`, 5]].map(([k, v, st]) => (
-            <div key={k as string} className="flex items-start justify-between gap-3 border-b border-border pb-2"><div className="min-w-0"><dt className="text-xs text-text-3">{k}</dt><dd className="font-medium">{v}</dd></div><EditLink stage={st as number} go={go} /></div>
+            ['Forecaster-visible fields', `${ins.filter(x => exposeOf(c.bindings[x.key]) === 'Editable').length} editable · ${ins.filter(x => exposeOf(c.bindings[x.key]) === 'Visible').length} read-only`, 5]].map(([k, v]) => (
+            <div key={k as string} className="flex items-start justify-between gap-3 border-b border-border pb-2"><div className="min-w-0"><dt className="text-xs text-text-3">{k}</dt><dd className="font-medium">{v}</dd></div></div>
           ))}
         </dl>
         <div className="mt-4 space-y-3">
@@ -5119,20 +5125,20 @@ function StagePreview({ c, ind, go, issues, warns, fix }: Ctx & { issues: Issue[
             <div key={i.id} className="rounded-md border border-border p-3">
               <p className="text-sm font-semibold">{i.name || 'Untitled stream'} <span className="font-normal text-text-2">· {archName(i.arch) || 'No archetype'}</span></p>
               <div className="mt-2 grid gap-2 text-[12px] @xl:grid-cols-3">
-                <div className="flex justify-between gap-2"><span className="min-w-0"><span className="block text-text-3">Modes</span>{i.arch ? modesFor(i.arch).map(m => i.modes[m.id]).filter(Boolean).join(' · ') : '—'}</span><EditLink stage={3} go={go} /></div>
-                <div className="flex justify-between gap-2"><span><span className="block text-text-3">Modules</span>{orderedModules(i).length} attached · {requiredFor(i.arch).length} core</span><EditLink stage={4} go={go} /></div>
-                <div className="flex justify-between gap-2"><span><span className="block text-text-3">Forecaster inputs</span>{Object.values(i.perms).filter(p => p.open).length} editable · {Object.values(i.perms).filter(p => !p.open).length} locked</span><EditLink stage={5} go={go} /></div>
+                <div className="flex justify-between gap-2"><span className="min-w-0"><span className="block text-text-3">Modes</span>{i.arch ? modesFor(i.arch).map(m => i.modes[m.id]).filter(Boolean).join(' · ') : '—'}</span></div>
+                <div className="flex justify-between gap-2"><span><span className="block text-text-3">Modules</span>{orderedModules(i).length} attached · {requiredFor(i.arch).length} core</span></div>
+                <div className="flex justify-between gap-2"><span><span className="block text-text-3">Forecaster inputs</span>{Object.values(i.perms).filter(p => p.open).length} editable · {Object.values(i.perms).filter(p => !p.open).length} locked</span></div>
               </div>
             </div>
           ))}
         </div>
       </Card>
 
-      <Card title={`Module map · ${ind.name || 'Stream'}`} sub="Structure and calculation order for this stream." right={<div className="flex items-center gap-3"><EditLink stage={4} go={go} /><ChartActions target="export-module-map" title={`Module map · ${ind.name || 'Stream'}`} subtitle={c.brand} /></div>}>
+      <Card title={`Module map · ${ind.name || 'Stream'}`} info="Structure and calculation order for this stream." right={<div className="flex items-center gap-3"><ChartActions target="export-module-map" title={`Module map · ${ind.name || 'Stream'}`} subtitle={c.brand} /></div>}>
         <div id="export-module-map" className="@container bg-surface"><ModuleLanes c={c} ind={ind} readOnly go={go} /></div>
       </Card>
 
-      <Card title="Configuration document" sub="What is saved as a version when you finalise.">
+      <Card title="Configuration document" info="What is saved as a version when you finalise.">
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3 ">
               <p className="min-w-[220px] flex-1 text-[13px] text-text-2">Finalising saves {c.version} as a configuration document.</p>
@@ -5198,7 +5204,7 @@ function StagePublish({ c, go, update, notify, issues, warns, errs, finalSig, on
         {warns.length > 0 && <p className="mt-3 text-xs text-text-3">{warns.length} item{warns.length > 1 ? 's' : ''} to review on the Review configuration step. They don’t block finalising.</p>}
       </Card>
 
-      <Card title="What becomes available to the Forecaster" sub="The structure forecasters work in.">
+      <Card title="What becomes available to the Forecaster" info="The structure forecasters work in.">
         <div className="grid gap-5 @2xl:grid-cols-3">
           <div><p className="text-[11px] font-bold uppercase tracking-wider text-text-2">Model structure</p>
             <ul className="mt-2 space-y-1.5 text-[13px]">{c.inds.map(i => <li key={i.id}><span className="font-medium">{i.name || 'Untitled stream'}</span><span className="block text-xs text-text-3">{archName(i.arch)} · {Array.from(new Set([...i.modules, ...requiredFor(i.arch)])).length} modules</span></li>)}</ul></div>
@@ -5210,7 +5216,7 @@ function StagePublish({ c, go, update, notify, issues, warns, errs, finalSig, on
         {ins.length > done && <p className="mt-4 flex items-start gap-2 text-xs text-warn"><AlertTriangle size={14} className="mt-0.5 shrink-0" />{ins.length - done} file-based input{ins.length - done > 1 ? 's have' : ' has'} no mapped field yet. <button type="button" className="font-semibold text-brand hover:underline" onClick={() => go(5)}>Configure</button></p>}
       </Card>
 
-      <Card title="Who can use it" sub="Access is set per model.">
+      <Card title="Who can use it" info="Access is set per model.">
         <label className={cx('mb-4 flex cursor-pointer items-start gap-3 rounded-md border p-3 transition-colors', c.selfForecast ? 'border-brand bg-brand-soft/40' : 'border-border hover:border-border-strong')}>
           <input type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-brand" checked={c.selfForecast} onChange={e => update({ selfForecast: e.target.checked })} />
           <span className="min-w-0"><span className="block text-sm font-semibold">I will also forecast in this model</span><span className="block text-xs text-text-2">It appears in your Forecaster workspace after finalisation.</span></span>

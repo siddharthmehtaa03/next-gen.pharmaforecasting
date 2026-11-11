@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
-import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Download, Plus, Search, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, ChevronLeft, ChevronRight, Download, Info, Plus, Search, X } from 'lucide-react'
 import { Btn, Label, Seg, Tag, Toggle, cx, field } from '../forecaster/workspace/ui'
 
 type Notify = (t: { tone: 'ok' | 'err' | 'info'; text: string }) => void
@@ -229,10 +229,10 @@ export default function AdminPortal({ notify, onBack }: { notify: Notify; onBack
 
   const tabs: [Tab, string][] = [['requests', 'Access Requests'], ['users', 'User Access']]
   return (
-    <div className="mx-auto flex w-full max-w-[1240px] flex-1 flex-col px-6 py-8">
+    <div className="mx-auto flex w-full flex-1 flex-col px-10 py-8">
       <button type="button" onClick={onBack} className="mb-3 flex items-center gap-1 self-start text-sm text-text-2 hover:text-text"><ArrowLeft size={14} />Model library</button>
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div><h1 className="text-[28px] font-semibold tracking-tight">Admin Portal</h1><p className="text-[13px] text-text-2">Approve access requests and manage who can use the forecaster.</p></div>
+        <div><h1 className="flex items-center gap-2 text-[28px] font-semibold tracking-tight">Admin Portal<span tabIndex={0} role="img" title="Approve access requests and manage who can use the forecaster." aria-label="Approve access requests and manage who can use the forecaster." className="inline-flex cursor-help text-text-3 hover:text-text-2"><Info size={14} /></span></h1></div>
       </header>
 
       <nav aria-label="Admin sections" className="mb-6 border-b border-border">
