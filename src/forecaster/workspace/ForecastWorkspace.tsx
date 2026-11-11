@@ -14,7 +14,7 @@ import { EventsStage, GoalSeekStage, ReviewStage, ScenariosStage } from './Stage
 import { SensitivityStage } from './Analysis'
 import { ScenarioSummary } from './Summary'
 import type { Calc } from './Stages'
-import { ActualKpis, ActualsView } from './Actuals'
+import { ActualKpis } from './Actuals'
 import { LrfView } from './Lrf'
 import { PerformanceView } from './Performance'
 import { BridgesView } from './Bridges'
@@ -28,7 +28,7 @@ import { AgentFocusCtx, useForecastAgent } from './agent'
 import type { AgentView, CopilotProps } from './agent'
 import { RotateCcw } from 'lucide-react'
 
-type View = AgentView | 'Actuals' | 'LRF'
+type View = AgentView | 'LRF'
 // Scenarios are created inside the Forecast workspace (ScenarioBar), so there is no separate step for them.
 const STEPS: View[] = ['Overview', 'Assumptions', 'LRF', 'Events', 'Summary', 'Sensitivity', 'Goal seek', 'Review']
 // Tab names shown to forecasters; internal ids stay stable for the assistant.
@@ -39,12 +39,12 @@ const AN_BUILT = ['Performance Dashboard', 'Financial Bridges']
 // Tab structure per the forecaster team's reference: eight tabs; Actuals under Baseline trend, Analytics under Forecast workspace.
 // 'Scenario' stays in GROUPS (for the assistant's own `view` lookups) but is left out of the rendered tab bar below.
 const GROUPS: { id: string; items: string[] }[] = [
-  { id: 'Baseline trend', items: ['Overview', 'Actuals'] }, { id: 'Forecast workspace', items: ['Assumptions'] },
+  { id: 'Baseline trend', items: ['Overview'] }, { id: 'Forecast workspace', items: ['Assumptions'] },
   { id: 'LRF', items: ['LRF'] }, { id: 'Events', items: ['Events'] }, { id: 'Scenario summary', items: ['Summary'] },
   { id: 'Sensitivity', items: ['Sensitivity'] }, { id: 'Goal seek', items: ['Goal seek'] }, { id: 'Review', items: ['Review'] },
   { id: 'Scenario', items: ['Scenarios'] },
 ]
-const LABEL: Record<View, string> = { Overview: 'Baseline trend', Actuals: 'Actuals', Assumptions: 'Forecast workspace', LRF: 'LRF', Events: 'Events', Scenarios: 'Scenario', Sensitivity: 'Sensitivity', 'Goal seek': 'Goal seek', Summary: 'Scenario summary', Review: 'Review' }
+const LABEL: Record<View, string> = { Overview: 'Baseline trend', Assumptions: 'Forecast workspace', LRF: 'LRF', Events: 'Events', Scenarios: 'Scenario', Sensitivity: 'Sensitivity', 'Goal seek': 'Goal seek', Summary: 'Scenario summary', Review: 'Review' }
 const NEXT: Partial<Record<View, View>> = Object.fromEntries(STEPS.slice(0, -1).map((v, i) => [v, STEPS[i + 1]!]))
 
 export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', brandId = 'nurtec', cycle = 'AOP 2027', stream = 'US net revenue', model = DEFAULT_MODEL, insights, setInsights, onAsk, Copilot, assistant = 'Charles', onPublished }: { notify: Notify; onHome?: () => void; brand?: string; brandId?: string; cycle?: string; stream?: string; model?: ModelCfg; insights: Insight[]; setInsights: (f: (x: Insight[]) => Insight[]) => void; onAsk?: (brandId?: string) => void; Copilot?: ComponentType<CopilotProps>; assistant?: string
@@ -239,7 +239,6 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
           {view === 'Sensitivity' && <SensitivityStage scenarios={scenarios} setScenarios={setScenarios} calc={calc} selId={selId} setSelId={setSelId} model={model} notify={notify} />}
           {view === 'Goal seek' && <GoalSeekStage scenarios={scenarios} setScenarios={setScenarios} calc={calc} selId={selId} setSelId={setSelId} model={model} notify={notify} onNext={() => go('Summary')} />}
           {view === 'Summary' && <ScenarioSummary uePct={ueFy(ue)} scenarios={scenarios} setScenarios={setScenarios} calc={calc} events={events} selId={selId} setSelId={setSelId} model={model} notify={notify} renderPart={part => <ScenariosStage events={events} scenarios={scenarios} setScenarios={setScenarios} selId={selId} setSelId={setSelId} calc={calc} workFy={work.fy} model={model} metric={metric} setMetric={setMetric} toggleFinal={toggleFinal} notify={notify} part={part} />} />}
-          {view === 'Actuals' && <ActualsView />}
           {view === 'Review' && <ReviewStage scenarios={scenarios} selId={selId} setSelId={setSelId} calc={calc} events={events} edits={edits} workFy={work.fy} toggleFinal={toggleFinal}
             onEdit={(id: DriverId) => { selDriver(id); go('Assumptions') }} onStage={s => go(s === 'events' ? 'Events' : 'Assumptions')} presenting={presenting} setPresenting={setPresenting} model={model} />}
         </main>

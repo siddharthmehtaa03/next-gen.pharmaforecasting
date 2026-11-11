@@ -199,6 +199,10 @@ export const SEED_EVENTS: EventDef[] = [
   { id: 'ev5', name: 'Biannual list price step', type: 'Pricing Event', sub: 'List Price (WAC) Change', date: idxOf(2027, 6), prob: 80, every: 6, notes: 'Regular list step every six months.', impacts: [{ metric: 'price', dir: 'up', mag: 0.5, curve: 'step', duration: null }] },
   { id: 'ev6', name: 'Ascent renegotiation fails', type: 'Pricing Event', sub: 'Gross-to-Net / Rebate Change', date: idxOf(2027, 6), prob: 30, notes: 'Rebate renegotiation with Ascent fails. Moves net, not gross.', impacts: [] },
   { id: 'ev3', name: 'Pediatric label expansion', type: 'Product Event', sub: 'Label Change', date: idxOf(2027, 6), prob: 50, notes: 'Regulatory decision expected mid-2027.', impacts: [{ metric: 'diag', dir: 'up', mag: 1.5, curve: 's', duration: null }, { metric: 'share', dir: 'up', mag: 4, curve: 's', duration: null }] },
+  { id: 'lrf1', name: 'Label update approval', type: 'Product Event', sub: 'Label Change', date: idxOf(2029, 6), prob: 60, notes: 'LRF: Expanded indication approval expected FY2029.', impacts: [{ metric: 'diag', dir: 'up', mag: 2.5, curve: 's', duration: null }] },
+  { id: 'lrf2', name: 'Competitor launch mitigation', type: 'Market Event', date: idxOf(2030, 3), prob: 45, notes: 'LRF: Market response program to competitor entry.', impacts: [{ metric: 'share', dir: 'down', mag: 1.5, curve: 'ramp', duration: null }] },
+  { id: 'lrf3', name: 'Payer contract renewal', type: 'Pricing Event', sub: 'Gross-to-Net / Rebate Change', date: idxOf(2031, 0), prob: 70, notes: 'LRF: Rebate structure renewal with major national plan.', impacts: [] },
+  { id: 'lrf4', name: 'Market access expansion', type: 'Market Event', date: idxOf(2032, 9), prob: 50, notes: 'LRF: Geographic or disease area expansion into adjacent markets.', impacts: [{ metric: 'diag', dir: 'up', mag: 1.2, curve: 'ramp', duration: null }, { metric: 'access', dir: 'up', mag: 3, curve: 'ramp', duration: null }] },
 ]
 // Self-check: a repeating +0.5% price step compounds past a single one by the end of the horizon.
 if (import.meta.env.DEV) {
