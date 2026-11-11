@@ -3,11 +3,12 @@ import { createPortal } from 'react-dom'
 import type { ComponentType } from 'react'
 import { scrollFrameTop } from '../../frame'
 import { ArrowLeft, ArrowRight, Check, ChevronDown, PanelRightOpen, Save } from 'lucide-react'
-import { DEFAULT_MODEL, SEED_EVENTS, SEED_SCENARIOS, fySum, revenue, scenarioLayer, workingLayer } from './engine'
+import { DEFAULT_MODEL, FY, SEED_EVENTS, SEED_SCENARIOS, fySum, revenue, scenarioLayer, workingLayer } from './engine'
 import type { DriverId, EventDef, ModelCfg, OutputId, Scenario } from './engine'
 import { Btn, Tag, cx, field } from './ui'
 import { DriverWorkspace, ForecastMap } from './Drivers'
 import type { DriverActions, Edits, Notify, Sel } from './Drivers'
+import { ScenarioBar, ScenarioDriverView, FORECAST } from './WorkspaceScenarios'
 import { EventsStage, GoalSeekStage, ReviewStage, ScenariosStage } from './Stages'
 import { SensitivityStage } from './Analysis'
 import { ScenarioSummary } from './Summary'
@@ -27,19 +28,22 @@ import type { AgentView, CopilotProps } from './agent'
 import { RotateCcw } from 'lucide-react'
 
 type View = AgentView | 'Actuals' | 'LRF'
-const STEPS: View[] = ['Overview', 'Assumptions', 'LRF', 'Events', 'Scenarios', 'Sensitivity', 'Goal seek', 'Summary', 'Review']
+// Scenarios are created inside the Forecast workspace (ScenarioBar), so there is no separate step for them.
+const STEPS: View[] = ['Overview', 'Assumptions', 'LRF', 'Events', 'Summary', 'Sensitivity', 'Goal seek', 'Review']
 // Tab names shown to forecasters; internal ids stay stable for the assistant.
 // CR-004: analytics layer below the workflow tabs. Tab content is defined in follow-up change requests.
 const ANALYTICS = ['Performance Dashboard', 'Financial Bridges', 'Patient Funnel', 'Sales Drivers', 'Judgement Layer', 'Long Range Plan', 'Competition', 'Needs-to-Meet', 'GTN Analysis']
 // Only these views are built; the rest show as coming soon and can't be opened.
 const AN_BUILT = ['Performance Dashboard', 'Financial Bridges']
-// Tab structure per the forecaster team's reference: eight tabs; Actuals under Baseline dashboard, Analytics under Forecast workspace.
+// Tab structure per the forecaster team's reference: eight tabs; Actuals under Baseline trend, Analytics under Forecast workspace.
+// 'Scenario' stays in GROUPS (for the assistant's own `view` lookups) but is left out of the rendered tab bar below.
 const GROUPS: { id: string; items: string[] }[] = [
-  { id: 'Baseline dashboard', items: ['Overview', 'Actuals'] }, { id: 'Forecast workspace', items: ['Assumptions'] },
-  { id: 'LRF', items: ['LRF'] }, { id: 'Events', items: ['Events'] }, { id: 'Scenario', items: ['Scenarios'] }, { id: 'Sensitivity', items: ['Sensitivity'] },
-  { id: 'Goal seek', items: ['Goal seek'] }, { id: 'Summary', items: ['Summary'] }, { id: 'Review', items: ['Review'] },
+  { id: 'Baseline trend', items: ['Overview', 'Actuals'] }, { id: 'Forecast workspace', items: ['Assumptions'] },
+  { id: 'LRF', items: ['LRF'] }, { id: 'Events', items: ['Events'] }, { id: 'Scenario summary', items: ['Summary'] },
+  { id: 'Sensitivity', items: ['Sensitivity'] }, { id: 'Goal seek', items: ['Goal seek'] }, { id: 'Review', items: ['Review'] },
+  { id: 'Scenario', items: ['Scenarios'] },
 ]
-const LABEL: Record<View, string> = { Overview: 'Baseline dashboard', Actuals: 'Actuals', Assumptions: 'Forecast workspace', LRF: 'LRF', Events: 'Events', Scenarios: 'Scenario', Sensitivity: 'Sensitivity', 'Goal seek': 'Goal seek', Summary: 'Summary', Review: 'Review' }
+const LABEL: Record<View, string> = { Overview: 'Baseline trend', Actuals: 'Actuals', Assumptions: 'Forecast workspace', LRF: 'LRF', Events: 'Events', Scenarios: 'Scenario', Sensitivity: 'Sensitivity', 'Goal seek': 'Goal seek', Summary: 'Scenario summary', Review: 'Review' }
 const NEXT: Partial<Record<View, View>> = Object.fromEntries(STEPS.slice(0, -1).map((v, i) => [v, STEPS[i + 1]!]))
 
 export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', brandId = 'nurtec', cycle = 'AOP 2027', stream = 'US net revenue', model = DEFAULT_MODEL, insights, setInsights, onAsk, Copilot, assistant = 'Charles', onPublished }: { notify: Notify; onHome?: () => void; brand?: string; brandId?: string; cycle?: string; stream?: string; model?: ModelCfg; insights: Insight[]; setInsights: (f: (x: Insight[]) => Insight[]) => void; onAsk?: (brandId?: string) => void; Copilot?: ComponentType<CopilotProps>; assistant?: string
@@ -58,6 +62,9 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
   const [scenarios, setScenarios] = useState<Scenario[]>(SEED_SCENARIOS)
   const [selId, setSelId] = useState('sc2')
   const [metric, setMetric] = useState<OutputId>(model.outputs[0]!)
+  // Scope of the Forecast workspace: the active forecast every scenario starts from, or one scenario's own changes.
+  const [scope, setScope] = useState(FORECAST)
+  const [wsYear, setWsYear] = useState(FY)
   const [presenting, setPresenting] = useState(false)
   const [driverDirty, setDriverDirty] = useState(false)
   const actions = useRef<DriverActions | null>(null)
@@ -146,7 +153,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
           {/* Two levels: a few global tabs, and one sub-tab row for the active group. */}
           <nav data-tour="tabs" aria-label="Forecast sections" className="mx-auto max-w-[1240px] px-6">
             <div role="tablist" className="flex flex-wrap items-center gap-0.5 py-2">
-              {GROUPS.map(g => (
+              {GROUPS.filter(g => g.id !== 'Scenario').map(g => (
                 <button key={g.id} type="button" role="tab" aria-selected={g.id === group} onClick={() => g.id !== group && go(g.items[0] as View)}
                   className={cx('inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-medium transition-colors', g.id === group ? 'bg-[#f1f1f3] text-text shadow-[inset_0_0_0_1px_rgba(16,24,40,0.04)]' : 'text-text-2 hover:bg-black/[0.04] hover:text-text')}>
                   {g.id}</button>
@@ -173,7 +180,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
               <div data-tour="subtabs" role="tablist" aria-label={`${group} views`} className="mx-auto flex max-w-[1240px] gap-1 overflow-x-auto px-6 py-2">
                 {subs.map((v, k) => {
                   const isAn = ANALYTICS.includes(v), on = isAn ? an === v : !an && view === v
-                  const badge = v === 'Assumptions' ? modified : v === 'Scenarios' || v === 'Summary' ? scenarios.length : v === 'Events' ? events.length : 0
+                  const badge = v === 'Assumptions' ? modified : v === 'Summary' ? scenarios.length : v === 'Events' ? events.length : 0
                   return (
                     <Fragment key={v}>
                     {isAn && k === 1 && <span className="mx-1 shrink-0 self-center text-[10.5px] font-semibold uppercase tracking-wider text-text-3">Analytics</span>}
@@ -217,10 +224,13 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface py-3 text-text-2 hover:border-brand/60 hover:text-brand lg:h-[calc(100dvh-220px)] lg:flex-col lg:justify-start">
               <PanelRightOpen size={16} className="shrink-0" /><span className="text-[12px] font-semibold uppercase tracking-wider lg:[writing-mode:vertical-rl]">Forecast map</span></button>}</aside>}
         <main className="min-w-0">
+          {view === 'Assumptions' && <div className="mb-6"><ScenarioBar scenarios={scenarios} setScenarios={setScenarios} scope={scope} setScope={setScope} year={wsYear} setYear={setWsYear} calc={calc} notify={notify} /></div>}
           {mapView && mod && <ModuleView id={mod} net={work.fy} ue={ue} setUe={setUe} editable={view === 'Assumptions'} onEdit={() => go('Assumptions')} />}
-          {mapView && !mod && <DriverWorkspace mode={view === 'Overview' ? 'overview' : 'assumptions'} sel={sel} edits={edits} setEdits={setEdits}
-            scenarioLayer={sc.layer} scenarioName={scName} workingLayer={work.layer} model={model} metric={metric} setMetric={setMetric}
-            onOpenAssumptions={() => go('Assumptions')} onGo={() => go('Scenarios')} onDirty={onDirty} actions={actions} notify={notify} />}
+          {mapView && !mod && (view === 'Assumptions' && scope !== FORECAST && sel !== 'rev'
+            ? <ScenarioDriverView id={sel} scenario={scenarios.find(s => s.id === scope)!} setScenarios={setScenarios} work={work.layer} layer={calc[scope]!.layer} events={events} model={model} notify={notify} />
+            : <DriverWorkspace mode={view === 'Overview' ? 'overview' : 'assumptions'} sel={sel} edits={edits} setEdits={setEdits}
+                scenarioLayer={sc.layer} scenarioName={scName} workingLayer={work.layer} model={model} metric={metric} setMetric={setMetric}
+                onOpenAssumptions={() => go('Assumptions')} onGo={() => go('Assumptions')} onDirty={onDirty} actions={actions} notify={notify} />)}
           {view === 'Scenarios' && <ScenariosStage events={events} scenarios={scenarios} setScenarios={setScenarios} selId={selId} setSelId={setSelId} calc={calc} workFy={work.fy} model={model} metric={metric} setMetric={setMetric} toggleFinal={toggleFinal} notify={notify} />}
           {view === 'LRF' && <LrfView scenarios={scenarios} calc={calc} selId={selId} setSelId={setSelId} onEvent={() => go('Events')} />}
           {view === 'Events' && <EventsStage events={events} setEvents={setEvents} scenarios={scenarios} setScenarios={setScenarios} calc={calc} selId={selId} setSelId={setSelId} model={model} metric={metric} setMetric={setMetric} modified={modified} notify={notify} onNext={() => go('Sensitivity')} />}
@@ -229,7 +239,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
           {view === 'Summary' && <ScenarioSummary uePct={ueFy(ue)} scenarios={scenarios} setScenarios={setScenarios} calc={calc} events={events} selId={selId} setSelId={setSelId} model={model} notify={notify} renderPart={part => <ScenariosStage events={events} scenarios={scenarios} setScenarios={setScenarios} selId={selId} setSelId={setSelId} calc={calc} workFy={work.fy} model={model} metric={metric} setMetric={setMetric} toggleFinal={toggleFinal} notify={notify} part={part} />} />}
           {view === 'Actuals' && <ActualsView />}
           {view === 'Review' && <ReviewStage scenarios={scenarios} selId={selId} setSelId={setSelId} calc={calc} events={events} edits={edits} workFy={work.fy} toggleFinal={toggleFinal}
-            onEdit={(id: DriverId) => { selDriver(id); go('Assumptions') }} onStage={s => go(s === 'events' ? 'Events' : 'Scenarios')} presenting={presenting} setPresenting={setPresenting} model={model} />}
+            onEdit={(id: DriverId) => { selDriver(id); go('Assumptions') }} onStage={s => go(s === 'events' ? 'Events' : 'Assumptions')} presenting={presenting} setPresenting={setPresenting} model={model} />}
         </main>
       </div>
       </>}

@@ -523,14 +523,14 @@ export function ReviewStage({ scenarios, selId, setSelId, calc, events, edits, w
       </Card>
 
       <div className="grid gap-5 lg:grid-cols-2">
-        <Card title="Active events" sub={`${sel.name} · contribution to FY${FY}`} right={<Btn variant="ghost" onClick={() => onStage('scenarios')} icon={<CalendarClock size={14} />}>Edit in scenarios</Btn>}>
+        <Card title="Active events" sub={`${sel.name} · contribution to FY${FY}`} right={<Btn variant="ghost" onClick={() => onStage('scenarios')} icon={<CalendarClock size={14} />}>Edit in forecast workspace</Btn>}>
           {contrib.length ? <ul className="divide-y divide-border">{contrib.map(({ e, d }) => (
             <li key={e.id} className="flex items-start justify-between gap-3 py-2.5 first:pt-0 last:pb-0">
               <div className="min-w-0"><p className="text-[13px] font-medium">{e.name}</p><p className="text-[12px] text-text-2">{e.type} · {mLong(e.date)} · {e.prob}%</p>
                 <div className="mt-1 flex flex-wrap gap-1">{e.impacts.map(i => <span key={i.metric} className="rounded bg-surface-2 px-1.5 py-0.5 text-[11px]">{DRV[i.metric].label} {i.dir === 'up' ? '+' : '−'}{i.mag}%</span>)}</div></div>
               <span className={cx('shrink-0 font-mono text-[13px]', d >= 0 ? 'text-ok' : 'text-err')}>{fmtDelta(d)}</span>
             </li>))}</ul>
-            : <p className="text-sm text-text-2">No events are active in {sel.name}, so its outcome equals the active forecast. Switch scenario above, or turn events on in <button type="button" onClick={() => onStage('scenarios')} className="text-brand underline-offset-2 hover:underline">Scenarios</button>.</p>}
+            : <p className="text-sm text-text-2">No events are active in {sel.name}, so its outcome equals the active forecast. Switch scenario above, or turn events on in <button type="button" onClick={() => onStage('scenarios')} className="text-brand underline-offset-2 hover:underline">Forecast workspace</button>.</p>}
           <p className="mt-3 border-t border-border pt-2 text-[11px] text-text-3">{events.length - c.events.length} other library event{events.length - c.events.length === 1 ? ' is' : 's are'} off in this scenario.</p>
         </Card>
         <Card title="Notes on change" sub="Active forecast edits and scenario overrides">
@@ -543,7 +543,7 @@ export function ReviewStage({ scenarios, selId, setSelId, calc, events, edits, w
             : <p className="text-sm text-text-2">No driver has been overridden. The active forecast matches the reference baseline.</p>}
           {ovr.length > 0 && <div className="mt-3 border-t border-border pt-3"><p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">{sel.name} overrides</p>
             <ul className="mt-1.5 space-y-1.5">{ovr.map(o => <li key={o.id} className="text-[13px]"><p className="font-medium">{describeOverride(o)}</p>{(o.note || o.by) && <p className="text-[12px] text-text-2">{o.note || `From ${o.by}`}</p>}</li>)}</ul>
-            <button type="button" onClick={() => onStage('scenarios')} className="mt-2 text-[12px] font-semibold text-brand hover:underline">Edit in scenarios</button></div>}
+            <button type="button" onClick={() => onStage('scenarios')} className="mt-2 text-[12px] font-semibold text-brand hover:underline">Edit in forecast workspace</button></div>}
         </Card>
       </div>
 
