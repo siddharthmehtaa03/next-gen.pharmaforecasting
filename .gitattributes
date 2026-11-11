@@ -4,7 +4,9 @@
 # ---------------------------------------------------------------------------
 # Images & Graphics
 # ---------------------------------------------------------------------------
-*.png                filter=lfs diff=lfs merge=lfs -text
+# .png files in this repo were committed as plain blobs before LFS was ever
+# pushed through; marking them filter=lfs produced broken pointer checkouts.
+*.png                -text
 *.jpg                filter=lfs diff=lfs merge=lfs -text
 *.jpeg               filter=lfs diff=lfs merge=lfs -text
 *.gif                filter=lfs diff=lfs merge=lfs -text
@@ -78,7 +80,8 @@
 *.ttf                filter=lfs diff=lfs merge=lfs -text
 *.otf                filter=lfs diff=lfs merge=lfs -text
 *.woff               filter=lfs diff=lfs merge=lfs -text
-*.woff2              filter=lfs diff=lfs merge=lfs -text
+# Same story as .png above: already plain blobs, never actually pushed via LFS.
+*.woff2              -text
 *.eot                filter=lfs diff=lfs merge=lfs -text
 
 # ---------------------------------------------------------------------------
