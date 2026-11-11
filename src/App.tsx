@@ -20,7 +20,7 @@ import { ChartActions } from './chart/ChartActions'
 import { MoreMenu } from './forecaster/workspace/ui'
 import { InputCanvas, ModelFlowTree, PatientFlowList, SnowflakeSources } from './ConfigInputs'
 import type { StreamRef } from './ConfigInputs'
-import { flowRows as inputFlow, withPatientFlow } from './configCatalog'
+import { flowRows as inputFlow, withPatientFlow, onCanvas } from './configCatalog'
 import type { InputMap } from './configCatalog'
 import pfizerMark from './assets/pfizer-mark-color.png'
 import pfizerLogo from './assets/pfizer-logo-color.png'
@@ -3065,8 +3065,7 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
     scrollFrameTop(true)
   }
   const ctx: Ctx = { c, ind, update, updInd, setArch, notify, go, fix }
-  const ins = inputsFor(c)
-  const okData = ins.filter(b => dataReady(c.bindings[b.key])).length
+  const canvasInputs = onCanvas(ind.inputMap)
   const archName = (i: Ind) => ARCHETYPES.find(a => a.id === i.arch)?.name
 
   /* assistant: explains, audits, diagnoses and proposes — never calculates */
@@ -3235,7 +3234,7 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
           <span className="truncate font-semibold">{c.brand || 'Untitled model'}</span>
           {ind.name && <span className="hidden min-w-0 truncate text-text-2 md:inline">/ {ind.name}</span>}
           <span className="hidden shrink-0 lg:inline-flex">{ind.arch && <Badge tone="brand">{archName(ind)}</Badge>}</span>
-          {ins.length > 0 && <span className="hidden shrink-0 items-center gap-1 text-xs text-text-3 xl:flex"><Database size={12} />{okData}/{ins.length} inputs configured</span>}
+          {canvasInputs.length > 0 && <span className="hidden shrink-0 items-center gap-1 text-xs text-text-3 xl:flex"><Database size={12} />{canvasInputs.length}/34 on canvas</span>}
         </div>
         <div className="flex shrink-0 items-center gap-2.5">
           <span className="hidden md:inline-flex"><Badge tone="neutral">{c.version} · Draft</Badge></span>
