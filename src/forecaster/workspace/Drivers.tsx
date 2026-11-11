@@ -241,7 +241,7 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
         <div data-tour="chart" className="min-w-0"><Card title={`${d.label} · monthly`} sub={d.unit === '%' ? 'Percent' : d.unit} right={<Legend s={series} />}>
           <ForecastChart title={`${d.label} forecast`} s={series} fmt={v => fmtV(id, v)} dp={d.dp} unit={d.unit} height={mode === 'overview' ? 340 : 280} />
         </Card></div>
-        {mode === 'overview' && <TrendPanel id={id} />}
+        {mode === 'overview' && <TrendPanel series={ACTUALS[id]} label={d.label} fmt={v => fmtV(id, v)} pct={d.pct} />}
       </div>
 
 

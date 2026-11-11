@@ -80,7 +80,7 @@ export function BaselineTrend({ onWorkspace, onEvents }: { onWorkspace: () => vo
       </div>
 
       {/* One layer: the trend chart, the "can you depend on it" verdict, and the assumptions that drive the trend. */}
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_270px_250px]">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_320px_260px]">
         <Card className="min-w-0">
           <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2">
             <label className="flex items-center gap-2 text-[13px] font-medium">Metric
@@ -96,7 +96,7 @@ export function BaselineTrend({ onWorkspace, onEvents }: { onWorkspace: () => vo
           </div>
           <div data-tour="chart"><ForecastChart key={m.id} title={`${m.label} · baseline trend`} s={series} fmt={m.fmt} dp={m.dp} unit={m.unit} height={330} context="Statistical baseline · read-only" /></div>
         </Card>
-        {m.driver ? <TrendPanel key={m.id} id={m.driver} /> : <div />}
+        <TrendPanel key={m.id} series={m.actual} label={m.label} fmt={m.fmt} pct={m.unit === '%'} />
         <aside data-tour="assumptions" aria-label="Underlying assumptions behind the trend" className="rounded-2xl border border-border bg-surface shadow-card p-4">
           <div className="mb-2 flex flex-wrap items-center gap-2"><p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Underlying assumptions behind the trend</p><Tag tone="neutral">Crucible link later</Tag></div>
           <ul className="divide-y divide-border">

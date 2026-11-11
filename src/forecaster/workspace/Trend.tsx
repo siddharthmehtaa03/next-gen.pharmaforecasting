@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { ACT, ACTUALS, DRV, fmtV, mLabel } from './engine'
-import type { DriverId } from './engine'
+import { ACT, mLabel } from './engine'
 import { cx } from './ui'
 
 type Verdict = 'Reliable' | 'Watch' | 'Don’t rely on trend'
@@ -42,20 +41,20 @@ const TONE: Record<Verdict, { box: string; dot: string; text: string; note: stri
   'Don’t rely on trend': { box: 'bg-err-soft', dot: 'bg-err', text: 'text-err', note: 'Trend keeps missing. Set this assumption yourself.' },
 }
 
-/** CR-003: can you depend on the trend? One verdict per metric, evidence one click away. */
-export function TrendPanel({ id }: { id: DriverId }) {
+/** CR-003: can you depend on the trend? One verdict per metric, evidence one click away. Works for any metric's own actuals, not just a model driver. */
+export function TrendPanel({ series, label, fmt, pct = false }: { series: number[]; label: string; fmt: (v: number) => string; pct?: boolean }) {
   const [open, setOpen] = useState(false)
-  const c = trendCheck(ACTUALS[id]), t = TONE[c.verdict], d = DRV[id]
-  const unit = d.pct ? ' pts' : ''
-  const miss = (v: number) => d.pct ? `${v.toFixed(2)}${unit}` : fmtV(id, v)
+  const c = trendCheck(series), t = TONE[c.verdict]
+  const unit = pct ? ' pts' : ''
+  const miss = (v: number) => pct ? `${v.toFixed(2)}${unit}` : fmt(v)
   return (
-    <section data-tour="trend" aria-label={`Trend reliability for ${d.label}`} className="rounded-xl border border-border bg-surface p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+    <section data-tour="trend" aria-label={`Trend reliability for ${label}`} className="rounded-xl border border-border bg-surface p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-[13.5px] font-semibold">Can you depend on the trend?</p>
         <button type="button" aria-expanded={open} onClick={() => setOpen(v => !v)} className="text-[12.5px] font-medium text-text-2 hover:text-text">{open ? 'Hide evidence' : 'Show evidence →'}</button>
       </div>
-      <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-        <div className={cx('rounded-xl border border-black/[0.04] px-3.5 py-3', t.box)}>
+      <div className="mt-3 grid grid-cols-2 gap-2.5">
+        <div className={cx('col-span-2 rounded-xl border border-black/[0.04] px-3.5 py-3', t.box)}>
           <p className={cx('flex items-center gap-2 text-[15px] font-semibold', t.text)}><span className={cx('h-2 w-2 rounded-full', t.dot)} />{c.verdict}</p>
           <p className={cx('mt-0.5 text-[12px]', t.text)}>{t.note}</p>
         </div>
@@ -67,7 +66,7 @@ export function TrendPanel({ id }: { id: DriverId }) {
         <table className="mt-3 w-full text-[12px]">
           <thead><tr className="text-text-3"><th className="py-1 text-left font-medium">Month</th><th className="py-1 text-right font-medium">Actual</th><th className="py-1 text-right font-medium">Trend</th><th className="py-1 text-right font-medium">Miss</th></tr></thead>
           <tbody>{c.rows.map(r => { const m = r.actual - r.trend; return (
-            <tr key={r.i} className="border-t border-border"><td className="py-1">{mLabel(r.i)}</td><td className="py-1 text-right font-mono">{fmtV(id, r.actual)}</td><td className="py-1 text-right font-mono">{fmtV(id, r.trend)}</td><td className={cx('py-1 text-right font-mono', m >= 0 ? 'text-ok' : 'text-err')}>{m >= 0 ? '+' : '−'}{miss(Math.abs(m))}</td></tr>) })}</tbody>
+            <tr key={r.i} className="border-t border-border"><td className="py-1">{mLabel(r.i)}</td><td className="py-1 text-right font-mono">{fmt(r.actual)}</td><td className="py-1 text-right font-mono">{fmt(r.trend)}</td><td className={cx('py-1 text-right font-mono', m >= 0 ? 'text-ok' : 'text-err')}>{m >= 0 ? '+' : '−'}{miss(Math.abs(m))}</td></tr>) })}</tbody>
         </table>
       )}
       <p className="mt-2.5 text-[11.5px] text-text-3">Backtest of the last {c.rows.length} months, refitting the trend each month.{ACT < 18 ? ' Fewer than 18 months of actuals: indicative.' : ''}</p>
