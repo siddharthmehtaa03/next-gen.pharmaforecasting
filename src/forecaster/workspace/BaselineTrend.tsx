@@ -1,14 +1,19 @@
 import { useMemo, useState } from 'react'
 import { Lock } from 'lucide-react'
-import { ACT, ACTUALS, BASELINE, DRIVERS, DRV, FY, OUTPUTS, UNBIASED, fmtRev, fmtV, idxOf, yearOf } from './engine'
+import { ACT, ACTUALS, BASELINE, DRIVERS, DRV, FY, OUTPUTS, UNBIASED, fmtRev, fmtV, idxOf, revenue, yearOf } from './engine'
 import type { DriverId, Layer, OutputId } from './engine'
 import { Card, ForecastChart, Tag, cx, field } from './ui'
 import type { ChartSeries } from './ui'
 import { TrendPanel } from './Trend'
-import { stdSeries } from './Modules'
+import { GTN, UE_PRIOR, bridgeOf } from './Modules'
 
 /** The statistical trend with actuals pinned: what the Data Science baseline says before anyone intervenes. */
 const FULL_ACTUALS: Layer = Object.fromEntries(DRIVERS.map(d => [d.id, UNBIASED[d.id].map((v, i) => i < ACT ? ACTUALS[d.id][i]! : v)])) as Layer
+// shortcut: Unexplained % held flat at the UE_PRIOR guess across the whole history instead of a real modelled series; upgrade once Data Science supplies monthly Unexplained %.
+const stdSeries = (layer: Layer) => {
+  const net = revenue(layer), b = net.map(n => bridgeOf(n, UE_PRIOR))
+  return { gross: b.map(x => x.gross), tud: b.map(x => x.tud), inv: b.map(x => x.inv), uePct: net.map(() => UE_PRIOR), netPrice: layer.price.map(p => p * (1 - GTN)), fx: net.map(() => 1) }
+}
 
 type Group = 'Outcome' | 'Assumption' | 'Standard'
 type Metric = { id: string; label: string; short?: string; group: Group; actual: number[]; trend: number[]; lo?: number[]; hi?: number[]; fmt: (v: number) => string; dp: number; unit: string; desc: string; sum?: boolean; driver?: DriverId }
@@ -90,7 +95,7 @@ export function BaselineTrend({ onWorkspace, onEvents }: { onWorkspace: () => vo
           </div>
           <div data-tour="chart"><ForecastChart key={m.id} title={`${m.label} · baseline trend`} s={series} fmt={m.fmt} dp={m.dp} unit={m.unit} height={330} context="Statistical baseline · read-only" /></div>
         </Card>
-        <TrendPanel key={m.id} series={m.actual.slice(0, ACT)} label={m.label} fmt={m.fmt} id={m.driver} />
+        {m.driver ? <TrendPanel key={m.id} id={m.driver} /> : <div />}
         <aside data-tour="assumptions" aria-label="Underlying assumptions behind the trend" className="rounded-2xl border border-border bg-surface shadow-card p-4">
           <div className="mb-2 flex flex-wrap items-center gap-2"><p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Underlying assumptions behind the trend</p><Tag tone="neutral">Crucible link later</Tag></div>
           <ul className="divide-y divide-border">

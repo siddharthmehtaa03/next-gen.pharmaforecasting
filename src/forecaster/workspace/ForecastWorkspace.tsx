@@ -9,6 +9,7 @@ import { Btn, Tag, cx, field } from './ui'
 import { DriverWorkspace, ForecastMap } from './Drivers'
 import type { DriverActions, Edits, Notify, Sel } from './Drivers'
 import { ScenarioBar, ScenarioDriverView, FORECAST } from './WorkspaceScenarios'
+import { BaselineTrend } from './BaselineTrend'
 import { EventsStage, GoalSeekStage, ReviewStage, ScenariosStage } from './Stages'
 import { SensitivityStage } from './Analysis'
 import { ScenarioSummary } from './Summary'
@@ -113,7 +114,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
   }, [anMenu])
   const pick = (s: Sel) => { if ((s !== sel || mod) && leaveOk()) selDriver(s) }
   const onDirty = useCallback((v: boolean) => setDriverDirty(v), [])
-  const mapView = view === 'Overview' || view === 'Assumptions'
+  const mapView = view === 'Assumptions'
   const save = () => { setSaved(snapshot); notify({ tone: 'ok', text: 'Draft saved. Assumptions, events and scenarios are kept.' }) }
   const saveInsight = useCallback((r: SaveReq) => {
     setInsights(xs => [{ id: `u${Date.now()}`, brandId, brand, cycle, kind: r.scenario ? 'Scenario' : 'View', title: r.title, note: `Saved from the ${view} view.`, snap: r.snap, scenario: r.scenario, by: 'me', at: 'Just now', tagged: [], thread: [] }, ...xs])
@@ -224,11 +225,12 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
               className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface py-3 text-text-2 hover:border-brand/60 hover:text-brand lg:h-[calc(100dvh-220px)] lg:flex-col lg:justify-start">
               <PanelRightOpen size={16} className="shrink-0" /><span className="text-[12px] font-semibold uppercase tracking-wider lg:[writing-mode:vertical-rl]">Forecast map</span></button>}</aside>}
         <main className="min-w-0">
+          {view === 'Overview' && <BaselineTrend onWorkspace={() => go('Assumptions')} onEvents={() => go('Events')} />}
           {view === 'Assumptions' && <div className="mb-6"><ScenarioBar scenarios={scenarios} setScenarios={setScenarios} scope={scope} setScope={setScope} year={wsYear} setYear={setWsYear} calc={calc} notify={notify} /></div>}
           {mapView && mod && <ModuleView id={mod} net={work.fy} ue={ue} setUe={setUe} editable={view === 'Assumptions'} onEdit={() => go('Assumptions')} />}
           {mapView && !mod && (view === 'Assumptions' && scope !== FORECAST && sel !== 'rev'
             ? <ScenarioDriverView id={sel} scenario={scenarios.find(s => s.id === scope)!} setScenarios={setScenarios} work={work.layer} layer={calc[scope]!.layer} events={events} model={model} notify={notify} />
-            : <DriverWorkspace mode={view === 'Overview' ? 'overview' : 'assumptions'} sel={sel} edits={edits} setEdits={setEdits}
+            : <DriverWorkspace mode="assumptions" sel={sel} edits={edits} setEdits={setEdits}
                 scenarioLayer={sc.layer} scenarioName={scName} workingLayer={work.layer} model={model} metric={metric} setMetric={setMetric}
                 onOpenAssumptions={() => go('Assumptions')} onGo={() => go('Assumptions')} onDirty={onDirty} actions={actions} notify={notify} />)}
           {view === 'Scenarios' && <ScenariosStage events={events} scenarios={scenarios} setScenarios={setScenarios} selId={selId} setSelId={setSelId} calc={calc} workFy={work.fy} model={model} metric={metric} setMetric={setMetric} toggleFinal={toggleFinal} notify={notify} />}
