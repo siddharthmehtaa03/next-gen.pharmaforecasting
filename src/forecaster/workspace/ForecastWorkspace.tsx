@@ -177,7 +177,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
             </div>
           </nav>
           {subs.length > 1 && (
-            <div className="border-t border-border bg-background">
+            <div>
               <div data-tour="subtabs" role="tablist" aria-label={`${group} views`} className="mx-auto flex max-w-[1240px] gap-1 overflow-x-auto px-6 py-2">
                 {subs.map((v, k) => {
                   const isAn = ANALYTICS.includes(v), on = isAn ? an === v : !an && view === v

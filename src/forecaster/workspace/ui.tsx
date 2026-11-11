@@ -21,13 +21,13 @@ export function Card({ title, sub, info, right, children, className, pad = true,
   frame?: boolean }) {
   return (
     <section className={cx('min-w-0 rounded-xl border border-border shadow-[0_1px_2px_rgba(16,24,40,0.04)]', frame ? 'bg-surface-2' : 'bg-surface', fill && 'flex h-full flex-col', className)}>
-      {title && <header className="flex flex-wrap items-start justify-between gap-3 px-4 pb-0.5 pt-3.5">
+      {title && <header className={cx('flex flex-wrap items-start justify-between gap-3 pb-0.5', frame ? 'px-3 pt-2.5' : 'px-4 pt-3.5')}>
         <div className="min-w-0">
           <h3 className="flex items-center gap-1.5 text-[13.5px] font-semibold">{title}{info && <button type="button" title={info} aria-label={info} className="shrink-0 text-text-3 hover:text-text-2"><Info size={13} /></button>}</h3>
           {sub && <p className="mt-0.5 text-[12.5px] text-text-3">{sub}</p>}
         </div>{right}</header>}
-      <div className={cx(pad && (title ? 'px-4 pb-4 pt-3' : 'p-4'), fill && 'flex flex-1 flex-col')}>
-        {frame ? <div className={cx('rounded-lg border border-border bg-surface p-3', fill && 'flex flex-1 flex-col')}>{children}</div> : children}
+      <div className={cx(pad && (frame ? 'px-2.5 pb-2.5 pt-2' : title ? 'px-4 pb-4 pt-3' : 'p-4'), fill && 'flex flex-1 flex-col')}>
+        {frame ? <div className={cx('rounded-lg border border-border bg-surface p-2.5', fill && 'flex flex-1 flex-col')}>{children}</div> : children}
       </div>
     </section>
   )
