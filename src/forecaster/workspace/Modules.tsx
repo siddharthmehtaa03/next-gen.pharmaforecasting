@@ -1,12 +1,11 @@
 import { useState } from 'react'
 import { ArrowRight, Lock, RotateCcw } from 'lucide-react'
-import { ACT, FY, MONTHS, START_YEAR, fmtRev } from './engine'
+import { ACT, FY, GTN, MONTHS, START_YEAR, fmtRev } from './engine'
 import { Btn, Card, Seg, Tag, cx, field, PageTitle } from './ui'
 
 /* Default modules every model carries (Default Modules + Gross Price Workflow docs).
-   shortcut: the engine forecasts net revenue only; gross, Δ inventory and TUD are derived here with illustrative ratios
-   (GtN 73%, Δ inventory +0.46% of gross, LES Nurtec v3.12.21). Move into the engine when the gross build lands. */
-export const GTN = 0.73
+   shortcut: gross sales, Δ inventory and TUD are worked back from net revenue here with illustrative ratios
+   (engine GTN, Δ inventory +0.46% of gross, LES Nurtec v3.12.21). Move into the engine when the gross build lands. */
 const INV_PCT = 0.0046, UE_TRIGGER = 5
 const CUR = START_YEAR + Math.floor((ACT - 1) / 12), YTD = ((ACT - 1) % 12) + 1
 // FY2025 Unexplained % of gross was −5.1%; current-year actual months as booked.
@@ -92,15 +91,17 @@ const SKUS: Sku[] = [
   { id: 'cv', name: 'Copay voucher fill · 8 ct', price: 1089.6, packs: 4100, rev: false, note: 'voucher' },
 ]
 const PILLS = 8
+const weighted = (xs: Sku[]) => { const p = xs.filter(s => s.rev).reduce((a, s) => a + s.packs, 0); return p ? xs.filter(s => s.rev).reduce((a, s) => a + s.price * s.packs, 0) / p : 0 }
 const usd = (v: number) => `$${v.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
 
 /** Weighted gross price: Σ(price × mix) over revenue SKUs. Net sales price is calculated, never forecast. */
-export function GrossPriceSkus({ readOnly }: { readOnly?: boolean }) {
-  const [skus, setSkus] = useState(SKUS)
+export function GrossPriceSkus({ readOnly, base }: { readOnly?: boolean; base: number }) {
+  // SKU list prices start scaled so their pack-weighted average equals the forecast's weighted gross price driver.
+  const [skus, setSkus] = useState(() => { const k = base / weighted(SKUS); return SKUS.map(s => ({ ...s, price: +(s.price * k).toFixed(2) })) })
   const [level, setLevel] = useState<'sku' | 'brand'>('sku')
   const [brandPrice, setBrandPrice] = useState<number | null>(null)
   const revPacks = skus.filter(s => s.rev).reduce((a, s) => a + s.packs, 0)
-  const wgpSku = revPacks ? skus.filter(s => s.rev).reduce((a, s) => a + s.price * s.packs, 0) / revPacks : 0
+  const wgpSku = weighted(skus)
   const wgp = level === 'brand' && brandPrice !== null ? brandPrice : wgpSku
   const set = (id: string, p: Partial<Sku>) => setSkus(xs => xs.map(s => (s.id === id ? { ...s, ...p } : s)))
   return (
@@ -138,7 +139,7 @@ export function GrossPriceSkus({ readOnly }: { readOnly?: boolean }) {
 }
 
 /** Right-pane view for a default module selected in the forecast map. Edits only in the Forecast workspace. */
-export function ModuleView({ id, net, ue, setUe, editable, onEdit }: { id: ModId; net: number; ue: number[]; setUe: (v: number[]) => void; editable: boolean; onEdit: () => void }) {
+export function ModuleView({ id, net, gp, ue, setUe, editable, onEdit }: { id: ModId; net: number; gp: number; ue: number[]; setUe: (v: number[]) => void; editable: boolean; onEdit: () => void }) {
   const m = MODS.find(x => x.id === id)!, b = bridgeOf(net, ueFy(ue))
   const DESC: Record<ModId, string> = {
     gp: 'Pack-volume-weighted average of each revenue SKU’s list price. Free packs (samples, vouchers, starter) are excluded. Drives gross; net sales price is calculated.',
@@ -154,7 +155,7 @@ export function ModuleView({ id, net, ue, setUe, editable, onEdit }: { id: ModId
         <div className="min-w-0"><PageTitle title={m.label} info={DESC[id]} /></div>
         {m.edit && !editable && <Btn onClick={onEdit}>Edit in Forecast workspace</Btn>}
       </div>
-      {id === 'gp' && <GrossPriceSkus readOnly={!editable} />}
+      {id === 'gp' && <GrossPriceSkus readOnly={!editable} base={gp} />}
       {id === 'ue' && <UnexplainedPct ue={ue} setUe={setUe} readOnly={!editable} />}
       {id === 'tud' && <><RequiredFunnel net={net} ue={ue} /><div className="grid gap-3 sm:grid-cols-3">
         {stat(`TUD · FY${FY}`, fmtB(b.tud), 'Gross − Δ inventory − unexplained')}

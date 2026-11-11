@@ -2,7 +2,7 @@ import { Fragment, useMemo, useState } from 'react'
 import { ArrowDown, ArrowUp, Check, ChevronDown, CircleCheck, CircleAlert, CircleMinus, GitBranch, Lock, Plus, Save, Target, Trash2, X, Zap } from 'lucide-react'
 import {
   ACT, BASELINE, CURVE_LABEL, DRV, FC_YEARS, FY, HORIZON_LABEL, MEASURE_LABEL, N, OUTPUTS, OVR_LABEL, UNBIASED,
-  adjusted, applyEvents, applyOverrides, bridge, describeOverride, fmtDelta, fmtRev, fmtV, funnelOf, fyAvg, goalSeekOrdered, idxOf, mLong, measure,
+  adjusted, applyEvents, applyOverrides, bridge, describeOverride, fmtDelta, fmtRev, fmtV, funnelOf, fyAvg, goalSeekOrdered, netPrice, idxOf, mLong, measure,
 } from './engine'
 import type { Curve, DriverId, EventDef, Goal, GoalStep, Horizon, Layer, ModelCfg, OutputId, OvrKind, Override, Scenario } from './engine'
 import { Btn, COLOR, Card, ForecastChart, Label, Legend, Seg, Tag, cx, field, PageTitle, InfoTip } from './ui'
@@ -84,7 +84,7 @@ export function FunnelCompare({ scenarios, calc, selId, onSelect, model, default
                 <tr key={r.id} className="border-b border-border">
                   <td className="px-3 py-2.5 align-top">
                     <p className="font-medium">{isDrv ? DRV[r.id as DriverId].label : r.label}</p>
-                    <p className="text-[11px] text-text-3">{isDrv ? (r.id === 'price' ? 'Net price → net revenue' : `→ ${r.label.toLowerCase()} patients`) : r.id === 'prev' ? 'Starting population' : `Rx from on-brand patients`}{locked.has(r.id as DriverId) && <> · <Lock size={9} className="inline" /> system-fed</>}</p>
+                    <p className="text-[11px] text-text-3">{isDrv ? (r.id === 'price' ? 'Gross × (1 − GTN) → net revenue' : r.id === 'rx' ? 'Rx per on-brand patient → TRx' : `→ ${r.label.toLowerCase()} patients`) : r.id === 'prev' ? 'Starting population' : `Rx from on-brand patients`}{locked.has(r.id as DriverId) && <> · <Lock size={9} className="inline" /> system-fed</>}</p>
                   </td>
                   {cols.map(c => {
                     const x = c.f.find(y => y.id === r.id)!, b = c.br?.find(y => y.id === r.id)
@@ -93,9 +93,9 @@ export function FunnelCompare({ scenarios, calc, selId, onSelect, model, default
                       <td key={c.s.id} className={cx('px-3 py-2.5 align-top', c.s.id === anc && 'bg-brand-soft/25')}>
                         {x.rate !== undefined ? <>
                           <div className="flex items-baseline justify-between gap-2"><span className="font-mono font-medium">{fmtV(r.id as DriverId, x.rate)}</span>
-                            {c.s.id !== anc && Math.abs(dr) > 0.005 && <span className={cx('font-mono text-[11px]', tone(dr))}>{dr >= 0 ? '+' : '−'}{Math.abs(dr).toFixed(DRV[r.id as DriverId].dp)}{r.id === 'price' ? '' : ' pts'}</span>}</div>
-                          {r.id !== 'price' && <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${Math.min(100, x.rate)}%`, background: COLOR.alt[c.k % COLOR.alt.length] }} /></div>}
-                          <div className="mt-1 flex items-baseline justify-between gap-2 text-[11px] text-text-2"><span>{r.id === 'price' ? 'per Rx' : `${fmtVol(x.vol, x.unit)} ${r.label.toLowerCase()}`}</span>
+                            {c.s.id !== anc && Math.abs(dr) > 0.005 && <span className={cx('font-mono text-[11px]', tone(dr))}>{dr >= 0 ? '+' : '−'}{Math.abs(dr).toFixed(DRV[r.id as DriverId].dp)}{DRV[r.id as DriverId].pct ? ' pts' : ''}</span>}</div>
+                          {DRV[r.id as DriverId].pct && <div className="mt-1 h-1 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full" style={{ width: `${Math.min(100, x.rate)}%`, background: COLOR.alt[c.k % COLOR.alt.length] }} /></div>}
+                          <div className="mt-1 flex items-baseline justify-between gap-2 text-[11px] text-text-2"><span>{r.id === 'price' ? `per pack · net ${fmtV('price', netPrice(x.rate))}` : `${fmtVol(x.vol, x.unit)} ${r.id === 'rx' ? 'TRx' : r.label.toLowerCase()}`}</span>
                             {b && Math.abs(b.d) > 0.05 && <span className={cx('font-mono', tone(b.d))} title="Contribution to the net revenue gap">{fmtDelta(b.d)}</span>}</div>
                         </> : <span className="font-mono">{fmtVol(x.vol, x.unit)}</span>}
                       </td>
@@ -210,6 +210,7 @@ const RANGES: Record<DriverId, Range> = {
   treat: { lo: 12, hi: 12, conf: 'Medium', src: 'Claims treated rate + KOL panel' },
   access: { lo: 6, hi: 4, conf: 'Medium', src: 'Payer contracting outlook' },
   share: { lo: 25, hi: 25, conf: 'Low', src: 'Analog launches + market research (n=120 neurologists)' },
+  rx: { lo: 3, hi: 3, conf: 'High', src: 'Claims Rx per patient, 3-year history' },
   price: { lo: 8, hi: 5, conf: 'High', src: 'Pricing committee guidance, gross-to-net model' },
 }
 type Change = { id: string; driver: DriverId; how: 'pts' | 'pct'; step: number; from: number; to: number }

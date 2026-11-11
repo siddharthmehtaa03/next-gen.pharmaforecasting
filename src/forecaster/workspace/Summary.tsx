@@ -236,7 +236,7 @@ export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, 
           {grp('Volume and sales')}
           {stat('share', 'Patients on brand', 'Average month across the year.')}
           {stat('trx', 'TRx', 'Prescriptions, total for the year.')}
-          {stat('price', 'Net price per Rx', 'After gross-to-net. Year average.')}
+          {stat('price', 'Weighted gross price, per pack', 'Pack-weighted list price, before gross-to-net. Year average.')}
           {stat('rev', 'Net revenue', 'Total for the year, $M.')}
           {grp('Revenue bridge · default modules')}
           {bridgeRow('tud', 'Total underlying demand', 'Calculated demand dollars. Change it upstream.')}
@@ -404,7 +404,7 @@ export function ScenarioBuilder({ scenarios, calc, events, model, year, base, on
               <MiniFunnel f={f} base={funnelOf(calc[base.id]!.layer, year)} color={color} width={width} label="Preview funnel" />
               <div className="mt-2 grid grid-cols-2 gap-1.5">
                 <Tile k="TRx" v={fmtN(x.trx)} d={fmtNDelta(x.trx - bx.trx)} sameAs={near(x.trx - bx.trx, x.trx)} />
-                <Tile k="Net price" v={fmtV('price', x.price)} d={`${x.price - bx.price >= 0 ? '+' : '−'}$${Math.abs(x.price - bx.price).toFixed(2)}`} sameAs={near(x.price - bx.price, x.price)} />
+                <Tile k="Gross price" v={fmtV('price', x.price)} d={`${x.price - bx.price >= 0 ? '+' : '−'}$${Math.abs(x.price - bx.price).toFixed(2)}`} sameAs={near(x.price - bx.price, x.price)} />
               </div>
             </div>
             <ul className="space-y-1 text-[12px] text-text-2">

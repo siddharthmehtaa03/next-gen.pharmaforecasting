@@ -2,8 +2,8 @@ import type { MutableRefObject } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Check, ClipboardPaste, Lock, PanelRightClose, PencilLine, RotateCcw, Upload, Users } from 'lucide-react'
 import {
-  ACT, ACTUALS, BASELINE, CURVE_LABEL, DRIVERS, DRV, FY, METHOD_LABEL, MONTHS, N, OUTPUTS, UNBIASED, YEARS,
-  applyEdit, defaultEdit, fmtV, fyAvg, idxOf, mLong, revenue, yearOf, fySum,
+  ACT, ACTUALS, BASELINE, CURVE_LABEL, DRIVERS, DRV, FY, GTN, METHOD_LABEL, MONTHS, N, OUTPUTS, UNBIASED, YEARS,
+  applyEdit, defaultEdit, fmtV, fyAvg, idxOf, mLong, netPrice, revenue, yearOf, fySum,
 } from './engine'
 import type { Curve, DriverId, Edit, Layer, Method, ModelCfg, OutputId } from './engine'
 import { Btn, Card, ForecastChart, Label, Legend, Seg, Tag, Toggle, cx, field, PageTitle, InfoTip, MoreMenu } from './ui'
@@ -39,10 +39,10 @@ export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, on
           <span className="block truncate text-[13px] font-medium text-text">{d.label}</span>
         </span>
         <span className="flex shrink-0 flex-col items-end">
-          <span className="font-mono text-[13px] text-text">{fmtV(id, fyAvg(working[id]))}</span>
+          <span className="font-mono text-[13px] text-text" title={id === 'rx' ? `${fmtV(id, fyAvg(working[id]))} Rx per patient` : undefined}>{id === 'rx' ? OUTPUTS.trx.fmt(fySum(OUTPUTS.trx.fn(working))) : fmtV(id, fyAvg(working[id]))}</span>
           {!editable ? <span className="inline-flex items-center gap-1 text-[10.5px] text-text-3"><Lock size={9} />System-fed</span>
             : changed ? <span className="inline-flex items-center gap-1 text-[10.5px] font-medium text-brand"><span className="h-1.5 w-1.5 rounded-full bg-[#e07b18]" />Modified</span>
-            : <span className="text-[10.5px] text-text-3">FY{FY} avg</span>}
+            : <span className="text-[10.5px] text-text-3">{id === 'rx' ? `TRx FY${FY}` : `FY${FY} avg`}</span>}
         </span>
       </button>
     )
@@ -62,6 +62,10 @@ export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, on
       {funnel.flatMap((m, k) => [link(`l${m.id}`), node(m.id, m.editable, `${Math.max(60, 100 - k * 8)}%`)])}
       {side.length > 0 && <div className="relative mx-auto my-2 flex items-center gap-2 pl-2 text-[11px] text-text-3"><span className="h-px flex-1 bg-border" />combined with<span className="h-px flex-1 bg-border" /></div>}
       {side.map(m => node(m.id, m.editable, '70%'))}
+      {side.some(m => m.id === 'price') && <div className="mx-auto mt-1 flex w-[70%] items-center justify-between gap-2 rounded-xl border border-dashed border-border bg-surface-2 px-3 py-2">
+        <span className="min-w-0"><span className="block truncate text-[11px] text-text-3">Calculated</span><span className="block truncate text-[13px] font-medium text-text-2">Net sales price</span></span>
+        <span className="flex shrink-0 flex-col items-end"><span className="font-mono text-[13px] text-text-2">{fmtV('price', netPrice(fyAvg(working.price)))}</span><span className="inline-flex items-center gap-1 text-[10.5px] text-text-3"><Lock size={9} />× (1 − {Math.round(GTN * 100)}% GTN)</span></span>
+      </div>}
       {link('bridge')}
       <div data-tour="bridge" className="rounded-md border border-border bg-surface-2/60 p-2">
         <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-text-3">Revenue bridge · required in every model</p>

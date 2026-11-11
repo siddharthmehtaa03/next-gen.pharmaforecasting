@@ -1,6 +1,6 @@
 import { CalendarPlus, PencilLine, RotateCcw } from 'lucide-react'
 import { useState } from 'react'
-import { FY, POP, RX_PER_PT, fmtRev, fyAvg } from './engine'
+import { FY, POP, fmtRev, fyAvg, netPrice, usd } from './engine'
 import type { DriverId, Scenario } from './engine'
 import type { Calc } from './Stages'
 import { Btn, Card, Seg, Toggle, cx, field, PageTitle, MoreMenu } from './ui'
@@ -12,7 +12,8 @@ const ROWS: { id: RowId; label: string; defG: number; fmt: (v: number) => string
   { id: 'treat', label: 'Treatment rate', defG: 0.0, fmt: v => `${v.toFixed(1)}%` },
   { id: 'access', label: 'Access / coverage', defG: 0.0, fmt: v => `${v.toFixed(1)}%` },
   { id: 'share', label: 'Brand share', defG: 3.0, fmt: v => `${v.toFixed(1)}%` },
-  { id: 'price', label: 'Net price ($/Rx)', defG: 3.0, fmt: v => `$${v.toFixed(2)}` },
+  { id: 'rx', label: 'Total prescriptions (Rx / patient)', defG: 0.0, fmt: v => v.toFixed(2) },
+  { id: 'price', label: 'Weighted gross price ($ / pack)', defG: 3.0, fmt: v => usd(v) },
 ]
 const LRF_YEARS = [2028, 2029, 2030, 2031, 2032, 2033, 2034, 2035, 2036]
 const defRates = () => Object.fromEntries(ROWS.map(r => [r.id, Object.fromEntries(LRF_YEARS.map(y => [y, r.defG]))])) as Record<RowId, Record<number, number>>
@@ -35,6 +36,7 @@ export function LrfView({ scenarios, calc, selId, setSelId, onEvent }: {
     treat: fyAvg(layer.treat, FY),
     access: fyAvg(layer.access, FY),
     share: fyAvg(layer.share, FY),
+    rx: fyAvg(layer.rx, FY),
     price: fyAvg(layer.price, FY),
   }
 
@@ -43,19 +45,19 @@ export function LrfView({ scenarios, calc, selId, setSelId, onEvent }: {
 
   // Project each row across FY2027..FY2036 by compounding YoY %G from FY2027 base.
   const allYears = [FY, ...LRF_YEARS]
-  const proj: Record<RowId, Record<number, number>> = { prev: {}, diag: {}, treat: {}, access: {}, share: {}, price: {} }
+  const proj: Record<RowId, Record<number, number>> = { prev: {}, diag: {}, treat: {}, access: {}, share: {}, rx: {}, price: {} }
   for (const r of ROWS) {
     let cur = base27[r.id]
     proj[r.id][FY] = cur
     for (const y of LRF_YEARS) {
       const g = mode === 'constant' ? rates[r.id][2028]! : rates[r.id][y]!
-      cur = r.id === 'prev' || r.id === 'price' ? cur * (1 + g / 100) : Math.min(100, Math.max(0, cur * (1 + g / 100)))
+      cur = r.id === 'prev' || r.id === 'rx' || r.id === 'price' ? cur * (1 + g / 100) : Math.min(100, Math.max(0, cur * (1 + g / 100)))
       proj[r.id][y] = cur
     }
   }
 
   const netOf = (y: number) =>
-    proj.prev[y]! * (proj.diag[y]! / 100) * (proj.treat[y]! / 100) * (proj.access[y]! / 100) * (proj.share[y]! / 100) * RX_PER_PT * 12 * proj.price[y]! / 1e6
+    proj.prev[y]! * (proj.diag[y]! / 100) * (proj.treat[y]! / 100) * (proj.access[y]! / 100) * (proj.share[y]! / 100) * proj.rx[y]! * 12 * netPrice(proj.price[y]!) / 1e6
   const derivedG = ((netOf(2028) / netOf(FY) - 1) * 100)
   const visYears = expanded ? LRF_YEARS : [2028, 2029]
 
@@ -65,7 +67,7 @@ export function LrfView({ scenarios, calc, selId, setSelId, onEvent }: {
     const treat = diag * (proj.treat[y]! / 100)
     const cov = treat * (proj.access[y]! / 100)
     const onBrand = cov * (proj.share[y]! / 100)
-    const trx = onBrand * RX_PER_PT * 12
+    const trx = onBrand * proj.rx[y]! * 12
     const net = netOf(y)
     return { prev, diag, treat, cov, onBrand, trx, net }
   }
@@ -141,7 +143,7 @@ export function LrfView({ scenarios, calc, selId, setSelId, onEvent }: {
                       <td key={y} className="px-3 py-2.5 text-right font-mono tabular-nums">
                         {mode === 'perYear' ? (
                           <div className="inline-flex flex-col items-end gap-0.5">
-                            <span>{r.id === 'price' ? `$${proj[r.id][y]!.toFixed(1)}` : r.fmt(proj[r.id][y]!)}</span>
+                            <span>{r.fmt(proj[r.id][y]!)}</span>
                             <div className="inline-flex items-center rounded border border-[#F0D98A] bg-[#FFF9E0] px-1.5 py-0.5">
                               <input
                                 type="number"
@@ -155,7 +157,7 @@ export function LrfView({ scenarios, calc, selId, setSelId, onEvent }: {
                             </div>
                           </div>
                         ) : (
-                          r.id === 'price' ? `$${proj[r.id][y]!.toFixed(1)}` : r.fmt(proj[r.id][y]!)
+                          r.fmt(proj[r.id][y]!)
                         )}
                       </td>
                     ))}

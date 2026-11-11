@@ -16,17 +16,23 @@ export const mLong = (i: number) => `${MONTHS[i % 12]} ${START_YEAR + Math.floor
 export const idxOf = (year: number, month: number) => (year - START_YEAR) * 12 + month
 export const yearOf = (i: number) => START_YEAR + Math.floor(i / 12)
 
-export type DriverId = 'diag' | 'treat' | 'access' | 'share' | 'price'
+export type DriverId = 'diag' | 'treat' | 'access' | 'share' | 'rx' | 'price'
 export type Driver = { id: DriverId; label: string; step: string; unit: string; dp: number; sens: 'pts' | '%'; desc: string; pct: boolean }
 export const DRIVERS: Driver[] = [
   { id: 'diag', label: 'Diagnosis rate', step: 'Diagnosed', unit: '%', dp: 1, sens: 'pts', pct: true, desc: 'Share of the prevalent population that has a confirmed diagnosis.' },
   { id: 'treat', label: 'Treatment rate', step: 'Treated', unit: '%', dp: 1, sens: 'pts', pct: true, desc: 'Share of diagnosed patients who receive a prescription treatment.' },
   { id: 'access', label: 'Access', step: 'Covered', unit: '%', dp: 1, sens: 'pts', pct: true, desc: 'Share of treated patients with payer coverage that lets them start the brand.' },
   { id: 'share', label: 'Share', step: 'Brand share', unit: '%', dp: 1, sens: 'pts', pct: true, desc: 'Brand share of covered, treated patients.' },
-  { id: 'price', label: 'Price', step: 'Net price', unit: '$ / Rx', dp: 2, sens: '%', pct: false, desc: 'Net price realised per prescription after gross-to-net.' },
+  { id: 'rx', label: 'Total prescriptions', step: 'Rx per patient', unit: 'Rx / patient', dp: 2, sens: '%', pct: false, desc: 'Prescriptions per on-brand patient per month. TRx = patients on brand × this rate.' },
+  { id: 'price', label: 'Weighted gross price', step: 'Gross price', unit: '$ / pack', dp: 2, sens: '%', pct: false, desc: 'Pack-weighted list price per pack, before gross-to-net. Net sales price is calculated from it.' },
 ]
+/** Gross-to-net as a share of gross: the one definition every view uses. */
+export const GTN = 0.73
+/** Net sales price is calculated, never forecast: weighted gross price × (1 − GTN). */
+export const netPrice = (gross: number) => gross * (1 - GTN)
 export const DRV = Object.fromEntries(DRIVERS.map(d => [d.id, d])) as Record<DriverId, Driver>
-export const fmtV = (id: DriverId, v: number) => { const d = DRV[id], s = v.toFixed(d.dp); return d.unit === '%' ? `${s}%` : d.unit === '$ / Rx' ? `$${s}` : s }
+export const usd = (v: number, dp = 2) => `$${v.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp })}`
+export const fmtV = (id: DriverId, v: number) => { const d = DRV[id]; return d.unit === '%' ? `${v.toFixed(d.dp)}%` : d.unit === '$ / pack' ? usd(v, d.dp) : v.toFixed(d.dp) }
 export const fmtRev = (v: number, dp = 0) => `$${v.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp })}M`
 export const fmtDelta = (v: number, dp = 1) => `${v >= 0 ? '+' : '−'}$${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp })}M`
 
@@ -37,7 +43,9 @@ const HIST: Record<DriverId, (i: number) => number> = {
   treat: i => 40.5 + 0.5 * i / 12 + 0.3 * nz(i, 3),
   access: i => 84 + 1.2 * i / 12 + 0.35 * nz(i, 4),
   share: i => 8.4 + 0.9 * i / 12 + 0.12 * nz(i, 5),
-  price: i => 285 + 6 * i / 12 + 1.4 * nz(i, 7),
+  rx: () => 0.55,
+  // Gross list price per pack; × (1 − GTN) it gives the net price the forecast was built on.
+  price: i => (285 + 6 * i / 12 + 1.4 * nz(i, 7)) / (1 - GTN),
 }
 const avg = (a: number[]) => a.reduce((s, v) => s + v, 0) / (a.length || 1)
 
@@ -75,7 +83,7 @@ const shape = (f: number, c: Curve) => c === 's' ? f * f * (3 - 2 * f) : c === '
 
 export function defaultEdit(id: DriverId): Edit {
   const d = DRV[id]
-  return { method: 'target', start: ACT, end: idxOf(2027, 11), target: +ACTUALS[id][ACT - 1]!.toFixed(d.dp), growth: 2, step: d.pct ? 0.1 : 0.5, curve: 'linear', hold: true, values: {}, pinned: [], notes: '', source: 'manual' }
+  return { method: 'target', start: ACT, end: idxOf(2027, 11), target: +ACTUALS[id][ACT - 1]!.toFixed(d.dp), growth: 2, step: d.pct ? 0.1 : id === 'rx' ? 0.01 : 0.5, curve: 'linear', hold: true, values: {}, pinned: [], notes: '', source: 'manual' }
 }
 
 export function applyEdit(id: DriverId, base: number[], e: Edit | undefined): number[] {
@@ -137,15 +145,22 @@ export function applyEvents(layer: Layer, events: EventDef[]): Layer {
 }
 
 /* ── Outcome: monthly net revenue, $M ── */
-export const POP = 39e6, RX_PER_PT = 0.55
+export const POP = 39e6
 export function revenue(l: Layer): number[] {
-  return Array.from({ length: N }, (_, i) => POP * (l.diag[i]! / 100) * (l.treat[i]! / 100) * (l.access[i]! / 100) * (l.share[i]! / 100) * RX_PER_PT * l.price[i]! / 1e6)
+  return Array.from({ length: N }, (_, i) => POP * (l.diag[i]! / 100) * (l.treat[i]! / 100) * (l.access[i]! / 100) * (l.share[i]! / 100) * l.rx[i]! * netPrice(l.price[i]!) / 1e6)
 }
 export type OutputId = 'rev' | 'pts' | 'trx'
 export const OUTPUTS: Record<OutputId, { label: string; unit: string; fn: (l: Layer) => number[]; fmt: (v: number, dp?: number) => string; delta: (v: number) => string; dp: number }> = {
   rev: { label: 'Net revenue', unit: '$M', fn: revenue, fmt: (v, dp = 0) => fmtRev(v, dp), delta: v => fmtDelta(v), dp: 0 },
   pts: { label: 'Treated patients', unit: 'K patients', fn: l => Array.from({ length: N }, (_, i) => POP * (l.diag[i]! / 100) * (l.treat[i]! / 100) * (l.access[i]! / 100) * (l.share[i]! / 100) / 1e3), fmt: (v, dp = 0) => `${v.toLocaleString('en-US', { maximumFractionDigits: dp })}K`, delta: v => `${v >= 0 ? '+' : '−'}${Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: 1 })}K`, dp: 1 },
-  trx: { label: 'TRx', unit: 'K Rx', fn: l => Array.from({ length: N }, (_, i) => POP * (l.diag[i]! / 100) * (l.treat[i]! / 100) * (l.access[i]! / 100) * (l.share[i]! / 100) * RX_PER_PT / 1e3), fmt: (v, dp = 0) => `${v.toLocaleString('en-US', { maximumFractionDigits: dp })}K`, delta: v => `${v >= 0 ? '+' : '−'}${Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: 1 })}K`, dp: 1 },
+  trx: { label: 'TRx', unit: 'K Rx', fn: l => Array.from({ length: N }, (_, i) => POP * (l.diag[i]! / 100) * (l.treat[i]! / 100) * (l.access[i]! / 100) * (l.share[i]! / 100) * l.rx[i]! / 1e3), fmt: (v, dp = 0) => `${v.toLocaleString('en-US', { maximumFractionDigits: dp })}K`, delta: v => `${v >= 0 ? '+' : '−'}${Math.abs(v).toLocaleString('en-US', { maximumFractionDigits: 1 })}K`, dp: 1 },
+}
+
+// Self-check: net price is gross × (1 − GTN), and the active-forecast FY2027 net revenue matches the reference (≈ $1,758.8M).
+if (import.meta.env.DEV) {
+  console.assert(Math.abs(netPrice(1101.92) - 1101.92 * 0.27) < 1e-9, 'netPrice must be gross × (1 − GTN)')
+  const fy27 = revenue(UNBIASED).slice((FY - START_YEAR) * 12, (FY - START_YEAR) * 12 + 12).reduce((a, b) => a + b, 0)
+  console.assert(Math.abs(fy27 / 1758.8 - 1) < 0.005, `FY2027 net revenue ${fy27.toFixed(1)} must stay within 0.5% of the reference $1,758.8M`)
 }
 
 /* Model configuration published by the CoE: which modules a brand's forecast exposes, in order. */
@@ -179,7 +194,6 @@ export function goalSeek(l: Layer, id: DriverId, target: number): { delta: numbe
 export type Scenario = { id: string; name: string; color?: string; active: string[]; adj: Partial<Record<DriverId, number>>; locked: boolean; ovr?: Override[] }
 export const SEED_EVENTS: EventDef[] = [
   { id: 'ev1', name: 'Part D formulary win', type: 'Market Event', date: idxOf(2027, 0), prob: 70, notes: 'Preferred-tier placement on two national Part D plans.', impacts: [{ metric: 'access', dir: 'up', mag: 4, curve: 'ramp', duration: null }, { metric: 'share', dir: 'up', mag: 3, curve: 'ramp', duration: null }] },
-  // shortcut: list (WAC) events move the net price driver until Phase 2 forecasts weighted gross price.
   { id: 'ev2', name: 'January WAC increase', type: 'Pricing Event', sub: 'List Price (WAC) Change', date: idxOf(2027, 0), prob: 85, notes: 'Pricing committee option: 2.5% list increase, partly offset by gross-to-net.', impacts: [{ metric: 'price', dir: 'up', mag: 2.5, curve: 'step', duration: null }] },
   { id: 'ev4', name: 'ODT 1x8 · October WAC action', type: 'Pricing Event', sub: 'List Price (WAC) Change', date: idxOf(2027, 9), prob: 20, notes: 'List action on the ODT 1x8 pack.', impacts: [{ metric: 'price', dir: 'up', mag: 2, curve: 'step', duration: null }] },
   { id: 'ev5', name: 'Biannual list price step', type: 'Pricing Event', sub: 'List Price (WAC) Change', date: idxOf(2027, 6), prob: 80, every: 6, notes: 'Regular list step every six months.', impacts: [{ metric: 'price', dir: 'up', mag: 0.5, curve: 'step', duration: null }] },
@@ -262,8 +276,9 @@ export function funnelOf(l: Layer, year: number): FunnelRow[] {
     { id: 'treat', label: 'Treated', rate: a('treat'), vol: p(2), unit: 'pts' },
     { id: 'access', label: 'Covered', rate: a('access'), vol: p(3), unit: 'pts' },
     { id: 'share', label: 'On brand', rate: a('share'), vol: fyAvg(OUTPUTS.pts.fn(l), year) * 1e3, unit: 'pts' },
+    { id: 'rx', label: 'Total prescriptions', rate: a('rx'), vol: fySum(OUTPUTS.trx.fn(l), year) * 1e3, unit: 'Rx' },
     { id: 'trx', label: 'TRx', vol: fySum(OUTPUTS.trx.fn(l), year) * 1e3, unit: 'Rx' },
-    { id: 'price', label: 'Net price', rate: a('price'), vol: fySum(revenue(l), year), unit: '$M' },
+    { id: 'price', label: 'Weighted gross price', rate: a('price'), vol: fySum(revenue(l), year), unit: '$M' },
   ]
 }
 /** Exact sequential bridge: swap each driver from one layer to the other in funnel order. Parts sum to the gap. */

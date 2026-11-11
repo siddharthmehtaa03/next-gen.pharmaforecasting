@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import type { ComponentType } from 'react'
 import { scrollFrameTop } from '../../frame'
 import { ArrowLeft, ArrowRight, Check, ChevronDown, PanelRightOpen, Save } from 'lucide-react'
-import { DEFAULT_MODEL, FY, SEED_EVENTS, SEED_SCENARIOS, fySum, revenue, scenarioLayer, workingLayer } from './engine'
+import { DEFAULT_MODEL, FY, SEED_EVENTS, SEED_SCENARIOS, fyAvg, fySum, revenue, scenarioLayer, workingLayer } from './engine'
 import type { DriverId, EventDef, ModelCfg, OutputId, Scenario } from './engine'
 import { Btn, Tag, cx, field } from './ui'
 import { DriverWorkspace, ForecastMap } from './Drivers'
@@ -227,7 +227,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
         <main className="min-w-0">
           {view === 'Overview' && <BaselineTrend onWorkspace={() => go('Assumptions')} />}
           {view === 'Assumptions' && <div className="mb-6"><ScenarioBar scenarios={scenarios} setScenarios={setScenarios} scope={scope} setScope={setScope} year={wsYear} setYear={setWsYear} calc={calc} notify={notify} /></div>}
-          {mapView && mod && <ModuleView id={mod} net={work.fy} ue={ue} setUe={setUe} editable={view === 'Assumptions'} onEdit={() => go('Assumptions')} />}
+          {mapView && mod && <ModuleView id={mod} net={work.fy} gp={fyAvg(work.layer.price)} ue={ue} setUe={setUe} editable={view === 'Assumptions'} onEdit={() => go('Assumptions')} />}
           {mapView && !mod && (view === 'Assumptions' && scope !== FORECAST && sel !== 'rev'
             ? <ScenarioDriverView id={sel} scenario={scenarios.find(s => s.id === scope)!} setScenarios={setScenarios} work={work.layer} layer={calc[scope]!.layer} events={events} model={model} notify={notify} />
             : <DriverWorkspace mode="assumptions" sel={sel} edits={edits} setEdits={setEdits}

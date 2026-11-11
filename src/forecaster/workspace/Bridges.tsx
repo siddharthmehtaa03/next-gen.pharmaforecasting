@@ -1,25 +1,24 @@
 import { useState } from 'react'
-import { MONTHS, POP, RX_PER_PT, idxOf, scenarioLayer } from './engine'
+import { GTN, MONTHS, POP, idxOf, netPrice, scenarioLayer } from './engine'
 import type { DriverId, EventDef, Layer, Scenario } from './engine'
 import type { Calc } from './Stages'
 import { Card, Seg, cx, field, PageTitle } from './ui'
-import { GTN } from './Modules'
 import { BUDGET } from './Performance'
 
 /* Financial bridges: one attribution engine, three views. Every view walks from the comparison to the scenario by
    substituting one driver (or event) at a time, so the bars always sum exactly to the change. */
 type Plane = { name: string; l: Layer; w: number[]; gtn: number }
 type Step = { label: string; sub: string; v: number }
-const DRV: DriverId[] = ['diag', 'treat', 'access', 'share', 'price']
-const DRV_LABEL: Record<DriverId, string> = { diag: 'Diagnosis rate', treat: 'Treatment rate', access: 'Access', share: 'Brand share', price: 'Net price' }
+const DRV: DriverId[] = ['diag', 'treat', 'access', 'share', 'rx', 'price']
+const DRV_LABEL: Record<DriverId, string> = { diag: 'Diagnosis rate', treat: 'Treatment rate', access: 'Access', share: 'Brand share', rx: 'Total prescriptions', price: 'Weighted gross price' }
 // Budget plans 0.4 pt less gross-to-net than the scenarios (placeholder plane, as on Performance).
 const BUDGET_GTN = GTN - 0.004
 const PERIODS = [{ id: 'ytd', label: `YTD ${MONTHS[6]} 2026` }, { id: '2026', label: 'FY2026' }, { id: '2027', label: 'FY2027' }, { id: '2028', label: 'FY2028' }] as const
 type PeriodId = (typeof PERIODS)[number]['id']
 
 const series = (p: Plane) => Object.fromEntries(DRV.map(d => [d, p.w.map(i => p.l[d][i]!)])) as Record<DriverId, number[]>
-const netOf = (s: Record<DriverId, number[]>) => s.diag.reduce((a, _, k) => a + POP * (s.diag[k]! / 100) * (s.treat[k]! / 100) * (s.access[k]! / 100) * (s.share[k]! / 100) * RX_PER_PT * s.price[k]! / 1e6, 0)
-const trxOf = (s: Record<DriverId, number[]>) => s.diag.reduce((a, _, k) => a + POP * (s.diag[k]! / 100) * (s.treat[k]! / 100) * (s.access[k]! / 100) * (s.share[k]! / 100) * RX_PER_PT, 0)
+const netOf = (s: Record<DriverId, number[]>) => s.diag.reduce((a, _, k) => a + POP * (s.diag[k]! / 100) * (s.treat[k]! / 100) * (s.access[k]! / 100) * (s.share[k]! / 100) * s.rx[k]! * netPrice(s.price[k]!) / 1e6, 0)
+const trxOf = (s: Record<DriverId, number[]>) => s.diag.reduce((a, _, k) => a + POP * (s.diag[k]! / 100) * (s.treat[k]! / 100) * (s.access[k]! / 100) * (s.share[k]! / 100) * s.rx[k]!, 0)
 const $m = (v: number) => `${v < 0 ? '−' : ''}$${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}M`
 const $d = (v: number) => `${v >= 0 ? '+' : '−'}${$m(Math.abs(v))}`
 const pct = (v: number) => `${v >= 0 ? '' : '−'}${Math.abs(v).toFixed(1)}%`
