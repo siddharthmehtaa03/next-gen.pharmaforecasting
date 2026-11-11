@@ -230,7 +230,75 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
   }
   const cellState = (i: number): CellState => eff.method === 'direct' && eff.pinned.includes(i) ? 'override' : Math.abs(preview[i]! - unb[i]!) > 1e-9 ? 'recalc' : 'system'
 
-  return (
+  const adjustPanel = editing && (
+    <AgentFrame on={agent.section === 'assume'} label={`${agent.name} is adjusting ${d.label.toLowerCase()}`}>
+    <Card title="Adjust assumption" info="Override permitted values or change the projection method. The calculation formula stays locked and the reference baseline never changes."
+      right={<div className="flex items-center gap-2">{dirty ? <Tag tone="warn">Unapplied changes</Tag> : applied ? <Tag tone="brand">Applied</Tag> : null}
+        <MoreMenu label="Assumption actions" items={[
+          { label: 'Upload Excel', icon: <Upload size={14} />, onClick: () => fileRef.current?.click() },
+          { label: paste !== null ? 'Close paste box' : 'Paste from Excel', icon: <ClipboardPaste size={14} />, onClick: () => setPaste(p => p === null ? '' : null) },
+          { label: 'Reset to system value', icon: <RotateCcw size={14} />, disabled: !applied && !dirty, onClick: reset },
+        ]} /></div>}>
+      <div className="space-y-5">
+        <div><Label className="mb-1.5">Projection method</Label>
+          <Seg label="Method" value={eff.method} onChange={m => patch({ method: m as Method })} options={(Object.keys(METHOD_LABEL) as Method[]).map(m => ({ id: m, label: METHOD_LABEL[m] }))} /></div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Period label="Start" value={eff.start} min={ACT} max={N - 1} onChange={v => patch({ start: v, end: Math.max(eff.end, v) })} />
+          <Period label="End" value={eff.end} min={eff.start} max={N - 1} onChange={v => patch({ end: v })} />
+          {eff.method === 'target' && <>
+            <NumField live={agent.field === 'target'} label="Target value" value={eff.target} suffix={d.unit === '%' ? '%' : '$'} onChange={v => patch({ target: v })} />
+            <label className="block"><Label className="mb-1">Curve</Label><select value={eff.curve} onChange={e => patch({ curve: e.target.value as Curve })} className={field}>{(Object.keys(CURVE_LABEL) as Curve[]).map(c => <option key={c} value={c}>{CURVE_LABEL[c]}</option>)}</select></label>
+          </>}
+          {eff.method === 'linear' && <NumField label="Change per month" value={eff.step} suffix={d.unit === '%' ? 'pts' : '$'} step={d.pct ? 0.05 : 0.25} onChange={v => patch({ step: v })} />}
+          {eff.method === 'growth' && <NumField live={agent.field === 'growth'} label="Growth / change per year" value={eff.growth} suffix="%" onChange={v => patch({ growth: v })} />}
+          {eff.method === 'hold' && <div className="sm:col-span-2"><Label className="mb-1">Carried value</Label><p className="flex h-9 items-center rounded-md bg-surface-2 px-3 font-mono text-sm">{fmtV(id, lastActual)} <span className="ml-2 font-sans text-text-3">last actual, {mLong(ACT - 1)}</span></p></div>}
+        </div>
+
+        {eff.method !== 'direct' && (
+          <label className="flex items-center gap-3 text-sm"><Toggle on={eff.hold} onChange={v => patch({ hold: v })} label="Hold flat after end" />
+            <span><b className="font-medium">Hold flat after end</b><span className="text-text-2"> · {eff.hold ? 'the end value carries forward' : 'the series rejoins the reference baseline'}</span></span></label>
+        )}
+
+        <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.txt" className="hidden" onChange={e => onFile(e.target.files?.[0])} />
+        {eff.method === 'direct' && eff.source !== 'manual' && <Tag tone="brand">Values from {eff.source === 'excel' ? 'file' : 'paste'}</Tag>}
+        {paste !== null && (
+          <div className="rounded-md border border-border bg-surface-2 p-3">
+            <textarea autoFocus value={paste} onChange={e => setPaste(e.target.value)} rows={3} placeholder={`Paste a row or column of monthly values, starting ${mLong(eff.start)}`} className="w-full resize-y rounded-md border border-border-strong bg-surface p-2.5 font-mono text-[12px] outline-none focus:border-brand" />
+            <div className="mt-2 flex items-center justify-between gap-2"><span className="text-[12px] text-text-2">{parseNums(paste).length} values detected</span>
+              <div className="flex gap-2"><Btn variant="ghost" onClick={() => setPaste(null)}>Cancel</Btn>
+                <Btn disabled={!parseNums(paste).length} onClick={() => { const n = loadValues(parseNums(paste), 'paste', eff.start); setPaste(null); notify({ tone: 'ok', text: `Pasted ${n} monthly values. Review the chart, then Apply.` }) }}>Use values</Btn></div></div>
+          </div>
+        )}
+
+        <div>
+          <div className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <label className="flex items-center gap-3 text-sm"><Toggle on={cascade} onChange={setCascade} label="Recalculate later periods" />
+              <span><b className="font-medium">Recalculate later periods</b><span className="text-text-2"> · {cascade ? 'editing a month moves every later month by the same change' : 'editing a month changes only that month'}</span></span></label>
+          </div>
+          <AssumptionGrid id={id} preview={preview} cellState={cellState} onCell={setCell} onCancel={() => setGridErr(null)} />
+          {gridErr && <p role="alert" className="mt-2 rounded-md border border-err/30 bg-err-soft px-3 py-2 text-[13px] text-err">{gridErr}</p>}
+        </div>
+
+        <label className="block"><Label className="mb-1" hint="optional">Notes on change</Label>
+          <textarea value={draft.notes} onChange={e => patch({ notes: e.target.value })} rows={2} placeholder="What changed, and why? Shown on the Review screen." className="w-full resize-y rounded-md border border-border-strong bg-surface p-2.5 text-sm outline-none focus:border-brand" /></label>
+
+      </div>
+    </Card>
+    </AgentFrame>
+  )
+
+  return editing ? (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div>
+        <div className="mb-5"><PageTitle title={d.label} info={`${d.desc} Source: Data Science baseline · monthly · brand level.`} /></div>
+        <div data-tour="chart" className="min-w-0"><Card title={`${d.label} · monthly`} sub={d.unit === '%' ? 'Percent' : d.unit} right={<Legend s={series} />}>
+          <ForecastChart title={`${d.label} forecast`} s={series} fmt={v => fmtV(id, v)} dp={d.dp} unit={d.unit} height={280} />
+        </Card></div>
+      </div>
+      <div className="lg:sticky lg:top-[98px] lg:self-start overflow-y-auto lg:max-h-[calc(100dvh-140px)]">{adjustPanel}</div>
+    </div>
+  ) : (
     <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0"><PageTitle title={d.label} info={`${d.desc} Source: Data Science baseline · monthly · brand level.`} /></div>
@@ -244,67 +312,8 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
         {mode === 'overview' && <TrendPanel series={ACTUALS[id]} label={d.label} fmt={v => fmtV(id, v)} pct={d.pct} />}
       </div>
 
-
       {mode === 'assumptions' && locked && (
         <Card><p className="flex items-start gap-2 text-sm text-text-2"><Lock size={15} className="mt-0.5 shrink-0" /><span><b className="font-medium text-text">{d.label} is system-fed for this model.</b> The CoE has not exposed it as an override, so its values and formula cannot be changed here. Pick another module from the forecast map.</span></p></Card>
-      )}
-
-      {editing && (
-        <AgentFrame on={agent.section === 'assume'} label={`${agent.name} is adjusting ${d.label.toLowerCase()}`}>
-        <Card title="Adjust assumption" info="Override permitted values or change the projection method. The calculation formula stays locked and the reference baseline never changes."
-          right={<div className="flex items-center gap-2">{dirty ? <Tag tone="warn">Unapplied changes</Tag> : applied ? <Tag tone="brand">Applied</Tag> : null}
-            <MoreMenu label="Assumption actions" items={[
-              { label: 'Upload Excel', icon: <Upload size={14} />, onClick: () => fileRef.current?.click() },
-              { label: paste !== null ? 'Close paste box' : 'Paste from Excel', icon: <ClipboardPaste size={14} />, onClick: () => setPaste(p => p === null ? '' : null) },
-              { label: 'Reset to system value', icon: <RotateCcw size={14} />, disabled: !applied && !dirty, onClick: reset },
-            ]} /></div>}>
-          <div className="space-y-5">
-            <div><Label className="mb-1.5">Projection method</Label>
-              <Seg label="Method" value={eff.method} onChange={m => patch({ method: m as Method })} options={(Object.keys(METHOD_LABEL) as Method[]).map(m => ({ id: m, label: METHOD_LABEL[m] }))} /></div>
-
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <Period label="Start" value={eff.start} min={ACT} max={N - 1} onChange={v => patch({ start: v, end: Math.max(eff.end, v) })} />
-              <Period label="End" value={eff.end} min={eff.start} max={N - 1} onChange={v => patch({ end: v })} />
-              {eff.method === 'target' && <>
-                <NumField live={agent.field === 'target'} label="Target value" value={eff.target} suffix={d.unit === '%' ? '%' : '$'} onChange={v => patch({ target: v })} />
-                <label className="block"><Label className="mb-1">Curve</Label><select value={eff.curve} onChange={e => patch({ curve: e.target.value as Curve })} className={field}>{(Object.keys(CURVE_LABEL) as Curve[]).map(c => <option key={c} value={c}>{CURVE_LABEL[c]}</option>)}</select></label>
-              </>}
-              {eff.method === 'linear' && <NumField label="Change per month" value={eff.step} suffix={d.unit === '%' ? 'pts' : '$'} step={d.pct ? 0.05 : 0.25} onChange={v => patch({ step: v })} />}
-              {eff.method === 'growth' && <NumField live={agent.field === 'growth'} label="Growth / change per year" value={eff.growth} suffix="%" onChange={v => patch({ growth: v })} />}
-              {eff.method === 'hold' && <div className="sm:col-span-2"><Label className="mb-1">Carried value</Label><p className="flex h-9 items-center rounded-md bg-surface-2 px-3 font-mono text-sm">{fmtV(id, lastActual)} <span className="ml-2 font-sans text-text-3">last actual, {mLong(ACT - 1)}</span></p></div>}
-            </div>
-
-            {eff.method !== 'direct' && (
-              <label className="flex items-center gap-3 text-sm"><Toggle on={eff.hold} onChange={v => patch({ hold: v })} label="Hold flat after end" />
-                <span><b className="font-medium">Hold flat after end</b><span className="text-text-2"> · {eff.hold ? 'the end value carries forward' : 'the series rejoins the reference baseline'}</span></span></label>
-            )}
-
-            <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.txt" className="hidden" onChange={e => onFile(e.target.files?.[0])} />
-            {eff.method === 'direct' && eff.source !== 'manual' && <Tag tone="brand">Values from {eff.source === 'excel' ? 'file' : 'paste'}</Tag>}
-            {paste !== null && (
-              <div className="rounded-md border border-border bg-surface-2 p-3">
-                <textarea autoFocus value={paste} onChange={e => setPaste(e.target.value)} rows={3} placeholder={`Paste a row or column of monthly values, starting ${mLong(eff.start)}`} className="w-full resize-y rounded-md border border-border-strong bg-surface p-2.5 font-mono text-[12px] outline-none focus:border-brand" />
-                <div className="mt-2 flex items-center justify-between gap-2"><span className="text-[12px] text-text-2">{parseNums(paste).length} values detected</span>
-                  <div className="flex gap-2"><Btn variant="ghost" onClick={() => setPaste(null)}>Cancel</Btn>
-                    <Btn disabled={!parseNums(paste).length} onClick={() => { const n = loadValues(parseNums(paste), 'paste', eff.start); setPaste(null); notify({ tone: 'ok', text: `Pasted ${n} monthly values. Review the chart, then Apply.` }) }}>Use values</Btn></div></div>
-              </div>
-            )}
-
-            <div>
-              <div className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-                <label className="flex items-center gap-3 text-sm"><Toggle on={cascade} onChange={setCascade} label="Recalculate later periods" />
-                  <span><b className="font-medium">Recalculate later periods</b><span className="text-text-2"> · {cascade ? 'editing a month moves every later month by the same change' : 'editing a month changes only that month'}</span></span></label>
-              </div>
-              <AssumptionGrid id={id} preview={preview} cellState={cellState} onCell={setCell} onCancel={() => setGridErr(null)} />
-              {gridErr && <p role="alert" className="mt-2 rounded-md border border-err/30 bg-err-soft px-3 py-2 text-[13px] text-err">{gridErr}</p>}
-            </div>
-
-            <label className="block"><Label className="mb-1" hint="optional">Notes on change</Label>
-              <textarea value={draft.notes} onChange={e => patch({ notes: e.target.value })} rows={2} placeholder="What changed, and why? Shown on the Review screen." className="w-full resize-y rounded-md border border-border-strong bg-surface p-2.5 text-sm outline-none focus:border-brand" /></label>
-
-          </div>
-        </Card>
-        </AgentFrame>
       )}
     </div>
   )

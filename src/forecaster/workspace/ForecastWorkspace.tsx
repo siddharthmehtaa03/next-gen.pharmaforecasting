@@ -218,12 +218,8 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
           </div>
         </div>
       ) : <>
-      <div className={cx('mx-auto px-10', view === 'Overview' ? 'pb-8 pt-6' : 'py-8', mapView && !presenting && cx('grid gap-6', mapOpen ? 'lg:grid-cols-[minmax(0,1fr)_300px]' : 'lg:grid-cols-[minmax(0,1fr)_44px]'))}>
-        {mapView && <aside className="lg:sticky lg:top-[98px] lg:order-last lg:self-start">{mapOpen
-          ? <ForecastMap sel={sel} onSel={pick} edits={edits} working={work.layer} model={model} metric={metric} mod={mod} onMod={m => { if (m !== mod && leaveOk()) setMod(m) }} uePct={ueFy(ue)} onCollapse={() => setMapOpen(false)} />
-          : <button type="button" onClick={() => setMapOpen(true)} aria-label="Expand forecast map" title="Expand forecast map"
-              className="flex w-full items-center justify-center gap-2 rounded-lg border border-border bg-surface py-3 text-text-2 hover:border-brand/60 hover:text-brand lg:h-[calc(100dvh-220px)] lg:flex-col lg:justify-start">
-              <PanelRightOpen size={16} className="shrink-0" /><span className="text-[12px] font-semibold uppercase tracking-wider lg:[writing-mode:vertical-rl]">Forecast map</span></button>}</aside>}
+      <div className={cx('mx-auto px-10', view === 'Overview' ? 'pb-8 pt-6' : 'py-8', mapView && !presenting && 'grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)_360px]')}>
+        {mapView && <aside className="lg:sticky lg:top-[98px] lg:self-start"><ForecastMap sel={sel} onSel={pick} edits={edits} working={work.layer} model={model} metric={metric} mod={mod} onMod={m => { if (m !== mod && leaveOk()) setMod(m) }} uePct={ueFy(ue)} onCollapse={undefined} /></aside>}
         <main className="min-w-0">
           {view === 'Overview' && <BaselineTrend onWorkspace={() => go('Assumptions')} />}
           {view === 'Assumptions' && <div className="mb-6"><ScenarioBar scenarios={scenarios} setScenarios={setScenarios} scope={scope} setScope={setScope} year={wsYear} setYear={setWsYear} calc={calc} notify={notify} /></div>}
