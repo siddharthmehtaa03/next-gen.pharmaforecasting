@@ -114,7 +114,7 @@ export function BaselineTrend({ onWorkspace, onEvents }: { onWorkspace: () => vo
         <div className="mb-2 flex flex-wrap items-baseline gap-x-3"><h3 className="text-[15px] font-semibold">Standard metric trends</h3><p className="text-[12.5px] text-text-3">Trend only. The detail behind each one (SKU prices, target weeks on hand, the Unexplained %) and any override is in the <button type="button" onClick={onWorkspace} className="font-semibold text-brand hover:underline">Forecast workspace</button>.</p></div>
         <div className="grid gap-4 lg:grid-cols-2">
           {TRENDS.map(t => (
-            <Card key={t.title} title={t.title} sub={t.sub} right={<div className="flex items-center gap-2"><Tag tone="neutral"><Lock size={10} />Trend</Tag><ChartActions target={`baseline-trend-${t.m.id}`} title={`${t.title} · baseline trend`} /></div>}>
+            <Card key={t.title} title={t.title} info={t.sub} right={<div className="flex items-center gap-2"><Tag tone="neutral"><Lock size={10} />Trend</Tag><ChartActions target={`baseline-trend-${t.m.id}`} title={`${t.title} · baseline trend`} /></div>}>
               <ForecastChart title={`${t.title} · baseline trend`} s={{ actual: t.m.actual, unbiased: t.m.trend, lo: t.m.lo, hi: t.m.hi }} fmt={t.m.fmt} dp={t.m.dp} unit={t.m.unit} height={230} context="Statistical baseline · read-only" canSave={false} ownActions domId={`baseline-trend-${t.m.id}`} />
             </Card>))}
         </div>

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { Bookmark } from 'lucide-react'
+import { Bookmark, Info } from 'lucide-react'
 import { ChartActions } from '../../chart/ChartActions'
 import { useInsights } from './insightsCtx'
 import { ACT, N, START_YEAR, mLabel, mLong } from './engine'
@@ -14,10 +14,16 @@ export function Btn({ children, variant = 'primary', onClick, icon, disabled, si
   return <button type="button" title={title} onClick={onClick} disabled={disabled} className={cx('inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45', size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-[13px]', variant === 'primary' && 'bg-brand text-white hover:bg-brand-dark', variant === 'secondary' && 'border border-border-strong bg-surface hover:border-text', variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text', variant === 'danger' && 'text-err hover:bg-err-soft', className)}>{icon}{children}</button>
 }
 /** `fill` stretches the card to its grid row and its body to the card, so paired cards line up. */
-export function Card({ title, sub, right, children, className, pad = true, fill }: { title?: ReactNode; sub?: string; right?: ReactNode; children: ReactNode; className?: string; pad?: boolean; fill?: boolean }) {
+export function Card({ title, sub, info, right, children, className, pad = true, fill }: { title?: ReactNode; sub?: string
+  /** Shown as a hover tooltip off a small info icon next to the title, instead of printing as a permanent subtitle line. */
+  info?: string; right?: ReactNode; children: ReactNode; className?: string; pad?: boolean; fill?: boolean }) {
   return (
     <section className={cx('min-w-0 rounded-xl border border-border bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.04)]', fill && 'flex h-full flex-col', className)}>
-      {title && <header className="flex flex-wrap items-start justify-between gap-3 px-4 pb-0.5 pt-3.5"><div className="min-w-0"><h3 className="text-[13.5px] font-semibold">{title}</h3>{sub && <p className="mt-0.5 text-[12.5px] text-text-3">{sub}</p>}</div>{right}</header>}
+      {title && <header className="flex flex-wrap items-start justify-between gap-3 px-4 pb-0.5 pt-3.5">
+        <div className="min-w-0">
+          <h3 className="flex items-center gap-1.5 text-[13.5px] font-semibold">{title}{info && <button type="button" title={info} aria-label={info} className="shrink-0 text-text-3 hover:text-text-2"><Info size={13} /></button>}</h3>
+          {sub && <p className="mt-0.5 text-[12.5px] text-text-3">{sub}</p>}
+        </div>{right}</header>}
       <div className={cx(pad && (title ? 'px-4 pb-4 pt-3' : 'p-4'), fill && 'flex flex-1 flex-col')}>{children}</div>
     </section>
   )
