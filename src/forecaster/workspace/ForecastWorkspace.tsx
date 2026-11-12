@@ -15,7 +15,6 @@ import { SensitivityStage } from './Analysis'
 import { ScenarioSummary } from './Summary'
 import type { Calc } from './Stages'
 import { ActualKpis } from './Actuals'
-import { LrfView } from './Lrf'
 import { PerformanceView } from './Performance'
 import { BridgesView } from './Bridges'
 import { ModuleView, ueDefault, ueFy } from './Modules'
@@ -28,9 +27,9 @@ import { AgentFocusCtx, useForecastAgent } from './agent'
 import type { AgentView, CopilotProps } from './agent'
 import { RotateCcw } from 'lucide-react'
 
-type View = AgentView | 'LRF'
+type View = AgentView
 // Scenarios are created inside the Forecast workspace (ScenarioBar), so there is no separate step for them.
-const STEPS: View[] = ['Overview', 'Assumptions', 'LRF', 'Events', 'Summary', 'Sensitivity', 'Goal seek', 'Review']
+const STEPS: View[] = ['Overview', 'Assumptions', 'Events', 'Summary', 'Sensitivity', 'Goal seek', 'Review']
 // Tab names shown to forecasters; internal ids stay stable for the assistant.
 // CR-004: analytics layer below the workflow tabs. Tab content is defined in follow-up change requests.
 const ANALYTICS = ['Performance Dashboard', 'Financial Bridges', 'Patient Funnel', 'Sales Drivers', 'Judgement Layer', 'Long Range Plan', 'Competition', 'Needs-to-Meet', 'GTN Analysis']
@@ -40,11 +39,11 @@ const AN_BUILT = ['Performance Dashboard', 'Financial Bridges']
 // 'Scenario' stays in GROUPS (for the assistant's own `view` lookups) but is left out of the rendered tab bar below.
 const GROUPS: { id: string; items: string[] }[] = [
   { id: 'Baseline trend', items: ['Overview'] }, { id: 'Forecast workspace', items: ['Assumptions'] },
-  { id: 'LRF', items: ['LRF'] }, { id: 'Events', items: ['Events'] }, { id: 'Scenario summary', items: ['Summary'] },
+  { id: 'Events', items: ['Events'] }, { id: 'Scenario summary', items: ['Summary'] },
   { id: 'Sensitivity', items: ['Sensitivity'] }, { id: 'Goal seek', items: ['Goal seek'] }, { id: 'Review', items: ['Review'] },
   { id: 'Scenario', items: ['Scenarios'] },
 ]
-const LABEL: Record<View, string> = { Overview: 'Baseline trend', Assumptions: 'Forecast workspace', LRF: 'LRF', Events: 'Events', Scenarios: 'Scenario', Sensitivity: 'Sensitivity', 'Goal seek': 'Goal seek', Summary: 'Scenario summary', Review: 'Review' }
+const LABEL: Record<View, string> = { Overview: 'Baseline trend', Assumptions: 'Forecast workspace', Events: 'Events', Scenarios: 'Scenario', Sensitivity: 'Sensitivity', 'Goal seek': 'Goal seek', Summary: 'Scenario summary', Review: 'Review' }
 const NEXT: Partial<Record<View, View>> = Object.fromEntries(STEPS.slice(0, -1).map((v, i) => [v, STEPS[i + 1]!]))
 
 export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', brandId = 'nurtec', cycle = 'AOP 2027', stream = 'US net revenue', model = DEFAULT_MODEL, insights, setInsights, onAsk, Copilot, assistant = 'Charles', onPublished }: { notify: Notify; onHome?: () => void; brand?: string; brandId?: string; cycle?: string; stream?: string; model?: ModelCfg; insights: Insight[]; setInsights: (f: (x: Insight[]) => Insight[]) => void; onAsk?: (brandId?: string) => void; Copilot?: ComponentType<CopilotProps>; assistant?: string
@@ -230,7 +229,6 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
                 scenarioLayer={sc.layer} scenarioName={scName} workingLayer={work.layer} model={model} metric={metric} setMetric={setMetric}
                 onOpenAssumptions={() => go('Assumptions')} onGo={() => go('Assumptions')} onDirty={onDirty} actions={actions} notify={notify} />)}
           {view === 'Scenarios' && <ScenariosStage events={events} scenarios={scenarios} setScenarios={setScenarios} selId={selId} setSelId={setSelId} calc={calc} workFy={work.fy} model={model} metric={metric} setMetric={setMetric} toggleFinal={toggleFinal} notify={notify} />}
-          {view === 'LRF' && <LrfView scenarios={scenarios} calc={calc} selId={selId} setSelId={setSelId} onEvent={() => go('Events')} />}
           {view === 'Events' && <EventsStage events={events} setEvents={setEvents} scenarios={scenarios} setScenarios={setScenarios} calc={calc} selId={selId} setSelId={setSelId} model={model} metric={metric} setMetric={setMetric} modified={modified} notify={notify} onNext={() => go('Sensitivity')} />}
           {view === 'Sensitivity' && <SensitivityStage scenarios={scenarios} setScenarios={setScenarios} calc={calc} selId={selId} setSelId={setSelId} model={model} notify={notify} />}
           {view === 'Goal seek' && <GoalSeekStage scenarios={scenarios} setScenarios={setScenarios} calc={calc} selId={selId} setSelId={setSelId} model={model} notify={notify} onNext={() => go('Summary')} />}
