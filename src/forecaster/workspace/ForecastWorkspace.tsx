@@ -7,6 +7,7 @@ import { DEFAULT_MODEL, FY, SEED_EVENTS, SEED_SCENARIOS, fyAvg, fySum, revenue, 
 import type { DriverId, EventDef, ModelCfg, OutputId, Scenario } from './engine'
 import { Btn, Tag, cx, field } from './ui'
 import { DriverWorkspace, ForecastMap } from './Drivers'
+import { FunnelChart, funnelLevels } from './FunnelChart'
 import type { DriverActions, Edits, Notify, Sel } from './Drivers'
 import { ScenarioBar, ScenarioDriverView, FORECAST } from './WorkspaceScenarios'
 import { BaselineTrend } from './BaselineTrend'
@@ -217,8 +218,14 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
           </div>
         </div>
       ) : <>
-      <div className={cx('mx-auto px-10', view === 'Overview' ? 'pb-8 pt-6' : 'py-8', mapView && !presenting && 'grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)]')}>
-        {mapView && <aside className="lg:sticky lg:top-[98px] lg:self-start"><ForecastMap sel={sel} onSel={pick} edits={edits} working={work.layer} model={model} metric={metric} mod={mod} onMod={m => { if (m !== mod && leaveOk()) setMod(m) }} uePct={ueFy(ue)} onCollapse={undefined} /></aside>}
+      <div className={cx('mx-auto px-10', view === 'Overview' ? 'pb-8 pt-6' : 'py-8', mapView && !presenting && 'grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]')}>
+        {mapView && (
+          <aside className="flex flex-col gap-3 lg:sticky lg:top-[98px] lg:self-start lg:max-h-[calc(100dvh-124px)] lg:overflow-y-auto">
+            <FunnelChart levels={funnelLevels(work.layer, model, edits)} sel={mod ? null : (sel as DriverId)} onSel={pick}
+              startLabel={model.start.label} startValue={model.start.value} />
+            <ForecastMap sel={sel} onSel={pick} edits={edits} working={work.layer} model={model} metric={metric} mod={mod} onMod={m => { if (m !== mod && leaveOk()) setMod(m) }} uePct={ueFy(ue)} onCollapse={undefined} funnelHandled />
+          </aside>
+        )}
         <main className="min-w-0">
           {view === 'Overview' && <BaselineTrend onWorkspace={() => go('Assumptions')} />}
           {view === 'Assumptions' && <div className="mb-6"><ScenarioBar scenarios={scenarios} setScenarios={setScenarios} scope={scope} setScope={setScope} year={wsYear} setYear={setWsYear} calc={calc} notify={notify} /></div>}

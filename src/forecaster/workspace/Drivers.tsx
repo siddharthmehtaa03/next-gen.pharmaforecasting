@@ -27,7 +27,9 @@ export function OutputSelect({ model, metric, onChange }: { model: ModelCfg; met
   )
 }
 
-export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, onMod, uePct, onCollapse }: { sel: Sel; onSel: (s: Sel) => void; edits: Edits; working: Layer; model: ModelCfg; metric: OutputId; mod: ModId | null; onMod: (m: ModId) => void; uePct: number; onCollapse?: () => void }) {
+export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, onMod, uePct, onCollapse, funnelHandled }: { sel: Sel; onSel: (s: Sel) => void; edits: Edits; working: Layer; model: ModelCfg; metric: OutputId; mod: ModId | null; onMod: (m: ModId) => void; uePct: number; onCollapse?: () => void
+  /** The percentage stages are drawn by FunnelChart above, so this map only shows what the funnel cannot: non-percentage inputs and the revenue bridge. */
+  funnelHandled?: boolean }) {
   const agent = useAgentFocus()
   const node = (id: DriverId, editable: boolean, width?: string) => {
     const d = DRV[id], on = !mod && sel === id, changed = !!edits[id]
@@ -48,19 +50,19 @@ export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, on
     )
   }
   const link = (k: string) => <div key={k} className="mx-auto h-3 w-px bg-border-strong" />
-  const funnel = model.modules.filter(m => DRV[m.id].pct), side = model.modules.filter(m => !DRV[m.id].pct)
+  const funnel = funnelHandled ? [] : model.modules.filter(m => DRV[m.id].pct), side = model.modules.filter(m => !DRV[m.id].pct)
   const out = OUTPUTS[metric]
   return (
-    <nav aria-label="Forecast map" className="rounded-lg border border-border bg-surface p-4">
-      <div className="mb-3 flex items-center justify-between gap-2"><Label>Forecast map</Label>
+    <nav aria-label="Forecast map" className="rounded-xl border border-border bg-surface p-4">
+      <div className="mb-3 flex items-center justify-between gap-2"><Label>{funnelHandled ? 'Other inputs' : 'Forecast map'}</Label>
         <span className="ml-auto flex items-center gap-1.5 text-[11px] text-text-3">{model.modules.length} modules · from model<InfoTip text="Modules, order and editable inputs come from the model published by the CoE. Formulas are locked." /></span>
         {onCollapse && <button type="button" onClick={onCollapse} aria-label="Collapse forecast map" title="Collapse" className="-mr-1 grid h-7 w-7 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><PanelRightClose size={15} /></button>}</div>
-      <div className="mx-auto flex w-full items-center justify-between gap-2 rounded-md border border-dashed border-border-strong bg-surface-2 px-3 py-2.5">
+      {!funnelHandled && <div className="mx-auto flex w-full items-center justify-between gap-2 rounded-md border border-dashed border-border-strong bg-surface-2 px-3 py-2.5">
         <span className="min-w-0"><span className="block text-[10px] font-semibold uppercase tracking-wider text-text-3">Starting point</span><span className="block truncate text-[13px] font-semibold">{model.start.label}</span></span>
         <span className="flex items-center gap-1 font-mono text-[13px] text-text-2"><Lock size={11} />{model.start.value}</span>
-      </div>
+      </div>}
       {funnel.flatMap((m, k) => [link(`l${m.id}`), node(m.id, m.editable, `${Math.max(60, 100 - k * 8)}%`)])}
-      {side.length > 0 && <div className="relative mx-auto my-2 flex items-center gap-2 pl-2 text-[11px] text-text-3"><span className="h-px flex-1 bg-border" />combined with<span className="h-px flex-1 bg-border" /></div>}
+      {side.length > 0 && !funnelHandled && <div className="relative mx-auto my-2 flex items-center gap-2 pl-2 text-[11px] text-text-3"><span className="h-px flex-1 bg-border" />combined with<span className="h-px flex-1 bg-border" /></div>}
       {side.map(m => node(m.id, m.editable, '70%'))}
       {side.some(m => m.id === 'price') && <div className="mx-auto mt-1 flex w-[70%] items-center justify-between gap-2 rounded-xl border border-dashed border-border bg-surface-2 px-3 py-2">
         <span className="min-w-0"><span className="block truncate text-[11px] text-text-3">Calculated</span><span className="block truncate text-[13px] font-medium text-text-2">Net sales price</span></span>
