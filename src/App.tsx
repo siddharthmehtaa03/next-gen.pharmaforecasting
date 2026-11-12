@@ -3801,7 +3801,9 @@ function StageArchetype({ c, ind, update, updInd, setArch, notify, fix }: Ctx) {
                         <span className="sr-only">{d.status}</span>{d.status !== 'Certified' && <Badge tone="warn">{d.status}</Badge>}
                         {known?.arch === a.id && <Badge tone="brand"><Sparkles size={10} />Suggested</Badge>}
                       </span>
-                      <span className="mt-1 text-xs leading-snug text-text-2">{a.blurb}</span>
+                      <span className="mt-1 text-[12.5px] font-medium leading-snug text-text">{d.question}</span>
+                      <span className="mt-0.5 text-[11px] italic text-text-3">{ARCH(a.id).state} · {ARCH(a.id).unit}</span>
+                      <span className="mt-1.5 text-xs leading-snug text-text-2">{a.blurb}</span>
                       <span className="mt-2 flex flex-wrap items-center gap-2">
                         <span className="text-[11px] text-text-3">{modesFor(a.id).length} modes · {coreCount(a.id)} core modules (from metadata)</span>
                       </span>
@@ -3829,6 +3831,39 @@ function StageArchetype({ c, ind, update, updInd, setArch, notify, fix }: Ctx) {
           </div>
         </div>
       </section>
+
+      {/* All seven engines side by side. The picker above offers the governed set;
+          this table exists so the two under discussion (D-04, D-06) are still visible. */}
+      <Card title="Taxonomy at a glance" sub="How the seven engines differ — the question each answers, the state it carries and its unit of account."
+        right={<Badge tone="brand"><Layers size={10} />Taxonomy v2</Badge>}>
+        <div className="overflow-x-auto">
+          <table className="w-full text-[13px]">
+            <thead>
+              <tr>
+                <th className="px-3 py-2 text-left">Archetype</th>
+                <th className="px-3 py-2 text-left">Question it answers</th>
+                <th className="px-3 py-2 text-left">State it carries</th>
+                <th className="px-3 py-2 text-left">Unit of account</th>
+                <th className="px-3 py-2 text-left">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ALL.map(id => {
+                const a = ARCH(id), d = ARCH_DETAIL[id]
+                return (
+                  <tr key={id} className={cx('border-t border-border', sel === id && 'bg-brand-soft/40')}>
+                    <td className="px-3 py-2 whitespace-nowrap"><span className="font-mono text-[11px] text-brand">{id}</span> <span className="font-semibold">{a.name}</span></td>
+                    <td className="px-3 py-2 text-text-2">{d.question}</td>
+                    <td className="px-3 py-2 text-text-2">{a.state}</td>
+                    <td className="px-3 py-2 text-text-2">{a.unit}</td>
+                    <td className="px-3 py-2">{d.status === 'Certified' ? <Badge tone="ok">Certified</Badge> : <Badge tone="warn">{d.status}</Badge>}</td>
+                  </tr>
+                )
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       {legacy && <Banner tone="warn" title="This stream uses Brand Inflow-Outflow (D-04), which is under review">It may fold into Patient Flow. Pick Patient Flow above to migrate.</Banner>}
 
