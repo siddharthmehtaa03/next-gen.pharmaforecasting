@@ -23,7 +23,7 @@ export async function nodeToPng(el: HTMLElement, scale = 2): Promise<{ png: stri
   const clone = el.cloneNode(true) as HTMLElement
   inline(el, clone)
   clone.querySelectorAll('[data-export-ignore]').forEach(n => n.remove())
-  clone.style.margin = '0'; clone.style.width = `${w}px`; clone.style.height = `${h}px`; clone.style.overflow = 'visible'; clone.style.background = '#ffffff'
+  clone.style.margin = '0'; clone.style.width = `${w}px`; clone.style.height = `${h}px`; clone.style.overflow = 'visible'; clone.style.background = token('--card', '#ffffff')
   const xml = new XMLSerializer().serializeToString(clone)
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><foreignObject x="0" y="0" width="100%" height="100%">${xml}</foreignObject></svg>`
   const img = new Image()
@@ -32,10 +32,32 @@ export async function nodeToPng(el: HTMLElement, scale = 2): Promise<{ png: stri
   const c = document.createElement('canvas')
   c.width = w * scale; c.height = h * scale
   const ctx = c.getContext('2d')!
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, c.width, c.height)
+  ctx.fillStyle = token('--card', '#ffffff'); ctx.fillRect(0, 0, c.width, c.height)
   ctx.scale(scale, scale); ctx.drawImage(img, 0, 0, w, h)
   return { png: c.toDataURL('image/png'), w, h }
 }
+
+/* pptxgenjs and the print window cannot read CSS custom properties, so brand tokens are
+   resolved to literal hex at export time. Keeps the theme as the single source of truth. */
+const token = (name: string, fallback: string) => {
+  if (typeof window === 'undefined') return fallback
+  const v = getComputedStyle(document.documentElement).getPropertyValue(name).trim()
+  if (!v) return fallback
+  // Resolve through a probe element so color-mix()/oklch() land as rgb().
+  const el = document.createElement('span')
+  el.style.cssText = `position:absolute;visibility:hidden;color:${v}`
+  document.body.appendChild(el)
+  const rgb = getComputedStyle(el).color
+  el.remove()
+  const m = rgb.match(/\d+(\.\d+)?/g)
+  if (!m || m.length < 3) return fallback
+  return '#' + m.slice(0, 3).map(n => Math.round(Number(n)).toString(16).padStart(2, '0')).join('')
+}
+/** Token as pptxgenjs wants it: six hex digits, no leading '#'. */
+const pptxColor = (name: string, fallback: string) => token(name, fallback).replace('#', '').toUpperCase()
+/** The chart series palette (--chart-1 … --chart-5) as hex, for exports. */
+export const chartPalette = (): string[] =>
+  [1, 2, 3, 4, 5].map(i => token(`--chart-${i}`, '#767676'))
 
 export async function downloadImage(el: HTMLElement, title: string) {
   const { png } = await nodeToPng(el)
@@ -46,8 +68,8 @@ export async function downloadPptx(el: HTMLElement, title: string, subtitle?: st
   const [{ png, w, h }, { default: Pptx }] = await Promise.all([nodeToPng(el), import('pptxgenjs')])
   const p = new Pptx(); p.layout = 'LAYOUT_WIDE'
   const s = p.addSlide()
-  s.addText(title, { x: 0.5, y: 0.35, w: 12.3, h: 0.5, fontSize: 24, bold: true, color: '0B0F2E' })
-  if (subtitle) s.addText(subtitle, { x: 0.5, y: 0.85, w: 12.3, h: 0.35, fontSize: 12, color: '5B6078' })
+  s.addText(title, { x: 0.5, y: 0.35, w: 12.3, h: 0.5, fontSize: 24, bold: true, color: pptxColor('--foreground', '1A1A1A') })
+  if (subtitle) s.addText(subtitle, { x: 0.5, y: 0.85, w: 12.3, h: 0.35, fontSize: 12, color: pptxColor('--muted-foreground', '767676') })
   // Fit the image into the content area, keeping its proportions.
   const boxW = 12.3, boxH = 5.6, k = Math.min(boxW / w, boxH / h)
   s.addImage({ data: png, x: 0.5 + (boxW - w * k) / 2, y: 1.4, w: w * k, h: h * k })
@@ -60,7 +82,7 @@ export function downloadPdf(el: HTMLElement, title: string, subtitle?: string) {
   const clone = el.cloneNode(true) as HTMLElement
   inline(el, clone)
   clone.querySelectorAll('[data-export-ignore]').forEach(n => n.remove())
-  w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:system-ui,-apple-system,sans-serif;margin:32px;color:#0b0f2e}h1{font-size:22px;margin:0 0 4px}p{color:#5b6078;font-size:13px;margin:0 0 20px}@media print{@page{margin:20mm}}</style></head><body><h1>${title}</h1>${subtitle ? `<p>${subtitle}</p>` : ''}${clone.outerHTML}</body></html>`)
+  w.document.write(`<!doctype html><html><head><title>${title}</title><style>body{font-family:${token('--font-sans','sans-serif')};margin:32px;color:${token('--foreground','#1A1A1A')}}h1{font-size:22px;margin:0 0 4px}p{color:${token('--muted-foreground','#767676')};font-size:13px;margin:0 0 20px}@media print{@page{margin:20mm}}</style></head><body><h1>${title}</h1>${subtitle ? `<p>${subtitle}</p>` : ''}${clone.outerHTML}</body></html>`)
   w.document.close()
   w.focus()
   setTimeout(() => w.print(), 350)
