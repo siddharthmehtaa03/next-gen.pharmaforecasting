@@ -187,6 +187,12 @@
   td[data-numeric], th[data-numeric] { text-align: right; }
 }
 
+/* Patient funnel bands: selection and hover are inset rings, so the trapezoid edges stay crisp.
+   Written here because Tailwind drops color-mix() inside arbitrary shadow values. */
+.funnel-band { transition: box-shadow .15s ease; }
+.funnel-band:hover { box-shadow: inset 0 0 0 2px color-mix(in oklab, var(--primary) 38%, transparent); }
+.funnel-band[aria-current="true"] { box-shadow: inset 0 0 0 2px var(--primary); }
+
 /* ---------- 6. Project CSS (unchanged) ---------- */
 [role="dialog"] { border-radius: calc(var(--radius) + 4px); }  /* 16px, matching the overlay-drawer reference */
 .tag:not(:has(svg))::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 9999px; background: currentColor; opacity: .8; }
