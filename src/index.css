@@ -25,10 +25,10 @@
   --pfizer-blue-10: #E8F2FF;   /* selected row / active item tint */
 
   --gray-0:  #FFFFFF;
-  --gray-5:  #FAFAFA;          /* derived: app canvas */
+  --gray-5:  #F9F9FB;          /* derived: app canvas */
   --gray-10: #F5F5F5;          /* brand: alternate surfaces */
-  --gray-20: #E8E8E8;          /* derived: borders, dividers */
-  --gray-30: #D4D4D4;          /* derived: input borders */
+  --gray-20: #ECEDF0;          /* derived: hairline borders, dividers */
+  --gray-30: #DCDDE1;          /* derived: input borders, strong dividers */
   --gray-50: #767676;          /* brand: secondary text (AA on white) */
   --gray-70: #4A4A4A;          /* derived: emphasized secondary text */
   --gray-90: #1A1A1A;          /* brand: primary text */
@@ -76,6 +76,10 @@
   /* Brand indicators: active nav, selected row, toggles, progress */
   --indicator: var(--pfizer-blue-70);
   --indicator-subtle: var(--pfizer-blue-10);
+  /* Selected/focus treatment from the reference set: a blue hairline plus a soft
+     blue glow over a white surface. Deliberately not a saturated background fill. */
+  --ring-glow: 0 0 0 3px color-mix(in oklab, var(--primary) 14%, transparent);
+  --ring-glow-strong: 0 0 0 4px color-mix(in oklab, var(--primary) 18%, transparent), 0 2px 10px -4px color-mix(in oklab, var(--primary) 35%, transparent);
 
   /* Charts: secondary palette, plus a neutral for baselines and actuals */
   --chart-1: var(--pfizer-blue-70);
@@ -93,7 +97,7 @@
   --sidebar-border: var(--gray-20);
   --sidebar-ring: var(--pfizer-blue-70);
 
-  --radius: 0.5rem;            /* cards, inputs. Buttons use rounded-full */
+  --radius: 0.75rem;           /* sm 8 · md 10 · lg 12 · xl 16, matching the references */
 }
 
 /* ---------- 4. Map to Tailwind utilities ---------- */
@@ -122,7 +126,7 @@
   --color-warn-soft: var(--warning-soft);
   --color-err: var(--destructive);
   --color-err-soft: var(--destructive-soft);
-  --shadow-card: 0 1px 2px rgb(26 26 26 / 0.04), 0 8px 24px -12px rgb(26 26 26 / 0.12);
+  --shadow-card: 0 1px 2px rgb(26 26 26 / 0.03);
   --breakpoint-wide: 87.5rem;
 
   /* --- shadcn semantic tokens --- */
@@ -184,19 +188,19 @@
 }
 
 /* ---------- 6. Project CSS (unchanged) ---------- */
-[role="dialog"] { border-radius: 20px; }
+[role="dialog"] { border-radius: calc(var(--radius) + 4px); }  /* 16px, matching the overlay-drawer reference */
 .tag:not(:has(svg))::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 9999px; background: currentColor; opacity: .8; }
 
 /* tables: no single shared <table> component, so the tint/hover live here once instead of in every file */
-table thead th { background: var(--color-surface-2); font-weight: 500; color: var(--color-text-3); }
-table tbody tr:hover { background: var(--color-surface-2); }
+table thead th { background: transparent; font-weight: 500; color: var(--color-text-3); border-bottom: 1px solid var(--gray-20); }
+table tbody tr:hover { background: color-mix(in oklab, var(--gray-10) 60%, transparent); }
 
 /* clickable "picker tile" buttons (forecast map nodes, option cards): lift on hover, pinned state stays flat */
 button[class*="rounded-xl"][class*="border-border"]:not(:disabled):not([aria-current="true"]),
 button[class*="rounded-md"][class*="border-border"][class*="text-left"]:not(:disabled):not([aria-current="true"]) { transition: box-shadow .15s, transform .15s, border-color .15s; }
 button[class*="rounded-xl"][class*="border-border"]:not(:disabled):not([aria-current="true"]):hover,
 button[class*="rounded-md"][class*="border-border"][class*="text-left"]:not(:disabled):not([aria-current="true"]):hover {
-  border-color: rgb(0 0 201 / .35); box-shadow: var(--shadow-card); transform: translateY(-1px);
+  border-color: color-mix(in oklab, var(--primary) 40%, var(--gray-20)); box-shadow: var(--ring-glow);
 }
 
 /* modal scrim: frosted instead of flat, matches the existing bg-brand-dark/40 overlay used across every dialog */

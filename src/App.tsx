@@ -499,10 +499,10 @@ function Btn({ children, variant = 'primary', size = 'md', disabled, onClick, ic
     <button
       type="button" title={title} disabled={disabled} onClick={onClick}
       className={cx(
-        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand disabled:cursor-not-allowed',
+        'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-[background-color,border-color,box-shadow] outline-none focus-visible:border-brand focus-visible:shadow-[var(--ring-glow)] disabled:cursor-not-allowed',
         size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-[13px]',
         variant === 'primary' && 'bg-brand text-white hover:bg-brand-dark disabled:bg-border-strong',
-        variant === 'secondary' && 'border border-border bg-surface text-text shadow-[0_1px_1px_rgba(16,24,40,0.04)] hover:bg-surface-2 disabled:text-text-3',
+        variant === 'secondary' && 'border border-border bg-surface text-text hover:border-border-strong hover:bg-surface-2 disabled:text-text-3',
         variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text disabled:text-text-3',
         variant === 'danger' && 'text-err hover:bg-err-soft',
         className,
@@ -516,12 +516,12 @@ function Btn({ children, variant = 'primary', size = 'md', disabled, onClick, ic
 function Badge({ tone = 'neutral', children }: { tone?: 'neutral' | 'brand' | 'ok' | 'warn' | 'err'; children: ReactNode }) {
   return (
     <span className={cx(
-      'inline-flex items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[12px] font-medium',
-      tone === 'neutral' && 'bg-surface-2 text-text-2',
-      tone === 'brand' && 'bg-brand-soft text-brand',
-      tone === 'ok' && 'bg-ok-soft text-ok',
-      tone === 'warn' && 'bg-warn-soft text-warn',
-      tone === 'err' && 'bg-err-soft text-err',
+      'inline-flex items-center gap-1 whitespace-nowrap rounded-full border px-2 py-0.5 text-[12px] font-medium',
+      tone === 'neutral' && 'border-border bg-surface text-text-2',
+      tone === 'brand' && 'border-brand/20 bg-brand-soft text-brand',
+      tone === 'ok' && 'border-ok/20 bg-ok-soft text-ok',
+      tone === 'warn' && 'border-warn/20 bg-warn-soft text-warn',
+      tone === 'err' && 'border-err/20 bg-err-soft text-err',
     )}>{children}</span>
   )
 }
@@ -565,7 +565,7 @@ function Field({ label, hint, error, children, required, ai, className, agent }:
 }
 
 const inputCls = (err?: boolean) => cx(
-  'h-9 w-full rounded-lg border bg-surface px-3 text-[13px] text-text shadow-[0_1px_1px_rgba(16,24,40,0.04)] outline-none transition-colors placeholder:text-text-3 focus:border-brand focus:ring-2 focus:ring-brand/15',
+  'h-9 w-full rounded-lg border bg-surface px-3 text-[13px] text-text outline-none transition-[border-color,box-shadow] placeholder:text-text-3 focus:border-brand focus:shadow-[var(--ring-glow)]',
   err ? 'border-err' : 'border-border',
 )
 
@@ -610,7 +610,7 @@ function Banner({ tone, title, children, action }: { tone: 'info' | 'ok' | 'warn
 /** `info` is a description shown behind an info icon next to the title; `sub` stays visible and is for live status (counts, validation). */
 function Card({ title, sub, info, right, children, className }: { title?: ReactNode; sub?: string; info?: string; right?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <section className={cx('rounded-xl border border-border bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.04)]', className)}>
+    <section className={cx('rounded-xl border border-border bg-surface', className)}>
       {title && (
         <header className="flex flex-wrap items-start justify-between gap-x-4 gap-y-2 px-5 pb-1 pt-4">
           <div className="min-w-0 flex-1"><h3 className="flex items-center gap-1.5 text-[14px] font-semibold text-text">{title}{info && <InfoTip text={info} />}</h3>{sub && <p className="mt-0.5 text-[12.5px] text-text-3">{sub}</p>}</div>
@@ -3791,7 +3791,7 @@ function StageArchetype({ c, ind, update, updInd, setArch, notify, fix }: Ctx) {
               const on = sel === a.id
               const d = ARCH_DETAIL[a.id]
               return (
-                <div key={a.id} className={cx('rounded-md border transition-all', on ? 'border-brand bg-brand-soft/30 ring-1 ring-brand' : 'border-border hover:border-text-2')}>
+                <div key={a.id} className={cx('rounded-lg border bg-surface transition-[border-color,box-shadow]', on ? 'border-brand shadow-[var(--ring-glow-strong)]' : 'border-border hover:border-border-strong')}>
                   <button type="button" role="radio" aria-checked={on} onClick={() => pick(a.id)}
                     className="flex w-full items-start gap-4 rounded-md p-3 text-left outline-none focus-visible:ring-2 focus-visible:ring-brand">
                     <span className="flex min-w-0 flex-1 flex-col">
