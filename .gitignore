@@ -19,3 +19,7 @@ logs/
 # beside it.
 /.plugins/
 /.opencode-skills/
+
+# Vercel CLI project link (local, not source)
+.vercel/
+.vercel
