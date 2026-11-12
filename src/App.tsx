@@ -13,6 +13,7 @@ import type { PublishedReg } from './forecaster/published'
 import { SEED_INSIGHTS } from './forecaster/workspace/insights'
 import type { Insight as BoardInsight } from './forecaster/workspace/insights'
 import AdminPortal from './admin/AdminPortal'
+import BdFlow from './bd/BdFlow'
 import { AgentBanner, AgentButton, AgentDemoCard } from './chat/Agent'
 import type { CopilotProps } from './forecaster/workspace/agent'
 import { FRAME_ID, scrollFrameTop } from './frame'
@@ -928,7 +929,7 @@ type Toast = { tone: 'ok' | 'err' | 'info'; text: string }
 const toTop = () => scrollFrameTop()
 
 export default function App() {
-  const [view, setView] = useState<'landing' | 'models' | 'config' | 'admin' | 'forecast' | 'chat'>('landing')
+  const [view, setView] = useState<'landing' | 'models' | 'config' | 'admin' | 'forecast' | 'chat' | 'bd'>('landing')
   const [models, setModels] = useState<ModelRow[]>(SEED_MODELS)
   const [seed, setSeed] = useState<Seed>({})
   const [run, setRun] = useState(0)
@@ -985,7 +986,7 @@ export default function App() {
   }
 
   return (
-    view === 'landing' ? <><Landing onCoE={() => setView('models')} onForecast={() => { setView('forecast'); setFcSection('forecasts'); toTop() }} /></> :
+    view === 'landing' ? <><Landing onCoE={() => setView('models')} onForecast={() => { setView('forecast'); setFcSection('forecasts'); toTop() }} onBd={() => setView('bd')} /></> :
     <AppFrame dock="split" collab={collab && (view === 'config' || (view === 'forecast' && fcSection === 'forecasts' && fcWs))} onCollab={setCollab}
       footer={<ProfileMenu placement="rail" onAdmin={() => { setView('admin'); toTop() }} onLogout={() => { setView('landing'); setToast({ tone: 'info', text: 'You’ve been logged out.' }) }} />} onHome={() => setView('landing')}
       items={view === 'forecast'
@@ -1008,7 +1009,7 @@ export default function App() {
       {view === 'forecast' ? <Forecaster key={fcKey} section={fcSection} setSection={setFcSection} onWorkspace={setFcWs} Copilot={ForecastCopilot} notify={setToast} insights={fcInsights} setInsights={setFcInsights} setChatBrand={setFcChatBrand}
           chat={{ threads: fcThreads, setThreads: setFcThreads, cur: fcCur, setCur: setFcCur, brandId: fcChatBrand, setBrandId: setFcChatBrand, assistant: { name: ASSISTANT, Mark: AssistantMark, Md }, userName: ME.split(' ')[0]!, blocked: fcBlocked, published: fcPublished }} onPublished={onPublished} />
         : view === 'chat' ? <CoeChat threads={threads} setThreads={setThreads} cur={curThread} setCur={setCurThread} models={models} setModels={setModels} />
-        : view === 'admin' ? <AdminPortal notify={setToast} onBack={() => setView('models')} /> : view === 'models'
+        : view === 'bd' ? <BdFlow onBack={() => setView('landing')} /> : view === 'admin' ? <AdminPortal notify={setToast} onBack={() => setView('models')} /> : view === 'models'
         ? <ModelsHome fixtures={fixtures} models={models} setModels={setModels} onOpen={open} onResume={resume} notify={setToast} ai={ai} closeAI={() => setAi(false)} />
         : <Configurator key={run} seed={seed} onExit={() => setView('models')} notify={setToast} ai={ai} closeAI={() => setAi(false)}
             onFinalised={c => setModels(ms => upsertRow(ms, c, 'Finalised'))}
@@ -1855,10 +1856,10 @@ function ForecastBackdrop() {
 const ROLE_ENTRIES: { id: string; title: string; who: string; desc: string; live: boolean }[] = [
   { id: 'config', title: 'Configure models', who: 'Forecasting CoE · BD & Pipeline · ICO', live: true, desc: 'Set up, validate and hand off forecast models.' },
   { id: 'forecast', title: 'Create or manage forecasts', who: 'Brand and commercial forecasters', live: true, desc: 'Build forecasts and scenarios from models the CoE has made available.' },
-  { id: 'perf', title: 'View performance and decisions', who: 'Leadership and brand teams', live: false, desc: 'Track forecasts against actuals and record decisions.' },
+  { id: 'bd', title: 'Size a new asset', who: 'Business development · BD&L', live: true, desc: 'Shape the opportunity for a pipeline or BD&L vaccine asset. Sliders, calculation chain, sandbox. Hand off to the CoE when it is ready.' },
 ]
 
-function Landing({ onCoE, onForecast }: { onCoE: () => void; onForecast: () => void }) {
+function Landing({ onCoE, onForecast, onBd }: { onCoE: () => void; onForecast: () => void; onBd: () => void }) {
   const [note, setNote] = useState('')
   const downloadCode = () => {
     const link = document.createElement('a')
@@ -1895,7 +1896,7 @@ function Landing({ onCoE, onForecast }: { onCoE: () => void; onForecast: () => v
               <h2 className="mt-3 text-xl font-bold tracking-tight">{r.title}</h2>
               <p className="mt-2 flex-1 text-sm text-text-2">{r.desc}</p>
               {r.live
-                ? <button type="button" onClick={r.id === 'forecast' ? onForecast : onCoE} className="mt-6 inline-flex items-center gap-2 border-t border-border pt-4 text-sm font-bold text-brand hover:underline">Get started <ArrowRight size={16} /></button>
+                ? <button type="button" onClick={r.id === 'forecast' ? onForecast : r.id === 'bd' ? onBd : onCoE} className="mt-6 inline-flex items-center gap-2 border-t border-border pt-4 text-sm font-bold text-brand hover:underline">Get started <ArrowRight size={16} /></button>
                 : <button type="button" onClick={() => setNote(`${r.title} is a concept in this prototype and is not built yet. Its scope is awaiting forecasting SME validation.`)} className="mt-6 inline-flex items-center gap-2 border-t border-border pt-4 text-sm font-semibold text-text-2 hover:text-brand">Coming soon <ArrowRight size={16} /></button>}
             </div>
           ))}
