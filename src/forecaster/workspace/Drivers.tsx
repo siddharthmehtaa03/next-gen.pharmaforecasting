@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import type { MutableRefObject } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowRight, Check, ClipboardPaste, Lock, PanelRightClose, PencilLine, RotateCcw, Upload, Users } from 'lucide-react'
@@ -139,14 +140,18 @@ const parseNums = (t: string) => t.split(/[\s,;]+/).map(s => s.replace(/[%$]/g, 
 export type DriverMode = 'overview' | 'assumptions'
 
 export type DriverActions = { apply: () => void; discard: () => void }
-export function DriverWorkspace({ mode, sel, edits, setEdits, scenarioLayer, scenarioName, workingLayer, model, metric, setMetric, onOpenAssumptions, onGo, onDirty, actions, notify }: {
+export function DriverWorkspace({ mode, sel, edits, setEdits, scenarioLayer, scenarioName, workingLayer, model, metric, setMetric, onOpenAssumptions, onGo, onDirty, actions, notify, hideTitle, bar }: {
   mode: DriverMode; sel: Sel; edits: Edits; setEdits: (f: (e: Edits) => Edits) => void; scenarioLayer: Layer; scenarioName: string; workingLayer: Layer
   model: ModelCfg; metric: OutputId; setMetric: (m: OutputId) => void; onOpenAssumptions: () => void
   onGo: (s: 'assumptions' | 'events') => void; onDirty: (v: boolean) => void; actions?: MutableRefObject<DriverActions | null>; notify: Notify
+  /** The parent renders the page title above the whole grid, so it spans the funnel column too. */
+  hideTitle?: boolean
+  /** Sits in the chart column, directly above the chart (the scenario "Working on" bar). */
+  bar?: ReactNode
 }) {
   if (sel === 'rev') return <RevenueView {...{ workingLayer, scenarioLayer, scenarioName, model, metric, setMetric }} />
   const cfg = model.modules.find(m => m.id === sel)
-  return <DriverEditorView key={sel} id={sel} locked={!!cfg && !cfg.editable} {...{ mode, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify }} />
+  return <DriverEditorView key={sel} id={sel} locked={!!cfg && !cfg.editable} {...{ mode, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify, hideTitle, bar }} />
 }
 
 function RevenueView({ workingLayer, scenarioLayer, scenarioName, model, metric, setMetric }: { workingLayer: Layer; scenarioLayer: Layer; scenarioName: string; model: ModelCfg; metric: OutputId; setMetric: (m: OutputId) => void }) {
@@ -163,9 +168,10 @@ function RevenueView({ workingLayer, scenarioLayer, scenarioName, model, metric,
   )
 }
 
-function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify }: {
+function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify, hideTitle, bar }: {
   id: DriverId; mode: DriverMode; locked: boolean; edits: Edits; setEdits: (f: (e: Edits) => Edits) => void; scenarioLayer: Layer; scenarioName: string; workingLayer: Layer
   onOpenAssumptions: () => void; onGo: (s: 'assumptions' | 'events') => void; onDirty: (v: boolean) => void; actions?: MutableRefObject<DriverActions | null>; notify: Notify
+  hideTitle?: boolean; bar?: ReactNode
 }) {
   const d = DRV[id], applied = edits[id]
   // The draft follows the applied value (including changes Charles makes) until the user starts their own edit.
@@ -299,12 +305,15 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
 
   return editing ? (
     <div className="space-y-4">
-      <div><PageTitle title={d.label} info={`${d.desc} Source: Data Science baseline · monthly · brand level.`} /></div>
-      {/* Bento: the chart is the hero cell, the adjust panel rides beside it, extras stack beneath. */}
+      {!hideTitle && <div><PageTitle title={d.label} info={`${d.desc} Source: Data Science baseline · monthly · brand level.`} /></div>}
+      {/* Bento: working-on sits over the chart, the chart is the hero cell, adjust rides beside both. */}
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div data-tour="chart" className="min-w-0"><Card title={`${d.label} · monthly`} sub={d.unit === '%' ? 'Percent' : d.unit} right={<Legend s={series} />} fill>
-          <ForecastChart title={`${d.label} forecast`} s={series} fmt={v => fmtV(id, v)} dp={d.dp} unit={d.unit} height={400} />
-        </Card></div>
+        <div className="flex min-w-0 flex-col gap-4">
+          {bar}
+          <div data-tour="chart" className="min-w-0"><Card title={`${d.label} · monthly`} sub={d.unit === '%' ? 'Percent' : d.unit} right={<Legend s={series} />} fill>
+            <ForecastChart title={`${d.label} forecast`} s={series} fmt={v => fmtV(id, v)} dp={d.dp} unit={d.unit} height={400} />
+          </Card></div>
+        </div>
         <div className="lg:sticky lg:top-[98px] lg:self-start overflow-y-auto lg:max-h-[calc(100dvh-140px)]">{adjustPanel}</div>
       </div>
     </div>

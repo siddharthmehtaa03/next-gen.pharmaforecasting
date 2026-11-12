@@ -3,10 +3,11 @@ import { createPortal } from 'react-dom'
 import type { ComponentType } from 'react'
 import { scrollFrameTop } from '../../frame'
 import { ArrowLeft, ArrowRight, Check, ChevronDown, PanelRightOpen, Save } from 'lucide-react'
-import { DEFAULT_MODEL, FY, SEED_EVENTS, SEED_SCENARIOS, UNBIASED, fyAvg, fySum, revenue, scenarioLayer, workingLayer } from './engine'
+import { DEFAULT_MODEL, DRV, FY, SEED_EVENTS, SEED_SCENARIOS, UNBIASED, fyAvg, fySum, revenue, scenarioLayer, workingLayer } from './engine'
 import type { DriverId, EventDef, ModelCfg, OutputId, Scenario } from './engine'
 import { Btn, Tag, cx, field } from './ui'
 import { DriverWorkspace, ForecastMap } from './Drivers'
+import { PageTitle } from './ui'
 import { FunnelChart, funnelLevels } from './FunnelChart'
 import { FullModelGrid } from './WorkspaceModel'
 import type { DriverActions, Edits, Notify, Sel } from './Drivers'
@@ -221,7 +222,13 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
           </div>
         </div>
       ) : <>
-      <div className={cx('mx-auto px-10', view === 'Overview' ? 'pb-8 pt-6' : 'py-8', mapView && !presenting && 'grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]')}>
+      {mapView && !presenting && !mod && sel !== 'rev' && (
+        <div className="mx-auto px-10 pt-6">
+          <PageTitle title={DRV[sel as DriverId].label}
+            info={`${DRV[sel as DriverId].desc} Source: Data Science baseline · monthly · brand level.`} />
+        </div>
+      )}
+      <div className={cx('mx-auto px-10', view === 'Overview' ? 'pb-8 pt-6' : mapView && !presenting && !mod && sel !== 'rev' ? 'pb-8 pt-4' : 'py-8', mapView && !presenting && 'grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]')}>
         {mapView && (
           <aside className="flex flex-col gap-3 lg:sticky lg:top-[98px] lg:self-start lg:max-h-[calc(100dvh-124px)] lg:overflow-y-auto">
             <FunnelChart levels={funnelLevels(work.layer, model, edits)} sel={mod ? null : (sel as DriverId)} onSel={pick}
@@ -231,11 +238,11 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
         )}
         <main className="min-w-0">
           {view === 'Overview' && <BaselineTrend onWorkspace={() => go('Assumptions')} />}
-          {view === 'Assumptions' && <div className="mb-6"><ScenarioBar scenarios={scenarios} setScenarios={setScenarios} scope={scope} setScope={setScope} year={wsYear} setYear={setWsYear} calc={calc} notify={notify} onManage={() => go('Summary')} /></div>}
           {mapView && mod && <ModuleView id={mod} net={work.fy} gp={fyAvg(work.layer.price)} ue={ue} setUe={setUe} editable={view === 'Assumptions'} onEdit={() => go('Assumptions')} />}
           {mapView && !mod && (view === 'Assumptions' && scope !== FORECAST && sel !== 'rev'
             ? <ScenarioDriverView id={sel} scenario={scenarios.find(s => s.id === scope)!} setScenarios={setScenarios} work={work.layer} layer={calc[scope]!.layer} events={events} model={model} notify={notify} />
-            : <DriverWorkspace mode="assumptions" sel={sel} edits={edits} setEdits={setEdits}
+            : <DriverWorkspace mode="assumptions" sel={sel} edits={edits} setEdits={setEdits} hideTitle
+                bar={view === 'Assumptions' ? <ScenarioBar scenarios={scenarios} setScenarios={setScenarios} scope={scope} setScope={setScope} year={wsYear} setYear={setWsYear} calc={calc} notify={notify} onManage={() => go('Summary')} /> : undefined}
                 scenarioLayer={sc.layer} scenarioName={scName} workingLayer={work.layer} model={model} metric={metric} setMetric={setMetric}
                 onOpenAssumptions={() => go('Assumptions')} onGo={() => go('Assumptions')} onDirty={onDirty} actions={actions} notify={notify} />)}
           {view === 'Scenarios' && <ScenariosStage events={events} scenarios={scenarios} setScenarios={setScenarios} selId={selId} setSelId={setSelId} calc={calc} workFy={work.fy} model={model} metric={metric} setMetric={setMetric} toggleFinal={toggleFinal} notify={notify} />}
