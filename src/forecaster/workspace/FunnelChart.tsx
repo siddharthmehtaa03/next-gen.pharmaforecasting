@@ -38,7 +38,7 @@ export function FunnelChart({ levels, sel, onSel, startLabel, startValue }: {
     <div className="rounded-xl border border-border bg-surface p-3">
       <div className="mb-2 flex items-center gap-1.5 px-1">
         <h3 className="text-[11px] font-semibold uppercase tracking-wider text-text-3">Patient funnel</h3>
-        <InfoTip text="Each card is the population still in the funnel after that stage, as an FY average. Card width is proportional to headcount. Click a stage to edit its assumption; formulas come from the CoE model and stay locked." />
+        <InfoTip text="Each card is the population still in the funnel after that stage, as an FY average. Cards narrow as the population falls, on a compressed scale so every label stays readable. Click a stage to edit its assumption; formulas come from the CoE model and stay locked." />
       </div>
 
       {/* Starting pool: the only full-width level, and never editable. */}
