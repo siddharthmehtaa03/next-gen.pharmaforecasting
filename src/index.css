@@ -20,9 +20,9 @@
 
 :root {
   /* ---------- 2. Raw brand tokens (never used directly in components) ---------- */
-  --pfizer-blue-70: #0000C9;   /* actions + indicators only */
+  --pfizer-blue-70: #2E29FF;   /* actions + indicators only */
   --pfizer-blue-90: #000067;   /* reserved: brand moments, not UI chrome */
-  --pfizer-blue-10: #E8F2FF;   /* selected row / active item tint */
+  --pfizer-blue-10: #CFDFFF;   /* selected row / active item tint, soft blue fills */
 
   --gray-0:  #FFFFFF;
   --gray-5:  #F9F9FB;          /* derived: app canvas */
@@ -69,11 +69,16 @@
   /* Soft status tints. No brand equivalent exists, so they are mixed from the
      status colour rather than introducing new hex values. Defined here (not in
      @theme inline, which truncates color-mix() at its first comma). */
+  /* Success as TEXT: the brand teal is 2.4:1 on white, so text uses a darkened step (~5.6:1). */
+  --success-strong: color-mix(in oklab, var(--success) 58%, black);
   --success-soft: color-mix(in oklab, var(--success) 12%, var(--gray-0));
   --warning-soft: color-mix(in oklab, var(--warning) 12%, var(--gray-0));
   --destructive-soft: color-mix(in oklab, var(--destructive) 12%, var(--gray-0));
 
   /* Brand indicators: active nav, selected row, toggles, progress */
+  /* Primary hover: the primary darkened, keeping the existing darken-on-hover behaviour.
+     (--pfizer-blue-90 stays as the modal scrim colour and is too far from this blue.) */
+  --primary-hover: color-mix(in oklab, var(--primary) 84%, black);
   --indicator: var(--pfizer-blue-70);
   --indicator-subtle: var(--pfizer-blue-10);
   /* Selected/focus treatment from the reference set: a blue hairline plus a soft
@@ -97,6 +102,12 @@
   --sidebar-border: var(--gray-20);
   --sidebar-ring: var(--pfizer-blue-70);
 
+  /* App frame: the surround behind the side nav and around the raised workspace card.
+     A dedicated token so darkening it does not touch --background, which is the canvas
+     inside many components. */
+  --frame: #E7E7E7;
+  --frame-hover: color-mix(in oklab, var(--frame) 92%, black);
+
   --radius: 0.75rem;           /* sm 8 · md 10 · lg 12 · xl 16, matching the references */
 }
 
@@ -119,8 +130,12 @@
   --color-text-3: var(--gray-50);
   --color-brand: var(--primary);
   --color-brand-dark: var(--pfizer-blue-90);
+  --color-brand-hover: var(--primary-hover);
+  --color-frame: var(--frame);
+  --color-frame-hover: var(--frame-hover);
   --color-brand-soft: var(--indicator-subtle);
   --color-ok: var(--success);
+  --color-ok-strong: var(--success-strong);
   --color-ok-soft: var(--success-soft);
   --color-warn: var(--warning);
   --color-warn-soft: var(--warning-soft);
@@ -137,6 +152,7 @@
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -206,7 +222,7 @@ button[class*="rounded-md"][class*="border-border"][class*="text-left"]:not(:dis
 /* modal scrim: frosted instead of flat, matches the existing bg-brand-dark/40 overlay used across every dialog */
 div[class*="fixed"][class*="inset-0"][class*="bg-brand-dark"] { backdrop-filter: blur(3px); }
 
-::selection { background: #0000c9; color: #fff; }
+::selection { background: var(--primary); color: var(--primary-foreground); }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
@@ -218,7 +234,7 @@ div[class*="fixed"][class*="inset-0"][class*="bg-brand-dark"] { backdrop-filter:
 .rise { animation: rise .25s ease-out both; }
 
 /* Charles agent: animated gradient used for the launcher, the section being worked on and the field being filled. */
-:root { --agent-grad: linear-gradient(90deg, #0a3d2e, #2f9e73, #6fcfa3, #bfeedb, #2f9e73, #0a3d2e); --agent: #2f9e73; --agent-deep: #0f5a43; --background: oklch(1 0 0); --foreground: oklch(0.145 0 0); --card: oklch(1 0 0); --card-foreground: oklch(0.145 0 0); --popover: oklch(1 0 0); --popover-foreground: oklch(0.145 0 0); --primary: oklch(0.205 0 0); --primary-foreground: oklch(0.985 0 0); --secondary: oklch(0.97 0 0); --secondary-foreground: oklch(0.205 0 0); --muted: oklch(0.97 0 0); --muted-foreground: oklch(0.556 0 0); --accent: oklch(0.97 0 0); --accent-foreground: oklch(0.205 0 0); --destructive: oklch(0.577 0.245 27.325); --border: oklch(0.922 0 0); --input: oklch(0.922 0 0); --ring: oklch(0.708 0 0); --chart-1: oklch(0.809 0.105 251.813); --chart-2: oklch(0.623 0.214 259.815); --chart-3: oklch(0.546 0.245 262.881); --chart-4: oklch(0.488 0.243 264.376); --chart-5: oklch(0.424 0.199 265.638); --radius: 0.625rem; --sidebar: oklch(0.985 0 0); --sidebar-foreground: oklch(0.145 0 0); --sidebar-primary: oklch(0.205 0 0); --sidebar-primary-foreground: oklch(0.985 0 0); --sidebar-accent: oklch(0.97 0 0); --sidebar-accent-foreground: oklch(0.205 0 0); --sidebar-border: oklch(0.922 0 0); --sidebar-ring: oklch(0.708 0 0); }
+:root { --agent-grad: linear-gradient(90deg, #0a3d2e, #2f9e73, #6fcfa3, #bfeedb, #2f9e73, #0a3d2e); --agent: #2f9e73; --agent-deep: #0f5a43; }
 @keyframes agent-flow { from { background-position: 0% 50%; } to { background-position: 300% 50%; } }
 @keyframes agent-sweep { from { transform: translateX(-100%); } to { transform: translateX(100%); } }
 .agent-bg { background: var(--agent-grad); background-size: 300% 100%; animation: agent-flow 4s linear infinite; }
