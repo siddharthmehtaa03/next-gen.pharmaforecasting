@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { ChartTip, tipProps } from '../../chart/ChartTip'
 import { ACT, MONTHS, OUTPUTS, UNBIASED, idxOf, yearOf } from './engine'
 import type { Layer, Scenario } from './engine'
 import type { Calc } from './Stages'
@@ -97,7 +98,7 @@ export function PerformanceView({ brand, scenarios, calc, selId, uePct }: { bran
           const lo = Math.min(...sp), hi = Math.max(...sp), pts = sp.map((v, k) => `${(k / 11) * 100},${28 - ((v - lo) / (hi - lo || 1)) * 24}`).join(' ')
           return (
             <button key={d.id} type="button" aria-pressed={on} onClick={() => setKpi(d.id)}
-              className={cx('rounded-xl border bg-surface px-4 py-3.5 text-left transition-colors', on ? 'border-[#266df0] ring-2 ring-[#266df0]/15 shadow-[0_1px_2px_rgba(16,24,40,0.06)]' : 'border-border hover:border-border-strong hover:shadow-[0_1px_2px_rgba(16,24,40,0.04)]')}>
+              className={cx('rounded-xl border bg-surface px-4 py-3.5 text-left transition-colors', on ? 'border-brand ring-2 ring-brand/15 shadow-[0_1px_2px_rgba(16,24,40,0.06)]' : 'border-border hover:border-border-strong hover:shadow-[0_1px_2px_rgba(16,24,40,0.04)]')}>
               <span className="flex items-start justify-between gap-2"><span className="text-[12.5px] font-medium text-text-2">{d.label}</span><span className="shrink-0 text-[11px] text-text-3">{d.tag}</span></span>
               <span className="mt-1 block text-[22px] font-semibold tracking-tight tabular-nums">{d.fmt(cur[d.id])}</span>
               <span className="mt-1.5 flex flex-wrap gap-1"><span className={cx('rounded-md px-1.5 py-0.5 text-[11.5px] font-medium', toneOf(d, vb))}>{deltaTxt(d, vb)} Bud</span><span className={cx('rounded-md px-1.5 py-0.5 text-[11.5px] font-medium', toneOf(d, vl))}>{deltaTxt(d, vl)} LY</span></span>
@@ -118,9 +119,18 @@ export function PerformanceView({ brand, scenarios, calc, selId, uePct }: { bran
                 {actEnd >= 0 && actEnd < 11 && <ReferenceLine x={MONTHS[actEnd]} stroke="#b9bed0" strokeDasharray="3 3" label={{ value: 'Actuals end', position: 'insideTopLeft', fontSize: 10, fill: '#8f9199' }} />}
                 <XAxis dataKey="m" tick={{ fontSize: 11, fill: '#8f9199' }} tickLine={false} axisLine={{ stroke: COLOR.grid }} />
                 <YAxis tick={{ fontSize: 11, fill: '#8f9199' }} tickLine={false} axisLine={false} width={56} tickFormatter={(v: number) => def.fmt(v)} domain={['auto', 'auto']} />
-                <Line dataKey="ly" stroke="#8f9199" strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} activeDot={false} />
-                <Line dataKey="bud" stroke="#b7791f" strokeWidth={2} dot={false} isAnimationActive={false} activeDot={false} />
-                <Line dataKey="sc" stroke={COLOR.working} strokeWidth={2.5} dot={{ r: 3 }} isAnimationActive={false} activeDot={false} />
+                <Tooltip {...tipProps} content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null
+                  const r = payload[0]!.payload as { m: string; ly: number; bud: number; sc: number }
+                  return <ChartTip title={`${r.m} ${year}`} sections={[{ rows: [
+                    { label: 'Scenario', color: COLOR.working, value: def.fmt(r.sc) },
+                    { label: 'Budget', color: '#b7791f', value: def.fmt(r.bud) },
+                    { label: 'Last year', color: '#8f9199', value: def.fmt(r.ly) },
+                  ] }]} />
+                }} />
+                <Line dataKey="ly" stroke="#8f9199" strokeWidth={1.5} strokeDasharray="4 3" dot={false} isAnimationActive={false} activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />
+                <Line dataKey="bud" stroke="#b7791f" strokeWidth={2} dot={false} isAnimationActive={false} activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />
+                <Line dataKey="sc" stroke={COLOR.working} strokeWidth={2.5} dot={{ r: 3 }} isAnimationActive={false} activeDot={{ r: 5, strokeWidth: 2, stroke: '#fff' }} />
               </ComposedChart>
             </ResponsiveContainer>
           </div>

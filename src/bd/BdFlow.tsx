@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { ASSETS, SCENARIOS, YEARS, findAsset } from './data'
 import type { Asset, ChainStep, GridDriver, ScenarioId, SliderInput } from './data'
+import { ChartTip, useHoverTip } from '../chart/ChartTip'
 
 /* ───────────────────────── Primitives ───────────────────────── */
 
@@ -382,12 +383,22 @@ function MarketShareTab({ asset, scenario }: { asset: Asset; scenario: ScenarioI
   const y = (v: number) => pad.t + ((yMax - v) / (yMax - yMin)) * (h - pad.t - pad.b)
   const line = (vs: number[]) => vs.map((v, i) => `${i === 0 ? 'M' : 'L'}${x(i)},${y(v)}`).join(' ')
 
+  // Series colours; Base follows the primary blue rather than the old violet.
+  const SHARE_COLOR: Record<ScenarioId, string> = { pess: '#d23b3b', base: '#2E29FF', opt: '#12804f' }
+  const tip = useHoverTip()
+  const [hi, setHi] = useState<number | null>(null)
+  const slot = (w - pad.l - pad.r) / (YEARS.length - 1)
+  const card = (i: number) => (
+    <ChartTip title={YEARS[i]} sections={[{ rows: SCENARIOS.map(s => ({ label: s.label, color: SHARE_COLOR[s.id], value: `${curves[s.id][i]}%` })) }]} />
+  )
+
   return (
     <Card>
       <SectionHeader title={asset.id === 'pcv-peds' ? 'Franchise share of market' : 'mRNA class share × Pfizer share within mRNA'}
         sub="Illustrative. The engine tab shows the exact calculation."
         right={<ScenarioLegend />} />
       <div className="p-5">
+        <div ref={tip.wrap} className="relative">
         <svg viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label="Share over time by scenario">
           {[0, 25, 50, 75, 100].map(v => (
             <g key={v}>
@@ -395,13 +406,25 @@ function MarketShareTab({ asset, scenario }: { asset: Asset; scenario: ScenarioI
               <text x={pad.l - 8} y={y(v) + 4} textAnchor="end" fontSize="11" fill="#6b6e7d">{v}%</text>
             </g>
           ))}
-          <path d={line(curves.pess)} fill="none" stroke="#d23b3b" strokeWidth="1.5" strokeDasharray="3 3" opacity={scenario === 'pess' ? 1 : 0.35} />
-          <path d={line(curves.base)} fill="none" stroke="#4a52e8" strokeWidth={scenario === 'base' ? 2.5 : 1.5} />
-          <path d={line(curves.opt)}  fill="none" stroke="#12804f" strokeWidth="1.5" strokeDasharray="3 3" opacity={scenario === 'opt' ? 1 : 0.35} />
+          <path d={line(curves.pess)} fill="none" stroke={SHARE_COLOR.pess} strokeWidth="1.5" strokeDasharray="3 3" opacity={scenario === 'pess' ? 1 : 0.35} />
+          <path d={line(curves.base)} fill="none" stroke={SHARE_COLOR.base} strokeWidth={scenario === 'base' ? 2.5 : 1.5} />
+          <path d={line(curves.opt)}  fill="none" stroke={SHARE_COLOR.opt} strokeWidth="1.5" strokeDasharray="3 3" opacity={scenario === 'opt' ? 1 : 0.35} />
           {YEARS.map((yr, i) => (
             <text key={yr} x={x(i)} y={h - 8} textAnchor="middle" fontSize="11" fill="#6b6e7d">{yr}</text>
           ))}
+          {hi !== null && (
+            <g aria-hidden pointerEvents="none">
+              <line x1={x(hi)} x2={x(hi)} y1={pad.t} y2={h - pad.b} stroke="var(--gray-30)" />
+              {SCENARIOS.map(s => <circle key={s.id} cx={x(hi)} cy={y(curves[s.id][hi]!)} r={4.5} fill={SHARE_COLOR[s.id]} stroke="#fff" strokeWidth={2} />)}
+            </g>
+          )}
+          {YEARS.map((yr, i) => (
+            <rect key={yr} x={x(i) - slot / 2} y={pad.t} width={slot} height={h - pad.t - pad.b} fill="transparent"
+              onPointerEnter={e => { setHi(i); tip.move(e, card(i)) }} onPointerMove={e => tip.move(e, card(i))} onPointerLeave={() => { setHi(null); tip.hide() }} />
+          ))}
         </svg>
+        {tip.node}
+        </div>
       </div>
     </Card>
   )
@@ -484,10 +507,21 @@ function OutputChart({ asset, scenario }: { asset: Asset; scenario: ScenarioId }
   // Stacked by product if available (PCV)
   const stack = asset.outputByProduct && scenario in asset.outputByProduct.values ? asset.outputByProduct : null
 
+  const tip = useHoverTip()
+  const [hi, setHi] = useState<number | null>(null)
+  const slot = (w - pad.l - pad.r) / YEARS.length
+  const dim = (i: number) => hi === null || hi === i
+  const card = (i: number) => {
+    if (!stack) return <ChartTip title={YEARS[i]} sections={[{ rows: [{ label: 'Net revenue', color: 'var(--color-brand)', value: fmtMoney(values[i]!) }] }]} />
+    const parts = stack.products.map(p => ({ label: p.label, color: p.color, v: stack.values[scenario]?.[p.id]?.[i] ?? 0 })).filter(p => p.v > 0)
+    return <ChartTip title={YEARS[i]} sections={[{ rows: parts.map(p => ({ label: p.label, color: p.color, value: fmtMoney(p.v) })) }, { rows: [{ label: 'Total', value: fmtMoney(parts.reduce((a, p) => a + p.v, 0)) }] }]} />
+  }
+
   return (
     <Card>
       <SectionHeader title="Annual output by year" sub="Pfizer net revenue, illustrative" right={<Pill tone="brand">{SCENARIOS.find(s => s.id === scenario)!.label}</Pill>} />
       <div className="p-5">
+        <div ref={tip.wrap} className="relative">
         <svg viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label="Annual output">
           {[0, 0.25, 0.5, 0.75, 1].map(f => {
             const vv = max * f
@@ -507,7 +541,7 @@ function OutputChart({ asset, scenario }: { asset: Asset; scenario: ScenarioId }
                     const v = stack.values[scenario]?.[p.id]?.[i] ?? 0
                     const yTop = y(acc + v), yBot = y(acc)
                     acc += v
-                    return v > 0 ? <rect key={p.id} x={x(i)} y={yTop} width={bw} height={yBot - yTop} fill={p.color} opacity="0.9" /> : null
+                    return v > 0 ? <rect key={p.id} x={x(i)} y={yTop} width={bw} height={yBot - yTop} fill={p.color} opacity={dim(i) ? 0.9 : 0.4} /> : null
                   })}
                   <text x={x(i) + bw / 2} y={h - 8} textAnchor="middle" fontSize="11" fill="#6b6e7d">{yr}</text>
                 </g>
@@ -516,12 +550,18 @@ function OutputChart({ asset, scenario }: { asset: Asset; scenario: ScenarioId }
             const v = values[i]
             return (
               <g key={yr}>
-                <rect x={x(i)} y={y(v)} width={bw} height={y(0) - y(v)} fill="var(--color-brand)" opacity="0.88" />
+                <rect x={x(i)} y={y(v)} width={bw} height={y(0) - y(v)} fill="var(--color-brand)" opacity={dim(i) ? 0.88 : 0.4} />
                 <text x={x(i) + bw / 2} y={h - 8} textAnchor="middle" fontSize="11" fill="#6b6e7d">{yr}</text>
               </g>
             )
           })}
+          {YEARS.map((yr, i) => (
+            <rect key={yr} x={pad.l + i * slot} y={pad.t} width={slot} height={h - pad.t - pad.b} fill="transparent"
+              onPointerEnter={e => { setHi(i); tip.move(e, card(i)) }} onPointerMove={e => tip.move(e, card(i))} onPointerLeave={() => { setHi(null); tip.hide() }} />
+          ))}
         </svg>
+        {tip.node}
+        </div>
         {stack && (
           <div className="mt-4 flex flex-wrap gap-4 text-[12px] text-text-2">
             {stack.products.map(p => (
@@ -581,6 +621,20 @@ function SandboxTab({ asset, scenario }: { asset: Asset; scenario: ScenarioId })
   const xBase = (i: number) => pad.l + (i / YEARS.length) * (w - pad.l - pad.r) + ((w - pad.l - pad.r) / YEARS.length - bw * 2) / 2
   const y = (v: number) => pad.t + (1 - v / max) * (h - pad.t - pad.b)
 
+  const tip = useHoverTip()
+  const [hi, setHi] = useState<number | null>(null)
+  const slot = (w - pad.l - pad.r) / YEARS.length
+  const card = (i: number) => {
+    const d = sandbox[i]! - base[i]!, pctD = base[i] ? (d / base[i]!) * 100 : 0
+    const tone = d === 0 ? 'muted' as const : d > 0 ? 'ok' as const : 'err' as const
+    return (
+      <ChartTip title={YEARS[i]} sections={[
+        { rows: [{ label: 'Base', color: '#c7c9d6', value: fmtMoney(base[i]!) }, { label: 'Sandbox', color: 'var(--color-brand)', value: fmtMoney(sandbox[i]!) }] },
+        { rows: [{ label: 'Change', tone, value: `${d >= 0 ? '+' : '−'}${fmtMoney(Math.abs(d))} (${pctD >= 0 ? '+' : '−'}${Math.abs(pctD).toFixed(1)}%)` }] },
+      ]} />
+    )
+  }
+
   return (
     <div className="grid gap-5 xl:grid-cols-[320px_minmax(0,1fr)]">
       <Card>
@@ -616,9 +670,10 @@ function SandboxTab({ asset, scenario }: { asset: Asset; scenario: ScenarioId })
 
       <Card>
         <SectionHeader title="Base vs sandbox"
-          sub="Grey = base; purple = sandbox. The delta table below runs the numbers."
+          sub="Grey = base; blue = sandbox. The delta table below runs the numbers."
           right={<Pill tone="brand">Live</Pill>} />
         <div className="p-5">
+          <div ref={tip.wrap} className="relative">
           <svg viewBox={`0 0 ${w} ${h}`} className="w-full" role="img" aria-label="Base vs sandbox">
             {[0, 0.25, 0.5, 0.75, 1].map(f => (
               <g key={f}>
@@ -627,13 +682,19 @@ function SandboxTab({ asset, scenario }: { asset: Asset; scenario: ScenarioId })
               </g>
             ))}
             {YEARS.map((yr, i) => (
-              <g key={yr}>
+              <g key={yr} opacity={hi === null || hi === i ? 1 : 0.45}>
                 <rect x={xBase(i)}      y={y(base[i])}    width={bw} height={y(0) - y(base[i])}    fill="#c7c9d6" />
                 <rect x={xBase(i) + bw} y={y(sandbox[i])} width={bw} height={y(0) - y(sandbox[i])} fill="var(--color-brand)" opacity="0.9" />
                 <text x={xBase(i) + bw} y={h - 8} textAnchor="middle" fontSize="11" fill="#6b6e7d">{yr}</text>
               </g>
             ))}
+            {YEARS.map((yr, i) => (
+              <rect key={yr} x={pad.l + i * slot} y={pad.t} width={slot} height={h - pad.t - pad.b} fill="transparent"
+                onPointerEnter={e => { setHi(i); tip.move(e, card(i)) }} onPointerMove={e => tip.move(e, card(i))} onPointerLeave={() => { setHi(null); tip.hide() }} />
+            ))}
           </svg>
+          {tip.node}
+          </div>
         </div>
         <div className="border-t border-border p-5">
           <table className="w-full text-[13px]">

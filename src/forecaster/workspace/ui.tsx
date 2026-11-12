@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { ChartTip, tipProps } from '../../chart/ChartTip'
+import type { TipRow } from '../../chart/ChartTip'
 import { Bookmark, EllipsisVertical, Info } from 'lucide-react'
 import { ChartActions } from '../../chart/ChartActions'
 import { useInsights } from './insightsCtx'
 import { ACT, N, START_YEAR, mLabel, mLong } from './engine'
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
-export const COLOR = { actual: '#0b0f2e', unbiased: '#8a8fa8', ci: '#8a8fa8', working: '#0000c9', scenario: '#0e7490', preview: '#7c3aed', grid: '#dfe2ec', alt: ['#0e7490', '#0a7d4f', '#c4122f', '#a35a00', '#7c3aed', '#0000c9'] }
+export const COLOR = { actual: '#0b0f2e', unbiased: '#8a8fa8', ci: '#8a8fa8', working: '#2E29FF', scenario: '#0e7490', preview: '#7c3aed', grid: '#dfe2ec', alt: ['#0e7490', '#0a7d4f', '#c4122f', '#a35a00', '#7c3aed', '#2E29FF'] }
 export const field = 'h-9 w-full rounded-xl border border-border bg-surface px-2.5 text-[13px] shadow-[0_1px_1px_rgba(16,24,40,0.04)] outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-text-3'
 
 export function Btn({ children, variant = 'primary', onClick, icon, disabled, size = 'md', title, className }: { children?: ReactNode; variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; onClick?: () => void; icon?: ReactNode; disabled?: boolean; size?: 'sm' | 'md'; title?: string; className?: string }) {
-  return <button type="button" title={title} onClick={onClick} disabled={disabled} className={cx('inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl font-medium transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45', size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-[13px]', variant === 'primary' && 'bg-[#1b1b21] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_1px_2px_rgba(0,0,0,0.25)] hover:bg-black disabled:opacity-35', variant === 'secondary' && 'border border-border-strong bg-surface shadow-[0_1px_1px_rgba(16,24,40,0.04)] hover:bg-surface-2', variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text', variant === 'danger' && 'text-err hover:bg-err-soft', className)}>{icon}{children}</button>
+  return <button type="button" title={title} onClick={onClick} disabled={disabled} className={cx('inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl font-medium transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45', size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-[13px]', variant === 'primary' && 'bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_1px_2px_rgba(0,0,0,0.25)] hover:bg-primary-hover disabled:opacity-35', variant === 'secondary' && 'border border-border-strong bg-surface shadow-[0_1px_1px_rgba(16,24,40,0.04)] hover:bg-surface-2', variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text', variant === 'danger' && 'text-err hover:bg-err-soft', className)}>{icon}{children}</button>
 }
 export type MenuItem = { label: string; icon?: ReactNode; onClick: () => void; disabled?: boolean; danger?: boolean }
 /** Three-dot menu for row and card actions (edit, copy, delete…), same trigger as the chart actions menu. */
@@ -220,13 +222,38 @@ export function ForecastChart({ s, fmt, height = 300, dp = 1, unit, title = 'For
             <XAxis dataKey="i" type="number" domain={yr ? [-0.2, P - 0.8] : [0, N - 1]} ticks={grain === 'year' ? Array.from({ length: YEARS_N }, (_, k) => k) : grain === 'quarter' ? Array.from({ length: P / 2 }, (_, k) => k * 2) : Array.from({ length: N / 6 }, (_, k) => k * 6)} tickFormatter={xLabel} tick={{ fontSize: 11, fill: '#8a8fa8' }} tickLine={false} axisLine={{ stroke: COLOR.grid }} />
             <YAxis domain={[min - pad, max + pad]} tickFormatter={(v: number) => v.toFixed(dp)} tick={{ fontSize: 11, fill: '#8a8fa8' }} tickLine={false} axisLine={false} width={48} />
             {!yr && <ReferenceLine x={ACT - 1} stroke="#b9bed0" strokeDasharray="3 3" label={{ value: 'Actuals end', position: 'insideTopLeft', fontSize: 10, fill: '#8a8fa8' }} />}
-            {s.lo && s.hi && <Area dataKey="ci" stroke="none" fill="#8a8fa8" fillOpacity={0.2} isAnimationActive={false} activeDot={false} />}
-            {s.unbiased && <Line dataKey="unbiased" stroke={COLOR.unbiased} strokeWidth={2} strokeDasharray="5 4" dot={yr ? { r: 3 } : false} isAnimationActive={false} activeDot={false} />}
-            {s.actual && <Line dataKey="actual" stroke={COLOR.actual} strokeWidth={2.5} dot={yr ? { r: 4 } : false} isAnimationActive={false} activeDot={false} />}
-            {s.working && <Line dataKey="working" stroke={COLOR.working} strokeWidth={2.5} dot={yr ? { r: 4 } : false} isAnimationActive={false} activeDot={false} />}
+            <Tooltip {...tipProps} content={({ active, payload }) => {
+              if (!active || !payload?.length) return null
+              const r = payload[0]!.payload as Row
+              const rows: TipRow[] = []
+              if (typeof r.actual === 'number') rows.push({ label: 'Actuals', color: COLOR.actual, value: fmt(r.actual) })
+              if (typeof r.unbiased === 'number') rows.push({ label: 'Reference baseline', color: COLOR.unbiased, value: fmt(r.unbiased) })
+              if (Array.isArray(r.ci)) rows.push({ label: '95% CI', color: COLOR.ci, value: `${fmt(r.ci[0]!)} – ${fmt(r.ci[1]!)}` })
+              if (typeof r.working === 'number') rows.push({ label: 'Active forecast', color: COLOR.working, value: fmt(r.working) })
+              if (typeof r.preview === 'number') rows.push({ label: 'Unapplied preview', color: COLOR.preview, value: fmt(r.preview) })
+              if (typeof r.scenario === 'number') rows.push({ label: s.scenarioName ?? 'Scenario', color: COLOR.scenario, value: fmt(r.scenario) })
+              ;(s.extra ?? []).forEach((x, k) => { const v = r[`x${k}`]; if (typeof v === 'number') rows.push({ label: x.name, color: x.color, value: fmt(v) }) })
+              // Value, %G YoY and % of Budget for the hovered point; month over month (monthly) and quarter over quarter (quarterly).
+              const v = val(r), prev = val(data[r.i - lag]), bud = budgetAt(r.i), prevStep = val(data[r.i - 1])
+              const g = v !== undefined && prev ? (v / prev - 1) * 100 : undefined, b = v !== undefined && bud ? (v / bud) * 100 : undefined
+              const gs = v !== undefined && prevStep ? (v / prevStep - 1) * 100 : undefined
+              const pct = (x: number | undefined) => x === undefined ? '—' : `${x >= 0 ? '+' : '−'}${Math.abs(x).toFixed(1)}%`
+              const tone = (x: number | undefined, at = 0): TipRow['tone'] => x === undefined ? 'muted' : x >= at ? 'ok' : 'err'
+              const kpis: TipRow[] = v === undefined ? [] : [
+                { label: 'Value', value: fmt(v) },
+                { label: '%G YoY', value: pct(g), tone: tone(g) },
+                ...(grain !== 'year' ? [{ label: grain === 'month' ? '%G MoM' : '%G QoQ', value: pct(gs), tone: tone(gs) }] : []),
+                { label: '% of Budget', value: b === undefined ? '—' : `${b.toFixed(1)}%`, tone: tone(b, 100) },
+              ]
+              return <ChartTip title={pointLabel(r.i)} sections={[{ rows: kpis }, { rows }]} />
+            }} />
+            {s.lo && s.hi && <Area dataKey="ci" stroke="none" fill="#8a8fa8" fillOpacity={0.2} isAnimationActive={false} activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />}
+            {s.unbiased && <Line dataKey="unbiased" stroke={COLOR.unbiased} strokeWidth={2} strokeDasharray="5 4" dot={yr ? { r: 3 } : false} isAnimationActive={false} activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />}
+            {s.actual && <Line dataKey="actual" stroke={COLOR.actual} strokeWidth={2.5} dot={yr ? { r: 4 } : false} isAnimationActive={false} activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />}
+            {s.working && <Line dataKey="working" stroke={COLOR.working} strokeWidth={2.5} dot={yr ? { r: 4 } : false} isAnimationActive={false} activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />}
             {s.extra?.map((x, k) => <Line key={x.name} dataKey={`x${k}`} stroke={x.color} strokeWidth={2} dot={yr ? { r: 3 } : false} isAnimationActive={false} activeDot={false} />)}
-            {s.scenario && <Line dataKey="scenario" stroke={COLOR.scenario} strokeWidth={2.5} dot={yr ? { r: 4 } : false} isAnimationActive={false} activeDot={false} />}
-            {s.preview && <Line dataKey="preview" stroke={COLOR.preview} strokeWidth={2.5} strokeDasharray="2 3" dot={yr ? { r: 3 } : false} isAnimationActive={false} activeDot={false} />}
+            {s.scenario && <Line dataKey="scenario" stroke={COLOR.scenario} strokeWidth={2.5} dot={yr ? { r: 4 } : false} isAnimationActive={false} activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />}
+            {s.preview && <Line dataKey="preview" stroke={COLOR.preview} strokeWidth={2.5} strokeDasharray="2 3" dot={yr ? { r: 3 } : false} isAnimationActive={false} activeDot={{ r: 4, strokeWidth: 2, stroke: '#fff' }} />}
           </ComposedChart>
         </ResponsiveContainer>
       </div>

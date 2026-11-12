@@ -137,7 +137,7 @@ export function GrossPriceSkus({ readOnly, base }: { readOnly?: boolean; base: n
             <tbody>{skus.map(s => (
               <tr key={s.id} className="border-b border-border last:border-0">
                 <td className="py-2">{s.name}{s.note && <span className="ml-1.5 text-[11px] text-text-3">· {s.note}</span>}</td>
-                <td className="py-2 text-center"><input type="checkbox" disabled={readOnly} checked={s.rev} onChange={e => set(s.id, { rev: e.target.checked })} aria-label={`${s.name} earns revenue`} className="h-4 w-4 accent-[#0000c9]" /></td>
+                <td className="py-2 text-center"><input type="checkbox" disabled={readOnly} checked={s.rev} onChange={e => set(s.id, { rev: e.target.checked })} aria-label={`${s.name} earns revenue`} className="h-4 w-4 accent-[#2E29FF]" /></td>
                 <td className="py-2 text-right font-mono">{s.packs.toLocaleString('en-US')}</td>
                 <td className="py-2 text-right font-mono text-text-2">{s.rev && revPacks ? `${((s.packs / revPacks) * 100).toFixed(1)}%` : '—'}</td>
                 <td className="py-1.5 pl-3 text-right"><input type="number" disabled={readOnly} step={0.1} value={s.price} onChange={e => set(s.id, { price: e.target.value === '' ? 0 : +e.target.value })} aria-label={`${s.name} list price`}

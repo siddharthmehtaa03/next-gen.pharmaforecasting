@@ -335,7 +335,7 @@ export function ScenarioWorkspace(p: WorkspaceProps) {
             <Select label="Forecast start" value={`${MONTHS[startM]} 2026`} options={MONTHS.slice(5, 9).map(m => `${m} 2026`)} onChange={v => setStartM(MONTHS.indexOf(v.slice(0, 3)))} /></label>
           <button type="button" onClick={() => setLogOpen(o => !o)} aria-expanded={logOpen} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-strong px-2.5 text-[13px] font-medium text-text-2 hover:border-brand hover:text-brand"><FileText size={14} />Change log{log.length > 0 && <span className="font-mono text-[11px]">{log.length}</span>}</button>
           <button type="button" onClick={generate} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-strong px-2.5 text-[13px] font-medium text-text-2 hover:border-brand hover:text-brand"><Sparkles size={14} />Generate insight</button>
-          <button type="button" onClick={() => p.onNew(id)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-brand px-3 text-[13px] font-semibold text-white hover:bg-brand-dark"><Plus size={14} />New scenario</button>
+          <button type="button" onClick={() => p.onNew(id)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-brand px-3 text-[13px] font-semibold text-white hover:bg-brand-hover"><Plus size={14} />New scenario</button>
           {logOpen && (
             <div className="absolute right-0 top-10 z-40 w-[360px] max-w-[calc(100vw-24px)] rounded-lg border border-border bg-surface p-3 shadow-xl">
               <p className="mb-2 text-sm font-semibold">Change log</p>
@@ -577,7 +577,7 @@ function GoalSeek(p: Sub & { applyMany: ApplyMany }) {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-end gap-2">
         <button type="button" onClick={run} className="h-9 rounded-md border border-brand px-4 text-sm font-medium text-brand hover:bg-brand-soft">Run Goal Seek</button>
-        <button type="button" disabled={!res || res.ch.length === 0} onClick={() => { p.applyMany(res!.ch, `Goal seek proposal applied (${res!.ch.length} changes)`); p.notify({ tone: 'ok', text: 'Forecast assumptions updated from goal seek.' }); setRes(null) }} className="h-9 rounded-md bg-brand px-4 text-sm font-medium text-white hover:bg-brand-dark disabled:opacity-40">Update Forecast Assumption</button>
+        <button type="button" disabled={!res || res.ch.length === 0} onClick={() => { p.applyMany(res!.ch, `Goal seek proposal applied (${res!.ch.length} changes)`); p.notify({ tone: 'ok', text: 'Forecast assumptions updated from goal seek.' }); setRes(null) }} className="h-9 rounded-md bg-brand px-4 text-sm font-medium text-white hover:bg-brand-hover disabled:opacity-40">Update Forecast Assumption</button>
       </div>
       <SummaryChart ctx={ctx} id={id} seasonal={p.seasonal} startM={p.startM} pin={p.pin} compact extra={res && Object.keys(res.ach).length ? [{ name: 'Target', tone: 'dark', dash: true, pts: ALL_YEARS.map(y => targets[y] ?? rev(ctx, id, y)) }, { name: 'Revenue achieved', tone: 'ok', pts: ALL_YEARS.map(y => res.ach[y] ?? rev(ctx, id, y)) }] : undefined} />
       <Panel title="Revenue targets" right={<PinBtn onClick={() => p.pin(`${id}: goal seek`, FYS.filter(y => targets[y]).map(y => `${y} target ${money(targets[y]!)}`).join(' · ') || 'No targets set')} />}>

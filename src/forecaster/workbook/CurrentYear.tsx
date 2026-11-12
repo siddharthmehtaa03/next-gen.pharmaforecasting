@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { ChartTip, tipProps } from '../../chart/ChartTip'
 import { ChevronDown, Lock } from 'lucide-react'
 import { eid, parseTable, txt, useEngine } from './engine'
 import { useSubmitGate } from '../submitGate'
@@ -77,7 +78,14 @@ export default function CurrentYear() {
                 <CartesianGrid vertical={false} stroke="var(--color-border)" />
                 <XAxis dataKey="m" tickLine={false} axisLine={false} fontSize={11} />
                 <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={v => `$${v}M`} />
-                <Tooltip formatter={(v) => [`$${Number(v).toFixed(1)}M`, 'Net sales']} cursor={{ fill: 'var(--color-brand-soft)' }} />
+                <Tooltip {...tipProps} cursor={{ fill: 'var(--color-brand-soft)', opacity: 0.7 }} content={({ active, payload }) => {
+                  if (!active || !payload?.length) return null
+                  const d = payload[0]!.payload as { m: string; v: number; act: boolean }
+                  return <ChartTip title={d.m} sections={[{ rows: [
+                    { label: 'Net sales', value: `$${Number(d.v).toFixed(1)}M` },
+                    { label: 'Basis', value: d.act ? 'Actual' : 'Forecast', tone: 'muted' },
+                  ] }]} />
+                }} />
                 <Bar dataKey="v" radius={[4, 4, 0, 0]}>{data.chart.map((d, i) => <Cell key={i} fill={d.act ? 'var(--color-text-3)' : 'var(--color-brand)'} />)}</Bar>
               </BarChart>
             </ResponsiveContainer>
@@ -91,7 +99,7 @@ export default function CurrentYear() {
           {gate ? (
             <div className="space-y-2">
               <button type="button" disabled={!!gate.submitted} onClick={() => { const id = submitBtn && eid(submitBtn); gate.request(id ? () => e.act(id) : undefined) }}
-                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-brand px-4 text-sm font-medium text-white transition-colors hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-50">
+                className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md bg-brand px-4 text-sm font-medium text-white transition-colors hover:bg-brand-hover disabled:cursor-not-allowed disabled:opacity-50">
                 <Lock size={15} />{gate.submitted ? `${gate.sub} submitted · ${gate.submitted}` : `Review & submit ${gate.sub}…`}
               </button>
               <p className="text-[11px] text-text-3">Opens the same pre-submit checks as guided steps. Nothing is submitted until you confirm.</p>

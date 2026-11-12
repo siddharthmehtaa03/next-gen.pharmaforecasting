@@ -320,7 +320,7 @@ export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
         <div className="ml-auto flex items-center gap-2">
           <button type="button" onClick={startVoice} aria-label={voice === 'idle' ? 'Voice input' : 'Stop voice input'} aria-pressed={voice !== 'idle'} title={voice === 'idle' ? 'Voice input' : 'Stop'}
             className={cx('grid h-10 w-10 place-items-center rounded-full border transition-colors', voice === 'idle' ? 'border-border text-text-2 hover:border-brand hover:text-brand' : 'mic-live border-err bg-err text-white')}>{voice === 'idle' ? <Mic size={17} /> : <Square size={14} fill="currentColor" />}</button>
-          <button type="submit" disabled={!q.trim() || !!p.thinking || voice !== 'idle'} aria-label="Send" className="grid h-10 w-10 place-items-center rounded-full bg-brand text-white transition-colors hover:bg-brand-dark disabled:bg-text-3/60"><ArrowUpRight size={17} /></button>
+          <button type="submit" disabled={!q.trim() || !!p.thinking || voice !== 'idle'} aria-label="Send" className="grid h-10 w-10 place-items-center rounded-full bg-brand text-white transition-colors hover:bg-brand-hover disabled:bg-text-3/60"><ArrowUpRight size={17} /></button>
         </div>
       </div>
     </form>

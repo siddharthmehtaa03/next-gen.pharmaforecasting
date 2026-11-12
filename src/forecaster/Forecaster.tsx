@@ -172,7 +172,7 @@ function Btn({ children, variant = 'primary', onClick, icon, disabled }: { child
   return (
     <button type="button" onClick={onClick} disabled={disabled}
       className={cx('inline-flex h-9 items-center justify-center gap-2 rounded-md px-3.5 text-[13px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50',
-        variant === 'primary' && 'bg-brand text-white hover:bg-brand-dark', variant === 'secondary' && 'border border-border-strong bg-surface hover:border-text', variant === 'ghost' && 'text-text-2 hover:bg-surface-2')}>
+        variant === 'primary' && 'bg-brand text-white hover:bg-brand-hover', variant === 'secondary' && 'border border-border-strong bg-surface hover:border-text', variant === 'ghost' && 'text-text-2 hover:bg-surface-2')}>
       {icon}{children}
     </button>
   )
@@ -789,7 +789,7 @@ function AgentDock({ onClose, insights, setInsights, addInsight, notify, ctx }: 
                   <p className="text-sm font-semibold">{m.title}</p>
                   <p className="mt-1 whitespace-pre-line text-[13px] text-text-2">{m.body}</p>
                   <div className="mt-2.5 flex flex-wrap gap-2">
-                    {m.action && <button type="button" onClick={m.action.run} className="inline-flex items-center gap-1 rounded-md bg-brand px-2.5 py-1 text-xs font-semibold text-white hover:bg-brand-dark">{m.action.label}</button>}
+                    {m.action && <button type="button" onClick={m.action.run} className="inline-flex items-center gap-1 rounded-md bg-brand px-2.5 py-1 text-xs font-semibold text-white hover:bg-brand-hover">{m.action.label}</button>}
                     <button type="button" onClick={() => addInsight(m.title, m.body)} className="inline-flex items-center gap-1 rounded-md border border-border-strong px-2.5 py-1 text-xs font-semibold hover:border-brand hover:text-brand"><Lightbulb size={12} />Add to knowledge bank</button>
                   </div>
                 </div>
@@ -800,7 +800,7 @@ function AgentDock({ onClose, insights, setInsights, addInsight, notify, ctx }: 
             <div className="mb-2 flex flex-wrap gap-1.5">{chips.map(c => <button key={c} type="button" onClick={() => ask(c)} className="rounded-full border border-border px-2.5 py-1 text-[11px] font-medium text-text-2 hover:border-brand hover:text-brand">{c}</button>)}</div>
             <form className="flex gap-2" onSubmit={e => { e.preventDefault(); ask(q) }}>
               <input value={q} onChange={e => setQ(e.target.value)} placeholder={tab === 'Ask Agent' ? 'Ask about this forecast…' : 'Describe a what-if…'} className="h-9 min-w-0 flex-1 rounded-md border border-border-strong bg-surface px-3 text-sm outline-none focus:border-brand" />
-              <button type="submit" aria-label="Send" className="grid h-9 w-9 place-items-center rounded-md bg-brand text-white hover:bg-brand-dark"><Send size={14} /></button>
+              <button type="submit" aria-label="Send" className="grid h-9 w-9 place-items-center rounded-md bg-brand text-white hover:bg-brand-hover"><Send size={14} /></button>
             </form>
           </div>
         </>
@@ -873,7 +873,7 @@ function CycleWorkspace({ brand, cycleName, sub, tab, setTab, ctx, selected, row
                     <td className="px-3 py-3.5 text-right font-mono">{fmtM(n)}</td>
                     <td className={cx('px-3 py-3.5 text-right font-mono text-xs font-semibold', vs >= 0 ? 'text-ok' : 'text-err')}>{vs >= 0 ? '+' : ''}{vs.toFixed(1)}%</td>
                     <td className="px-3 py-3.5 text-xs text-text-2">{r.updated} · {r.by}</td>
-                    <td className="px-4 py-3.5 text-right"><button type="button" onClick={() => onOpen(r.base)} className="h-8 rounded-md bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-dark">{statusOf(r) === 'Draft' ? 'Adjust' : 'Open'}</button></td>
+                    <td className="px-4 py-3.5 text-right"><button type="button" onClick={() => onOpen(r.base)} className="h-8 rounded-md bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover">{statusOf(r) === 'Draft' ? 'Adjust' : 'Open'}</button></td>
                   </tr>
                 ))}
                 <tr className="border-t border-dashed border-border-strong"><td colSpan={7} className="px-4 py-3">
@@ -883,7 +883,7 @@ function CycleWorkspace({ brand, cycleName, sub, tab, setTab, ctx, selected, row
                       <option value="">the generated forecast</option>
                       {rows.map(({ r }) => <option key={r.id} value={r.base}>a copy of {r.name}</option>)}
                     </select>
-                    <button type="button" onClick={() => onNew(from || undefined)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-dark"><Plus size={13} />Create</button>
+                    <button type="button" onClick={() => onNew(from || undefined)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-brand px-3 text-xs font-semibold text-white hover:bg-brand-hover"><Plus size={13} />Create</button>
                   </div>
                 </td></tr>
               </tbody>

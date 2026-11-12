@@ -6,7 +6,7 @@ import type { Snap } from './insightsCtx'
 export type Person = { id: string; name: string; role: string; color: string }
 export const ME = 'me'
 export const PEOPLE: Person[] = [
-  { id: 'me', name: 'J. Andersen', role: 'Forecaster · you', color: '#0000c9' },
+  { id: 'me', name: 'J. Andersen', role: 'Forecaster · you', color: '#2E29FF' },
   { id: 'priya', name: 'Priya Nair', role: 'Brand lead', color: '#0e7490' },
   { id: 'daniel', name: 'Daniel Reyes', role: 'Finance', color: '#a35a00' },
   { id: 'tom', name: 'Tom Becker', role: 'Market access', color: '#0a7d4f' },

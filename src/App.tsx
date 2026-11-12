@@ -25,6 +25,7 @@ import { flowRows as inputFlow, withPatientFlow, onCanvas } from './configCatalo
 import type { InputMap } from './configCatalog'
 import pfizerMark from './assets/pfizer-mark-color.png'
 import pfizerLogo from './assets/pfizer-logo-color.png'
+import { ChartTip, useHoverTip } from './chart/ChartTip'
 import {
   AlertCircle, AlertTriangle, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, ArrowRight, Bell, Boxes, Check, CheckCircle2, ChevronDown, ChevronRight,
   Clock, Copy, Database, FileText, GitBranch, History, Info, Layers, Loader2, Lock, Plus, PanelRightClose, PanelRightOpen, Maximize2, Minimize2,
@@ -501,7 +502,7 @@ function Btn({ children, variant = 'primary', size = 'md', disabled, onClick, ic
       className={cx(
         'inline-flex items-center justify-center gap-2 rounded-lg font-medium transition-[background-color,border-color,box-shadow] outline-none focus-visible:border-brand focus-visible:shadow-[var(--ring-glow)] disabled:cursor-not-allowed',
         size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-[13px]',
-        variant === 'primary' && 'bg-brand text-white hover:bg-brand-dark disabled:bg-border-strong',
+        variant === 'primary' && 'bg-brand text-white hover:bg-brand-hover disabled:bg-border-strong',
         variant === 'secondary' && 'border border-border bg-surface text-text hover:border-border-strong hover:bg-surface-2 disabled:text-text-3',
         variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text disabled:text-text-3',
         variant === 'danger' && 'text-err hover:bg-err-soft',
@@ -1051,13 +1052,13 @@ function AppFrame({ onHome, items, active, flow, header, collab, onCollab, foote
   useEffect(() => { if (collab) setSize('md') }, [collab])
   const w = open ? 236 : 72
   return (
-    <div className="h-dvh overflow-hidden bg-background">
+    <div className="h-dvh overflow-hidden bg-frame">
       {/* The rail sits on the canvas; the workspace is a separate rounded, raised panel beside it. */}
       <nav aria-label={`${flow} navigation`}
         className="fixed inset-y-0 left-0 z-50 flex flex-col py-4 transition-[width] duration-200" style={{ width: w }}>
         <button type="button" onClick={onHome} aria-label="Pfizer · Go to home" className={cx('mb-6 flex shrink-0 items-center gap-2 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-brand', open ? 'mx-4 px-1.5' : 'mx-auto h-10 justify-center')}>
           <img src={pfizerMark} alt="" className="h-8 w-8 shrink-0 select-none" draggable={false} />
-          {open && <span className="min-w-0 text-left leading-tight"><span className="block truncate text-[13px] font-semibold tracking-tight text-text">NextGen Forecasting</span><span className="block truncate text-[11px] text-text-3">{flow}</span></span>}
+          {open && <span className="min-w-0 text-left leading-tight"><span className="block truncate text-[13px] font-semibold tracking-tight text-text">NextGen Forecasting</span><span className="block truncate text-[11px] text-text-2">{flow}</span></span>}
         </button>
         <ul className={cx('flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto', open ? 'px-3' : 'items-center px-0')}>
           {items.map((it, k) => {
@@ -1073,9 +1074,9 @@ function AppFrame({ onHome, items, active, flow, header, collab, onCollab, foote
                     <div className="ml-[22px] mt-1 border-l border-border-strong/70 pl-2.5">
                       <button type="button" onClick={it.sub.onNew} className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-[12.5px] font-medium text-text hover:bg-black/[0.05]"><SquarePen size={13} />New chat</button>
                       {it.sub.items.length > 0 && <ul className="max-h-[40dvh] space-y-0.5 overflow-y-auto">{it.sub.items.map(t => (
-                        <li key={t.id} className={cx('group/t relative flex h-8 items-center rounded-lg', t.active ? 'bg-surface' : 'hover:bg-[#e2e5ec]')}>
+                        <li key={t.id} className={cx('group/t relative flex h-8 items-center rounded-lg', t.active ? 'bg-surface' : 'hover:bg-frame-hover')}>
                           <button type="button" onClick={t.go} aria-current={t.active ? 'page' : undefined} title={t.label} className={cx('flex h-8 min-w-0 flex-1 items-center rounded-lg px-2 text-left text-[12.5px]', t.active ? 'font-medium text-brand' : 'text-text-2 hover:text-text')}><span className="truncate">{t.label}</span></button>
-                          <span className={cx('absolute inset-y-0 right-0 hidden items-center gap-0.5 rounded-r-lg bg-gradient-to-l to-transparent pl-4 pr-1 group-focus-within/t:flex group-hover/t:flex', t.active ? 'from-surface via-surface' : 'from-[#e2e5ec] via-[#e2e5ec]')}>
+                          <span className={cx('absolute inset-y-0 right-0 hidden items-center gap-0.5 rounded-r-lg bg-gradient-to-l to-transparent pl-4 pr-1 group-focus-within/t:flex group-hover/t:flex', t.active ? 'from-surface via-surface' : 'from-frame-hover via-frame-hover')}>
                             <button type="button" onClick={t.dup} aria-label={`Duplicate ${t.label}`} title="Duplicate" className="grid h-6 w-6 place-items-center rounded-md text-text-3 hover:bg-black/[0.06] hover:text-text"><Copy size={12} /></button>
                             <button type="button" onClick={t.del} aria-label={`Delete ${t.label}`} title="Delete" className="grid h-6 w-6 place-items-center rounded-md text-text-3 hover:bg-err-soft hover:text-err"><Trash2 size={12} /></button>
                           </span></li>))}</ul>}
@@ -1090,7 +1091,7 @@ function AppFrame({ onHome, items, active, flow, header, collab, onCollab, foote
           <button data-tour="rail-toggle" type="button" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-label={open ? 'Collapse navigation' : 'Expand navigation'} title={open ? 'Collapse' : 'Expand'}
             className="grid h-10 w-10 place-items-center rounded-xl text-text-2 outline-none hover:bg-black/[0.05] hover:text-text focus-visible:ring-2 focus-visible:ring-brand">{open ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}</button>
         </div>
-        <div className={cx('mt-3 flex shrink-0 items-center gap-3', open ? 'px-5' : 'justify-center')}>{footer}{open && <span className="min-w-0 leading-tight"><span className="block truncate text-[12.5px] font-medium text-text">{ME}</span><span className="block text-[11px] text-text-3">Super Admin</span></span>}</div>
+        <div className={cx('mt-3 flex shrink-0 items-center gap-3', open ? 'px-5' : 'justify-center')}>{footer}{open && <span className="min-w-0 leading-tight"><span className="block truncate text-[12.5px] font-medium text-text">{ME}</span><span className="block text-[11px] text-text-2">Super Admin</span></span>}</div>
       </nav>
       <div className="flex h-full gap-2 py-2 pr-2 transition-[padding] duration-200" style={{ paddingLeft: w }}>
         <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-black/[0.05] bg-surface shadow-[0_1px_3px_rgba(16,24,40,0.06),0_8px_24px_-12px_rgba(16,24,40,0.10)]">
@@ -1411,7 +1412,7 @@ function ChatCard({ c, th, live, models, send, setFlow }: { c: Card; th: Thread;
       <div className={cardCls}><CardHead icon={Boxes} title="Module map" meta={`${cf.mods.length} selected`} />
         <ul className="grid gap-x-4 px-4 py-2 sm:grid-cols-2">{[...req, ...rec].map(m => { const isReq = req.includes(m); const on = cf.mods.includes(m.id); return (
           <li key={m.id}><label className={cx('flex items-start gap-2.5 py-1.5 text-[13px]', (isReq || !live) ? 'cursor-default' : 'cursor-pointer')}>
-            <input type="checkbox" className="mt-0.5 accent-[var(--color-brand,#0000C9)]" checked={on} disabled={isReq || !live} onChange={() => setFlow({ ...cf, mods: on ? cf.mods.filter(x => x !== m.id) : [...cf.mods, m.id] })} />
+            <input type="checkbox" className="mt-0.5 accent-[var(--color-brand,#2E29FF)]" checked={on} disabled={isReq || !live} onChange={() => setFlow({ ...cf, mods: on ? cf.mods.filter(x => x !== m.id) : [...cf.mods, m.id] })} />
             <span className="min-w-0"><span className="font-medium">{m.name}</span>{isReq && <Lock size={10} className="ml-1 inline text-text-3" />}<span className="block truncate text-[11px] text-text-3">{m.cat}</span></span></label></li>) })}</ul>
         {live && <div className="border-t border-border px-4 py-2.5"><Btn size="sm" onClick={() => send('Modules look good')}>Looks good, run checks</Btn></div>}
       </div>) }
@@ -2198,7 +2199,7 @@ function Charles({ context, chips, respond, greeting, extra, busy, busyLabel = '
               placeholder={E.placeholder} aria-label={`Message ${E.label}`}
               className="block max-h-40 min-h-[32px] w-full resize-none bg-transparent px-1 py-1 text-[15px] outline-none placeholder:text-text-3" />
             <div className="mt-2 flex items-center gap-2">
-              <button type="submit" disabled={!q.trim() || thinking} aria-label="Send" className="ml-auto grid h-10 w-10 place-items-center rounded-full bg-brand text-white transition-colors hover:bg-brand-dark disabled:bg-text-3/60"><ArrowUpRight size={17} /></button>
+              <button type="submit" disabled={!q.trim() || thinking} aria-label="Send" className="ml-auto grid h-10 w-10 place-items-center rounded-full bg-brand text-white transition-colors hover:bg-brand-hover disabled:bg-text-3/60"><ArrowUpRight size={17} /></button>
             </div>
           </form>
           <p className="mt-2 text-[10px] leading-snug text-text-3">{E.foot}</p>
@@ -3239,7 +3240,7 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
       </div>
 
       <div className="grid flex-1 lg:grid-cols-[232px_minmax(0,1fr)] xl:grid-cols-[232px_minmax(0,1fr)_auto]">
-        <aside className="border-b border-border bg-background lg:border-b-0 lg:border-r lg:sticky lg:top-[50px] lg:h-[calc(100dvh-122px)] lg:overflow-y-auto">
+        <aside className={cx('border-b border-border bg-background lg:border-b-0 lg:border-r lg:sticky lg:top-[50px] lg:overflow-y-auto', stage < LAST ? 'lg:h-[calc(100dvh-179px)]' : 'lg:h-[calc(100dvh-122px)]')}>
           <div className="p-5">
             <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Configuration</p>
             <div className="mt-3 flex items-center gap-3">
@@ -3368,21 +3369,10 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
               </div>
             )}
           </div>
-          {stage < LAST && (
-            <footer className="sticky bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur">
-              <div className={cx("mx-auto flex items-center gap-3 px-10 py-3", stage === 4 ? "max-w-none" : "")}>
-                <Btn variant="ghost" icon={<ArrowLeft size={16} />} disabled={stage === 1} onClick={() => go(stage - 1)}>Back</Btn>
-                <span className="ml-auto hidden truncate text-[13px] text-text-3 md:block">
-                  {issues[stage - 1].length ? `${issues[stage - 1].length} item${issues[stage - 1].length > 1 ? 's' : ''} left on this step` : <span className="flex items-center gap-1 text-ok"><CheckCircle2 size={14} />Ready</span>}
-                </span>
-                <Btn onClick={next} className="shrink-0 max-md:ml-auto"><span className="hidden sm:inline">Next:</span> {STAGES[stage].title}<ArrowRight size={16} /></Btn>
-              </div>
-            </footer>
-          )}
         </main>
 
         </AgentCtx.Provider>
-        <aside data-tour="flow-panel" aria-label="Full flow preview" style={{ width: flowOpen ? flowW : 44 }} className={cx('relative hidden border-l border-border bg-background xl:sticky xl:top-[50px] xl:block xl:h-[calc(100dvh-122px)]', !flowDrag && 'transition-[width] duration-200')}>
+        <aside data-tour="flow-panel" aria-label="Full flow preview" style={{ width: flowOpen ? flowW : 44 }} className={cx('relative hidden border-l border-border bg-background xl:sticky xl:top-[50px] xl:block', stage < LAST ? 'xl:h-[calc(100dvh-179px)]' : 'xl:h-[calc(100dvh-122px)]', !flowDrag && 'transition-[width] duration-200')}>
           {flowOpen && <div role="separator" aria-orientation="vertical" aria-label="Resize the full flow preview" aria-valuenow={flowW} aria-valuemin={FLOW_MIN} aria-valuemax={FLOW_MAX} tabIndex={0}
             onPointerDown={resizeFlow} onDoubleClick={() => setFlowW(340)} onKeyDown={e => { if (e.key === 'ArrowLeft') setFlowW(w => Math.min(FLOW_MAX, w + 24)); if (e.key === 'ArrowRight') setFlowW(w => Math.max(FLOW_MIN, w - 24)) }}
             title="Drag to resize · double-click to reset" className="group absolute inset-y-0 -left-1.5 z-10 w-3 cursor-col-resize outline-none">
@@ -3406,6 +3396,25 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
           ) : undefined}
           chips={stage === 1 ? ['Set up a model for Braftovi, a brand in oncology at growth, with streams for NSCLC, CRC and melanoma', 'Add a stream for Crohn’s', 'What’s still missing?'] : stage === 2 ? ['Compare the archetypes', 'Explain this step'] : stage === 3 ? ['What are modes?', 'Audit before finalising'] : stage === 4 ? ['Attach default modules', 'Explain this step'] : stage === 5 ? ['Use suggested sources', 'What data is still unconfigured?'] : ['What’s missing before I finalise?', 'Explain this step']} />
       </div>
+
+      {/* Same bar as the forecast workspace: spans the whole card, step label on the left,
+          step state and actions grouped on the right. */}
+      {stage < LAST && (
+        <footer className="sticky bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur">
+          <div className="mx-auto flex flex-wrap items-center gap-3 px-10 py-3">
+            <span className="text-[13px] text-text-3" aria-live="polite">Step {stage} of {LAST} · {S.title}</span>
+            <div className="ml-auto flex flex-wrap items-center gap-2.5">
+              <span className="text-[12px] font-medium text-text-3">
+                {issues[stage - 1].length
+                  ? `${issues[stage - 1].length} item${issues[stage - 1].length > 1 ? 's' : ''} left on this step`
+                  : <span className="flex items-center gap-1 text-ok-strong"><CheckCircle2 size={14} />Ready</span>}
+              </span>
+              <Btn variant="secondary" disabled={stage === 1} onClick={() => go(stage - 1)} icon={<ArrowLeft size={15} />}>Back</Btn>
+              <Btn onClick={next} icon={<ArrowRight size={15} />}>Next: {STAGES[stage].title.toLowerCase()}</Btn>
+            </div>
+          </div>
+        </footer>
+      )}
 
     </div>
   )
@@ -4343,7 +4352,7 @@ const fmtFunnel = (v: number, unit: string) => unit === '$'
 /* A Sankey of every stream rolling up to total net revenue, rebuilt from the configuration on each edit:
    streams → archetype engines → modes → modules → data, top to bottom, ending in net revenue and gross-to-net.
    Modules change the funnel values, so band widths move as modules are attached. Values are illustrative, from forecasterFunnel. */
-const FLOW_HUES = ['#0000c9', '#0a7d4f', '#c2410c', '#7c3aed', '#0e7490', '#be185d', '#4d7c0f']
+const FLOW_HUES = ['#2E29FF', '#0a7d4f', '#c2410c', '#7c3aed', '#0e7490', '#be185d', '#4d7c0f']
 type FlowRow = { id: string; name: string; hue: string; arch: ArchId | null; gross: number; net: number; steps: boolean[]; modes: [number, number]; mods: number; ins: [number, number] }
 const flowRows = (c: Config): FlowRow[] => c.inds.map((i, k) => {
   const vols = forecasterFunnel(i).nodes.filter((n): n is Extract<FunnelNode, { kind: 'vol' }> => n.kind === 'vol')
@@ -4433,25 +4442,51 @@ function FlowSankey({ rows, onPick, go, hov, setHov, id }: { rows: FlowRow[]; on
   const W = Math.max(200, cw || 280)
   const { nodes, links, H, by, rowsShown } = useMemo(() => layoutFlow(rows, W), [rows, W])
   const dim = (s?: string) => !!hov && !!s && s !== hov
+  const tip = useHoverTip()
+  // One card per stream, shown from its band or any of its nodes; the total node gets its own.
+  const streamCard = (stream: string) => {
+    const r = rows.find(x => x.id === stream); if (!r) return null
+    const live = !!r.arch && r.net > 0
+    return (
+      <ChartTip title={r.name} sections={[{ rows: [
+        { label: 'Archetype', value: r.arch ? archName(r.arch) : 'Not chosen', tone: r.arch ? undefined : 'muted' },
+        { label: 'Net revenue', value: live ? fmtFunnel(r.net, '$') : '—', tone: live ? undefined : 'muted' },
+        { label: 'Gross revenue', value: live ? fmtFunnel(r.gross, '$') : '—', tone: live ? undefined : 'muted' },
+        { label: 'Modes set', value: `${r.modes[0]} of ${r.modes[1]}` },
+        { label: 'Modules', value: String(r.mods) },
+        { label: 'Inputs with a source table', value: `${r.ins[0]} of ${r.ins[1]}` },
+      ] }]} footer={r.arch ? undefined : 'Choose an archetype in step 2 to include this stream in the total.'} />
+    )
+  }
+  const totalCard = () => {
+    const live = rows.filter(r => r.arch && r.net > 0)
+    return <ChartTip title="Total net revenue" sections={[{ rows: [
+      { label: 'Net revenue', value: fmtFunnel(live.reduce((a, r) => a + r.net, 0), '$') },
+      { label: 'Streams counted', value: `${live.length} of ${rows.length}` },
+    ] }]} />
+  }
   return (
     <div ref={ref} className="w-full">
+      <div ref={tip.wrap} className="relative">
       <svg viewBox={`0 0 ${W} ${H}`} className="block w-full overflow-visible" role="img" aria-label={`Flow: ${rows.map(r => `${r.name}${r.arch ? ` on ${archName(r.arch)}` : ', no archetype yet'}`).join('; ')}`}>
         <defs><pattern id={`${id}-hatch`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#eef0f7" /><line x1="0" y1="0" x2="0" y2="6" stroke="#b9bed0" strokeWidth="1.5" /></pattern></defs>
         {FLOW_ROWS.slice(0, rowsShown).map((t, r) => <text key={t} x={0} y={by(r) - 20} className="fill-text-3 font-mono" fontSize={9} fontWeight={600} letterSpacing={0.8} style={HALO}>{t.toUpperCase()}</text>)}
-        {links.map(l => <path key={l.key} d={l.d} onMouseEnter={() => setHov(l.stream)} onMouseLeave={() => setHov(null)} fill={l.pending ? `url(#${id}-hatch)` : l.hue} fillOpacity={dim(l.stream) ? 0.08 : l.pending ? 0.9 : hov === l.stream ? 0.4 : 0.22} style={{ transition: 'd .45s ease, fill-opacity .2s ease' }} />)}
+        {links.map(l => <path key={l.key} d={l.d} onPointerEnter={e => { setHov(l.stream); tip.move(e, streamCard(l.stream)) }} onPointerMove={e => tip.move(e, streamCard(l.stream))} onPointerLeave={() => { setHov(null); tip.hide() }} fill={l.pending ? `url(#${id}-hatch)` : l.hue} fillOpacity={dim(l.stream) ? 0.08 : l.pending ? 0.9 : hov === l.stream ? 0.4 : 0.22} style={{ transition: 'd .45s ease, fill-opacity .2s ease' }} />)}
         {nodes.map(n => {
           const y = by(n.row), chars = Math.floor(n.w / 6)
           const fill = n.tone === 'total' ? '#000a5c' : n.pending ? '#ffffff' : n.tone === 'engine' ? '#4a5070' : n.hue!
           const click = n.tone === 'stream' ? () => onPick(n.stream!) : n.pending ? () => go(2) : undefined
+          const card = () => n.stream ? streamCard(n.stream) : n.tone === 'total' ? totalCard() : null
           return (
-            <g key={n.key} onClick={click} onMouseEnter={() => n.stream && setHov(n.stream)} onMouseLeave={() => setHov(null)} className={click ? 'cursor-pointer' : undefined} opacity={dim(n.stream) ? 0.35 : 1}>
-              <title>{n.pending ? 'Choose an archetype in step 2' : n.label}</title>
+            <g key={n.key} onClick={click} onPointerEnter={e => { if (n.stream) setHov(n.stream); tip.move(e, card()) }} onPointerMove={e => tip.move(e, card())} onPointerLeave={() => { setHov(null); tip.hide() }} className={click ? 'cursor-pointer' : undefined} opacity={dim(n.stream) ? 0.35 : 1}>
               <rect x={n.x} y={y} width={Math.max(2, n.w)} height={SK.BH} rx={3} fill={fill} stroke={n.pending ? '#8a8fa8' : 'none'} strokeDasharray={n.pending ? '3 2' : undefined} style={{ transition: 'x .45s ease, width .45s ease' }} />
               {chars >= 4 && <text x={n.x + n.w / 2} y={y - 6} textAnchor="middle" fontSize={n.tone === 'total' ? 12 : 11} fontWeight={600} className={n.pending ? 'fill-warn' : 'fill-text'} style={HALO}>{clipText(n.label, chars)}</text>}
             </g>
           )
         })}
       </svg>
+      {tip.node}
+      </div>
     </div>
   )
 }

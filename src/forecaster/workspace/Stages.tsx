@@ -138,7 +138,7 @@ function EventForm({ initial, onSave, onCancel, model, work, metric }: { initial
             <select value={e.mfn ?? MFN_SUB[0]} onChange={x => set({ mfn: x.target.value })} className={field}>{MFN_SUB.map(o => <option key={o}>{o}</option>)}</select></label>}
         </div>
         <div className="grid grid-cols-2 gap-3"><Period label="Expected date" value={e.date} min={ACT} max={N - 1} onChange={v => set({ date: v })} />
-          <label className="block"><Label className="mb-1">Probability · {e.prob}%</Label><input type="range" min={0} max={100} step={5} value={e.prob} onChange={x => set({ prob: +x.target.value })} className="mt-2.5 w-full accent-[#0000c9]" /></label></div>
+          <label className="block"><Label className="mb-1">Probability · {e.prob}%</Label><input type="range" min={0} max={100} step={5} value={e.prob} onChange={x => set({ prob: +x.target.value })} className="mt-2.5 w-full accent-brand" /></label></div>
         <div><Label className="mb-1.5" hint="a regular price action is one event">Repeats</Label>
           <Seg label="Repeats" value={String(e.every ?? 0)} onChange={v => set({ every: v === '0' ? undefined : (+v as 6 | 12) })} options={[{ id: '0', label: 'Does not repeat' }, { id: '6', label: 'Every 6 months' }, { id: '12', label: 'Every year' }]} /></div>
         <div><Label className="mb-1.5">Impacted metrics</Label>

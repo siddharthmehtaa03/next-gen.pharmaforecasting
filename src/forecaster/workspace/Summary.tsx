@@ -21,7 +21,7 @@ type SetScenarios = (f: (s: Scenario[]) => Scenario[]) => void
 const PAT = ['prev', 'diag', 'treat', 'access', 'share'] as const
 const STEP_LABEL: Record<(typeof PAT)[number], string> = { prev: 'Prevalent', diag: 'Diagnosed', treat: 'Treated', access: 'Covered', share: 'On brand' }
 /** A scenario's own colour if one was picked in the builder, otherwise the palette by position. */
-export const PALETTE = ['#0e7490', '#0a7d4f', '#c4122f', '#a35a00', '#7c3aed', '#0000c9', '#be185d', '#4d7c0f', '#0b0f2e', '#ea580c', '#0891b2', '#9333ea']
+export const PALETTE = ['#0e7490', '#0a7d4f', '#c4122f', '#a35a00', '#7c3aed', '#2E29FF', '#be185d', '#4d7c0f', '#0b0f2e', '#ea580c', '#0891b2', '#9333ea']
 const colorOf = (s: Scenario | null, k: number) => s?.color ?? COLOR.alt[k % COLOR.alt.length]!
 const fmtN = (v: number) => (v >= 1e6 ? `${(v / 1e6).toFixed(v >= 1e7 ? 1 : 2)}M` : v >= 1e3 ? `${(v / 1e3).toFixed(v >= 1e5 ? 0 : 1)}K` : `${Math.round(v)}`)
 const fmtNDelta = (d: number) => `${d >= 0 ? '+' : '−'}${fmtN(Math.abs(d))}`

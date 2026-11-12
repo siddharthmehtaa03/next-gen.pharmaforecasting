@@ -4,6 +4,7 @@ import type { DriverId, EventDef, Layer, Scenario } from './engine'
 import type { Calc } from './Stages'
 import { Card, Seg, cx, field, PageTitle } from './ui'
 import { BUDGET } from './Performance'
+import { ChartTip, useHoverTip } from '../../chart/ChartTip'
 
 /* Financial bridges: one attribution engine, three views. Every view walks from the comparison to the scenario by
    substituting one driver (or event) at a time, so the bars always sum exactly to the change. */
@@ -28,6 +29,8 @@ export function BridgesView({ scenarios, calc, events, selId }: { scenarios: Sce
   const [cmp, setCmp] = useState('budget')
   const [period, setPeriod] = useState<PeriodId>('2027')
   const [mode, setMode] = useState<'finance' | 'drivers' | 'events'>('finance')
+  const tip = useHoverTip()
+  const [hv, setHv] = useState<number | null>(null)
   const sc = scenarios.find(s => s.id === scId) ?? scenarios[0]!
   const W = period === 'ytd' ? Array.from({ length: 7 }, (_, m) => idxOf(2026, m)) : Array.from({ length: 12 }, (_, m) => idxOf(+period, m))
   const pLabel = PERIODS.find(p => p.id === period)!.label
@@ -71,7 +74,7 @@ export function BridgesView({ scenarios, calc, events, selId }: { scenarios: Sce
   const VW = 1000, TOP = 26, H = 250, L = 64, slot = (VW - L - 10) / bars.length, bw = Math.min(90, slot * 0.6)
   const y = (v: number) => TOP + (1 - (Math.max(lo, v) - lo) / (hi - lo)) * H
   const ticks = Array.from({ length: 5 }, (_, k) => lo + ((hi - lo) * k) / 4)
-  const FILL = { start: '#0b0f2e', end: '#0000c9', up: '#4f8a64', down: '#c0434f' }
+  const FILL = { start: '#0b0f2e', end: '#2E29FF', up: '#4f8a64', down: '#c0434f' }
 
   return (
     <div className="space-y-5">
@@ -94,13 +97,28 @@ export function BridgesView({ scenarios, calc, events, selId }: { scenarios: Sce
 
       <Card title={`Net revenue bridge · ${from.name} → ${to.name} · ${pLabel}`}
         right={<Seg label="Bridge view" value={mode} onChange={setMode} options={[{ id: 'finance', label: 'Finance · price–volume–GtN' }, { id: 'drivers', label: 'Commercial · model drivers' }, { id: 'events', label: 'Commercial · by event (vs forecast)' }]} />}>
+        <div ref={tip.wrap} className="relative">
         <svg viewBox={`0 0 ${VW} ${TOP + H + 52}`} className="w-full" role="img" aria-label={`Waterfall from ${from.name} ${$m(start)} to ${to.name} ${$m(end)}`}>
           {ticks.map(t => <g key={t}><line x1={L} x2={VW - 10} y1={y(t)} y2={y(t)} stroke="#ebebed" strokeDasharray="4 4" /><text x={L - 8} y={y(t) + 4} textAnchor="end" className="fill-[#8f9199] text-[11px]">{`$${Math.round(t).toLocaleString('en-US')}M`}</text></g>)}
           {bars.map((x, k) => {
             const cx0 = L + slot * k + slot / 2, top = Math.min(y(x.y0), y(x.y1)), ht = Math.max(2, Math.abs(y(x.y1) - y(x.y0))), solid = x.kind === 'start' || x.kind === 'end'
             const next = bars[k + 1]
+            const card = (
+              <ChartTip title={x.sub ? `${x.label} · ${x.sub}` : x.label} sections={[{ rows: solid
+                ? [
+                    { label: x.kind === 'start' ? from.name : to.name, value: $m(x.v) },
+                    ...(x.kind === 'end' ? [{ label: `Change vs ${from.name}`, value: `${$d(total)} (${pct((total / start) * 100)})`, tone: total >= 0 ? 'ok' as const : 'err' as const }] : []),
+                  ]
+                : [
+                    { label: 'Impact', value: $d(x.v), tone: x.v >= 0 ? 'ok' as const : 'err' as const },
+                    { label: '% of start', value: pct((x.v / start) * 100) },
+                    { label: 'Share of change', value: total ? pct((x.v / total) * 100) : '—' },
+                    { label: 'Running total', value: $m(x.y1) },
+                  ] }]} />
+            )
             return (
-              <g key={k}>
+              <g key={k} opacity={hv === null || hv === k ? 1 : 0.5} onPointerEnter={e => { setHv(k); tip.move(e, card) }} onPointerMove={e => tip.move(e, card)} onPointerLeave={() => { setHv(null); tip.hide() }}>
+                <rect x={L + slot * k} y={TOP - 20} width={slot} height={H + 74} fill="transparent" />
                 <rect x={cx0 - bw / 2} y={solid ? y(x.y1) : top} width={bw} height={solid ? TOP + H - y(x.y1) : ht} fill={FILL[x.kind]} rx={2} />
                 {next && <line x1={cx0 + bw / 2} x2={cx0 + slot - bw / 2} y1={y(x.kind === 'start' ? x.y1 : x.kind === 'end' ? x.y1 : x.y1)} y2={y(x.kind === 'start' ? x.y1 : x.y1)} stroke="#8f9199" strokeDasharray="2 3" />}
                 <text x={cx0} y={(solid ? y(x.y1) : top) - 7} textAnchor="middle" className={cx('text-[12.5px] font-semibold', x.kind === 'up' ? 'fill-[#0a7d4f]' : x.kind === 'down' ? 'fill-[#c4122f]' : 'fill-[#1c1d21]')}>{solid ? $m(x.v) : $d(x.v)}</text>
@@ -109,6 +127,8 @@ export function BridgesView({ scenarios, calc, events, selId }: { scenarios: Sce
               </g>)
           })}
         </svg>
+        {tip.node}
+        </div>
         <p className="mt-1 text-[12px] text-text-3">The value axis does not start at zero, so the movements are readable.</p>
 
         <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">

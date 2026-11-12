@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { CartesianGrid, Legend, Line, LineChart, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
+import { ChartTip, tipProps } from '../../chart/ChartTip'
 import {
   ArrowLeft, ArrowRight, Bot, Check, CheckCircle2, ChevronRight, CircleAlert, FileUp, Flag, History, Layers, Lock, MessageSquareText, Paperclip,
   Plus, Save, Send, ShieldCheck, Sparkles, Target, Trash2, TrendingDown, TrendingUp, Minus, X, Zap, Boxes, Archive,
@@ -12,7 +13,7 @@ import {
 import type { Dev, DevKind, DevStatus, Method, Model, NodeId, Setup, Tier } from './engine'
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
-const C = { brand: '#0000c9', base: '#8a8fa8', act: '#0b0f2e', ok: '#0a7d4f', warn: '#a35a00', grid: '#dfe2ec', alt: ['#0000c9', '#0a7d4f', '#a35a00', '#c4122f'] }
+const C = { brand: '#2E29FF', base: '#8a8fa8', act: '#0b0f2e', ok: '#0a7d4f', warn: '#a35a00', grid: '#dfe2ec', alt: ['#2E29FF', '#0a7d4f', '#a35a00', '#c4122f'] }
 type Notify = (t: { tone: 'ok' | 'info' | 'err'; text: string }) => void
 type Stage = 'orient' | 'baseline' | 'deviations' | 'scenarios' | 'publish'
 type Gran = 'monthly' | 'yearly'
@@ -35,7 +36,7 @@ const FY = 2027
 
 /* ───────── primitives ───────── */
 function Btn({ children, variant = 'primary', onClick, icon, disabled, size = 'md' }: { children: ReactNode; variant?: 'primary' | 'secondary' | 'ghost'; onClick?: () => void; icon?: ReactNode; disabled?: boolean; size?: 'sm' | 'md' }) {
-  return <button type="button" onClick={onClick} disabled={disabled} className={cx('inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45', size === 'sm' ? 'h-8 px-2.5 text-[13px]' : 'h-10 px-4 text-sm', variant === 'primary' && 'bg-brand text-white hover:bg-brand-dark', variant === 'secondary' && 'border border-border-strong bg-surface hover:border-text', variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text')}>{icon}{children}</button>
+  return <button type="button" onClick={onClick} disabled={disabled} className={cx('inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45', size === 'sm' ? 'h-8 px-2.5 text-[13px]' : 'h-10 px-4 text-sm', variant === 'primary' && 'bg-brand text-white hover:bg-brand-hover', variant === 'secondary' && 'border border-border-strong bg-surface hover:border-text', variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text')}>{icon}{children}</button>
 }
 function Card({ title, sub, right, children, className, pad = true }: { title?: ReactNode; sub?: string; right?: ReactNode; children: ReactNode; className?: string; pad?: boolean }) {
   return (
@@ -83,7 +84,11 @@ function TrendChart({ model, id, gran, extra, height = 260 }: { model: Model; id
           <CartesianGrid stroke={C.grid} vertical={false} />
           <XAxis dataKey="x" tick={{ fontSize: 11, fill: '#8a8fa8' }} interval={gran === 'monthly' ? 11 : 0} tickLine={false} axisLine={{ stroke: C.grid }} />
           <YAxis tick={{ fontSize: 11, fill: '#8a8fa8' }} width={56} tickLine={false} axisLine={false} domain={['auto', 'auto']} tickFormatter={v => Number(v).toLocaleString('en-US', { maximumFractionDigits: n.dp > 1 ? 2 : 0 })} />
-          <Tooltip formatter={(v) => (typeof v === 'number' ? fmt(id, v) : String(v))} contentStyle={{ fontSize: 12, borderRadius: 6, borderColor: C.grid }} />
+          <Tooltip {...tipProps} content={({ active, payload, label }) => {
+            if (!active || !payload?.length) return null
+            const rows = payload.filter(p => typeof p.value === 'number').map(p => ({ label: String(p.name), color: String(p.color), value: fmt(id, p.value as number) }))
+            return <ChartTip title={String(label)} sections={[{ rows }]} />
+          }} />
           <Legend wrapperStyle={{ fontSize: 12 }} iconType="plainline" />
           <ReferenceLine x={gran === 'monthly' ? mLabel(ACT - 1) : '2026'} stroke="#b9bed0" strokeDasharray="2 3" label={{ value: 'Actuals | Forecast', fontSize: 10, fill: '#8a8fa8', position: 'insideTopRight' }} />
           <Line dataKey="actual" name="Actuals" stroke={C.act} strokeWidth={2} dot={false} connectNulls={false} isAnimationActive={false} />

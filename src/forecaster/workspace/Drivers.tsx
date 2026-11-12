@@ -36,7 +36,7 @@ export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, on
     const d = DRV[id], on = !mod && sel === id, changed = !!edits[id]
     return (
       <button key={id} type="button" onClick={() => onSel(id)} aria-current={on ? 'true' : undefined} style={{ width }}
-        className={cx('group mx-auto flex min-w-0 items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-2.5 text-left transition-all', on ? 'border-[#266df0] ring-2 ring-[#266df0]/15 shadow-[0_1px_2px_rgba(16,24,40,0.06)]' : 'border-border hover:border-border-strong hover:shadow-[0_1px_2px_rgba(16,24,40,0.04)]', on && agent.section === 'assume' && 'agent-ring')}>
+        className={cx('group mx-auto flex min-w-0 items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-2.5 text-left transition-all', on ? 'border-brand ring-2 ring-brand/15 shadow-[0_1px_2px_rgba(16,24,40,0.06)]' : 'border-border hover:border-border-strong hover:shadow-[0_1px_2px_rgba(16,24,40,0.04)]', on && agent.section === 'assume' && 'agent-ring')}>
         <span className="min-w-0">
           <span className="block truncate text-[11px] text-text-3">{d.step}</span>
           <span className="block truncate text-[13px] font-medium text-text">{d.label}</span>
@@ -77,7 +77,7 @@ export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, on
           const v = m.id === 'tud' ? fmtB(b.tud) : m.id === 'inv' ? `+${fmtB(b.inv)}` : m.id === 'ue' ? `${uePct.toFixed(1)}%` : m.id === 'fx' ? '1.00' : ''
           return (
             <button key={m.id} type="button" onClick={() => onMod(m.id)} aria-current={on ? 'true' : undefined}
-              className={cx('flex w-full items-center justify-between gap-2 rounded-lg border bg-surface px-2.5 py-1.5 text-left transition-all', on ? 'border-[#266df0] ring-2 ring-[#266df0]/15 shadow-[0_1px_2px_rgba(16,24,40,0.06)]' : 'border-border hover:border-border-strong hover:shadow-[0_1px_2px_rgba(16,24,40,0.04)]')}>
+              className={cx('flex w-full items-center justify-between gap-2 rounded-lg border bg-surface px-2.5 py-1.5 text-left transition-all', on ? 'border-brand ring-2 ring-brand/15 shadow-[0_1px_2px_rgba(16,24,40,0.06)]' : 'border-border hover:border-border-strong hover:shadow-[0_1px_2px_rgba(16,24,40,0.04)]')}>
               <span className="min-w-0"><span className="block truncate text-[12.5px] font-medium text-text">{m.label}</span>
                 <span className={cx('inline-flex items-center gap-1 text-[10.5px]', m.edit ? 'text-warn' : 'text-text-3')}>{!m.edit && <Lock size={9} />}{m.kind}</span></span>
               {v && <span className="shrink-0 font-mono text-[12px] text-text">{v}</span>}
@@ -86,7 +86,7 @@ export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, on
       </div>
       {link('out')}
       <button type="button" onClick={() => onSel('rev')} aria-current={!mod && sel === 'rev' ? 'true' : undefined}
-        className={cx('flex w-full items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-3 text-left transition-all', !mod && sel === 'rev' ? 'border-[#266df0] ring-2 ring-[#266df0]/15 shadow-[0_1px_2px_rgba(16,24,40,0.06)]' : 'border-border hover:border-border-strong hover:shadow-[0_1px_2px_rgba(16,24,40,0.04)]')}>
+        className={cx('flex w-full items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-3 text-left transition-all', !mod && sel === 'rev' ? 'border-brand ring-2 ring-brand/15 shadow-[0_1px_2px_rgba(16,24,40,0.06)]' : 'border-border hover:border-border-strong hover:shadow-[0_1px_2px_rgba(16,24,40,0.04)]')}>
         <span className="min-w-0"><span className="block text-[11px] text-text-3">Outcome</span><span className="block truncate text-[13px] font-medium text-text">{out.label}</span></span>
         <span className="font-mono text-[13px] font-medium text-text">{out.fmt(fySum(out.fn(working)))}</span>
       </button>
