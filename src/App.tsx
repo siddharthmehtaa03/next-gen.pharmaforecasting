@@ -1861,12 +1861,6 @@ const ROLE_ENTRIES: { id: string; title: string; who: string; desc: string; live
 
 function Landing({ onCoE, onForecast, onBd }: { onCoE: () => void; onForecast: () => void; onBd: () => void }) {
   const [note, setNote] = useState('')
-  const downloadCode = () => {
-    const link = document.createElement('a')
-    link.href = '/figma-make-app-code.zip'
-    link.download = 'figma-make-app-code.zip'
-    link.click()
-  }
   return (
     <div className="relative flex min-h-dvh flex-col overflow-hidden bg-background selection:bg-brand selection:text-white">
       <ForecastBackdrop />
@@ -1903,17 +1897,6 @@ function Landing({ onCoE, onForecast, onBd }: { onCoE: () => void; onForecast: (
         </div>
         {note && <p role="status" className="mt-4 max-w-2xl text-center text-sm text-text-2">{note}</p>}
       </main>
-      <footer className="relative z-10 flex justify-center px-6 pb-6">
-        <Btn
-          variant="secondary"
-          size="sm"
-          icon={<Download size={14} aria-hidden />}
-          onClick={downloadCode}
-          className="bg-surface/80 text-xs text-text-2 shadow-sm backdrop-blur hover:border-brand/40 hover:text-brand"
-        >
-          Download updated code
-        </Btn>
-      </footer>
     </div>
   )
 }

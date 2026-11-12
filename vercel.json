@@ -1,0 +1,10 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "pnpm build",
+  "installCommand": "pnpm install --frozen-lockfile",
+  "outputDirectory": "dist",
+  "rewrites": [
+    { "source": "/((?!assets/|fonts/|.*\\.[a-zA-Z0-9]+$).*)", "destination": "/index.html" }
+  ]
+}
