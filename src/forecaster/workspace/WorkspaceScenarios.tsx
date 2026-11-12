@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Copy, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { ArrowUpRight, Copy, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
 import { ACTUALS, DRV, FC_YEARS, UNBIASED, fmtDelta, fmtRev, fmtV, fyAvg, fySum } from './engine'
 import type { DriverId, EventDef, Layer, ModelCfg, Scenario } from './engine'
 import { Btn, Card, ForecastChart, Legend, MoreMenu, cx, field, PageTitle } from './ui'
@@ -14,8 +14,10 @@ type SetScenarios = (f: (s: Scenario[]) => Scenario[]) => void
 export const FORECAST = '__forecast'
 
 /** Scenario bar of the forecast page: pick what you are working on, create a scenario that replicates the forecast assumptions, and set the year the funnel shows. */
-export function ScenarioBar({ scenarios, setScenarios, scope, setScope, year, setYear, calc, notify }: {
+export function ScenarioBar({ scenarios, setScenarios, scope, setScope, year, setYear, calc, notify, onManage }: {
   scenarios: Scenario[]; setScenarios: SetScenarios; scope: string; setScope: (s: string) => void; year: number; setYear: (y: number) => void; calc: Calc; notify: Notify
+  /** Opens the scenario summary page. Rendered as a text link, since it navigates away rather than acting here. */
+  onManage?: () => void
 }) {
   const [form, setForm] = useState<{ mode: 'new' | 'rename'; name: string; from: string } | null>(null)
   const sc = scenarios.find(s => s.id === scope) ?? null
@@ -41,25 +43,36 @@ export function ScenarioBar({ scenarios, setScenarios, scope, setScope, year, se
   const total = (id: string) => fmtRev(fySum((calc[id] ?? calc.__working!).rev, year))
   return (
     <div data-tour="scenario-bar" className="space-y-3">
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-3 rounded-2xl border border-border bg-surface px-5 py-3 shadow-card">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <span className="text-[11px] font-semibold uppercase tracking-wider text-text-3">Working on</span>
-          <select aria-label="Working on" value={scope} onChange={e => { setScope(e.target.value); setForm(null) }} className={cx(field, 'h-10 w-72 font-semibold text-text')}>
-            <option value={FORECAST}>Active forecast · {total('__working')}</option>
-            {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}{s.locked ? ' · Final' : ''} · {total(s.id)}</option>)}
-          </select>
+      {/* Labels sit above their controls so the row stays shallow and the chart keeps the height. */}
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3 rounded-xl border border-border bg-surface px-4 py-3">
+        <div className="flex min-w-0 items-end gap-2">
+          <label className="block min-w-0">
+            <span className="mb-1 block text-[10.5px] font-semibold uppercase tracking-wider text-text-3">Working on</span>
+            <select aria-label="Working on" value={scope} onChange={e => { setScope(e.target.value); setForm(null) }} className={cx(field, 'h-9 w-72 font-semibold text-text')}>
+              <option value={FORECAST}>Active forecast · {total('__working')}</option>
+              {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}{s.locked ? ' · Final' : ''} · {total(s.id)}</option>)}
+            </select>
+          </label>
           <MoreMenu label="Scenario actions" align="left" items={[
             { label: 'Duplicate', icon: <Copy size={14} />, disabled: !sc, onClick: dup },
             { label: 'Rename', icon: <Pencil size={14} />, disabled: !sc || lock, onClick: () => sc && setForm({ mode: 'rename', name: sc.name, from: FORECAST }) },
             { label: 'Delete', icon: <Trash2 size={14} />, danger: true, disabled: !sc || lock || scenarios.length < 2, onClick: del },
           ]} />
         </div>
-        <div className="ml-auto flex items-center gap-4">
+        <label className="block">
+          <span className="mb-1 block text-[10.5px] font-semibold uppercase tracking-wider text-text-3">Values for</span>
+          <select aria-label="Values for" value={year} onChange={e => setYear(+e.target.value)} className={cx(field, 'h-9 w-24 text-text')}>
+            {FC_YEARS.map(y => <option key={y} value={y}>FY{y}</option>)}
+          </select>
+        </label>
+        <div className="ml-auto flex items-center gap-3 pb-0.5">
           <Btn size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => setForm({ mode: 'new', name: `Scenario ${scenarios.length + 1}`, from: FORECAST })}>New scenario</Btn>
-          <label className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-text-3">Values for
-            <select aria-label="Values for" value={year} onChange={e => setYear(+e.target.value)} className={cx(field, 'h-9 w-24 normal-case tracking-normal text-text')}>
-              {FC_YEARS.map(y => <option key={y} value={y}>FY{y}</option>)}
-            </select></label>
+          {onManage && (
+            <button type="button" onClick={onManage}
+              className="inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-[13px] font-medium text-brand transition-colors hover:bg-brand-soft">
+              Manage scenarios<ArrowUpRight size={14} />
+            </button>
+          )}
         </div>
       </div>
       {form && (

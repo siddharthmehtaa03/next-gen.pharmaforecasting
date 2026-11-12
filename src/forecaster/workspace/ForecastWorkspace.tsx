@@ -3,11 +3,12 @@ import { createPortal } from 'react-dom'
 import type { ComponentType } from 'react'
 import { scrollFrameTop } from '../../frame'
 import { ArrowLeft, ArrowRight, Check, ChevronDown, PanelRightOpen, Save } from 'lucide-react'
-import { DEFAULT_MODEL, FY, SEED_EVENTS, SEED_SCENARIOS, fyAvg, fySum, revenue, scenarioLayer, workingLayer } from './engine'
+import { DEFAULT_MODEL, FY, SEED_EVENTS, SEED_SCENARIOS, UNBIASED, fyAvg, fySum, revenue, scenarioLayer, workingLayer } from './engine'
 import type { DriverId, EventDef, ModelCfg, OutputId, Scenario } from './engine'
 import { Btn, Tag, cx, field } from './ui'
 import { DriverWorkspace, ForecastMap } from './Drivers'
 import { FunnelChart, funnelLevels } from './FunnelChart'
+import { FullModelGrid } from './WorkspaceModel'
 import type { DriverActions, Edits, Notify, Sel } from './Drivers'
 import { ScenarioBar, ScenarioDriverView, FORECAST } from './WorkspaceScenarios'
 import { BaselineTrend } from './BaselineTrend'
@@ -66,6 +67,8 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
   // Scope of the Forecast workspace: the active forecast every scenario starts from, or one scenario's own changes.
   const [scope, setScope] = useState(FORECAST)
   const [wsYear, setWsYear] = useState(FY)
+  // Tabbed model panel under the workspace: the full grid, and the plan-version comparison.
+  const [modelTab, setModelTab] = useState<'model' | 'versions'>('model')
   const [presenting, setPresenting] = useState(false)
   const [driverDirty, setDriverDirty] = useState(false)
   const actions = useRef<DriverActions | null>(null)
@@ -228,7 +231,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
         )}
         <main className="min-w-0">
           {view === 'Overview' && <BaselineTrend onWorkspace={() => go('Assumptions')} />}
-          {view === 'Assumptions' && <div className="mb-6"><ScenarioBar scenarios={scenarios} setScenarios={setScenarios} scope={scope} setScope={setScope} year={wsYear} setYear={setWsYear} calc={calc} notify={notify} /></div>}
+          {view === 'Assumptions' && <div className="mb-6"><ScenarioBar scenarios={scenarios} setScenarios={setScenarios} scope={scope} setScope={setScope} year={wsYear} setYear={setWsYear} calc={calc} notify={notify} onManage={() => go('Summary')} /></div>}
           {mapView && mod && <ModuleView id={mod} net={work.fy} gp={fyAvg(work.layer.price)} ue={ue} setUe={setUe} editable={view === 'Assumptions'} onEdit={() => go('Assumptions')} />}
           {mapView && !mod && (view === 'Assumptions' && scope !== FORECAST && sel !== 'rev'
             ? <ScenarioDriverView id={sel} scenario={scenarios.find(s => s.id === scope)!} setScenarios={setScenarios} work={work.layer} layer={calc[scope]!.layer} events={events} model={model} notify={notify} />
@@ -244,6 +247,38 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
             onEdit={(id: DriverId) => { selDriver(id); go('Assumptions') }} onStage={s => go(s === 'events' ? 'Events' : 'Assumptions')} presenting={presenting} setPresenting={setPresenting} model={model} />}
         </main>
       </div>
+      {mapView && view === 'Assumptions' && !presenting && (
+        <div className="mx-auto px-10 pb-8">
+          <div className="overflow-hidden rounded-xl border border-border bg-surface">
+            <div role="tablist" aria-label="Model views" className="flex gap-1 border-b border-border px-3 py-2">
+              {([['model', 'Full model'], ['versions', 'Plan versions · 10-year view']] as const).map(([id, label]) => (
+                <button key={id} type="button" role="tab" aria-selected={modelTab === id} onClick={() => setModelTab(id)}
+                  className={cx('rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors',
+                    modelTab === id ? 'bg-surface-2 text-text' : 'text-text-2 hover:bg-surface-2/60 hover:text-text')}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {modelTab === 'model' ? (
+              <FullModelGrid layer={work.layer} reference={UNBIASED} year={wsYear} title={scope === FORECAST ? 'Active forecast' : scName}
+                editable={[]} locked ue={ue} selected={mod ? null : (sel as string)}
+                onRow={go2 => { const d = model.modules.find(m => m.id === go2); if (d) pick(d.id) }}
+                onCell={() => null} />
+            ) : (
+              <div className="grid place-items-center px-6 py-16 text-center">
+                <div>
+                  <p className="text-[15px] font-semibold">Plan versions · 10-year view</p>
+                  <p className="mx-auto mt-1 max-w-md text-[13px] text-text-3">
+                    Compares the current forecast with OP, Prior OP and each latest estimate. It needs a version store
+                    the prototype does not have yet, so the snapshots are not wired up.
+                  </p>
+                  <Btn variant="secondary" className="mt-4" onClick={() => setModelTab('model')}>Back to the full model</Btn>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
       </>}
       {!presenting && (
         <div data-tour="bottombar" className="sticky bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur">

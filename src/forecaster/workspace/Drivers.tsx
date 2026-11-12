@@ -117,8 +117,8 @@ export function NumField({ label, value, onChange, suffix, step = 0.1, live }: {
   )
 }
 
-type CellState = 'system' | 'override' | 'recalc'
-function GridCell({ value, dp, state, onCommit, onCancel }: { value: number; dp: number; state: CellState; onCommit: (v: number) => string | null; onCancel: () => void }) {
+export type CellState = 'system' | 'override' | 'recalc'
+export function GridCell({ value, dp, state, onCommit, onCancel }: { value: number; dp: number; state: CellState; onCommit: (v: number) => string | null; onCancel: () => void }) {
   const [txt, setTxt] = useState<string | null>(null)
   const [bad, setBad] = useState(false)
   const commit = () => {
@@ -298,14 +298,15 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
   )
 
   return editing ? (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div>
-        <div className="mb-5"><PageTitle title={d.label} info={`${d.desc} Source: Data Science baseline · monthly · brand level.`} /></div>
-        <div data-tour="chart" className="min-w-0"><Card title={`${d.label} · monthly`} sub={d.unit === '%' ? 'Percent' : d.unit} right={<Legend s={series} />}>
-          <ForecastChart title={`${d.label} forecast`} s={series} fmt={v => fmtV(id, v)} dp={d.dp} unit={d.unit} height={280} />
+    <div className="space-y-4">
+      <div><PageTitle title={d.label} info={`${d.desc} Source: Data Science baseline · monthly · brand level.`} /></div>
+      {/* Bento: the chart is the hero cell, the adjust panel rides beside it, extras stack beneath. */}
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div data-tour="chart" className="min-w-0"><Card title={`${d.label} · monthly`} sub={d.unit === '%' ? 'Percent' : d.unit} right={<Legend s={series} />} fill>
+          <ForecastChart title={`${d.label} forecast`} s={series} fmt={v => fmtV(id, v)} dp={d.dp} unit={d.unit} height={400} />
         </Card></div>
+        <div className="lg:sticky lg:top-[98px] lg:self-start overflow-y-auto lg:max-h-[calc(100dvh-140px)]">{adjustPanel}</div>
       </div>
-      <div className="lg:sticky lg:top-[98px] lg:self-start overflow-y-auto lg:max-h-[calc(100dvh-140px)]">{adjustPanel}</div>
     </div>
   ) : (
     <div className="space-y-5">

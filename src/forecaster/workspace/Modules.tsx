@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { ArrowRight, Lock, RotateCcw } from 'lucide-react'
-import { ACT, FY, GTN, MONTHS, START_YEAR, fmtRev } from './engine'
+import { ACT, FY, GTN, MONTHS, START_YEAR, fmtRev, netPrice, revenue } from './engine'
+import type { Layer } from './engine'
 import { Btn, Card, Seg, Tag, cx, field, PageTitle } from './ui'
 
 /* Default modules every model carries (Default Modules + Gross Price Workflow docs).
@@ -18,6 +19,26 @@ if (import.meta.env.DEV) console.assert(Math.abs(ueFy(ueDefault()) - UE_PRIOR) <
 
 /** Gross = TUD + ΔInv + UE, worked back from net revenue ($M). */
 export const bridgeOf = (net: number, uePct: number) => { const gross = net / (1 - GTN), ueD = gross * uePct / 100, inv = gross * INV_PCT; return { gross, ueD, inv, tud: gross - inv - ueD } }
+/** Target weeks of inventory on hand; the Δ Inventory module is sized against it. */
+export const WOH_DEFAULT = 2.26
+/**
+ * Revenue-bridge series for the full-model grid: net revenue expanded back out to gross,
+ * total underlying demand, Δ inventory, the unexplained share and FX, month by month.
+ * `ue` is the 12-month unexplained profile (see ueDefault); Δ inventory scales with target WOH.
+ */
+export const stdSeries = (layer: Layer, ue: number[] = [], woh: number = WOH_DEFAULT) => {
+  const net = revenue(layer)
+  const uePct = net.map((_, i) => (ue.length ? ue[i % 12]! : UE_PRIOR))
+  const b = net.map((n, i) => bridgeOf(n, uePct[i]!))
+  return {
+    gross: b.map(x => x.gross),
+    tud: b.map(x => x.tud),
+    inv: b.map(x => x.inv * (woh / WOH_DEFAULT)),
+    uePct,
+    netPrice: layer.price.map(netPrice),
+    fx: net.map(() => 1),
+  }
+}
 export const fmtB = (v: number) => Math.abs(v) >= 1000 ? `$${(v / 1000).toFixed(2)}B` : fmtRev(v, 0)
 
 /** The five default modules, in funnel order, as they appear in the forecast map. */
