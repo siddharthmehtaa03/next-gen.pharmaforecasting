@@ -8,10 +8,10 @@ import { ACT, N, START_YEAR, mLabel, mLong } from './engine'
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
 export const COLOR = { actual: '#0b0f2e', unbiased: '#8a8fa8', ci: '#8a8fa8', working: '#0000c9', scenario: '#0e7490', preview: '#7c3aed', grid: '#dfe2ec', alt: ['#0e7490', '#0a7d4f', '#c4122f', '#a35a00', '#7c3aed', '#0000c9'] }
-export const field = 'h-9 w-full rounded-lg border border-border bg-surface px-2.5 text-[13px] shadow-[0_1px_1px_rgba(16,24,40,0.04)] outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-text-3'
+export const field = 'h-9 w-full rounded-xl border border-border bg-surface px-2.5 text-[13px] shadow-[0_1px_1px_rgba(16,24,40,0.04)] outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-text-3'
 
 export function Btn({ children, variant = 'primary', onClick, icon, disabled, size = 'md', title, className }: { children?: ReactNode; variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; onClick?: () => void; icon?: ReactNode; disabled?: boolean; size?: 'sm' | 'md'; title?: string; className?: string }) {
-  return <button type="button" title={title} onClick={onClick} disabled={disabled} className={cx('inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-lg font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45', size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-[13px]', variant === 'primary' && 'bg-brand text-white hover:bg-brand-dark', variant === 'secondary' && 'border border-border-strong bg-surface hover:border-text', variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text', variant === 'danger' && 'text-err hover:bg-err-soft', className)}>{icon}{children}</button>
+  return <button type="button" title={title} onClick={onClick} disabled={disabled} className={cx('inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl font-medium transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45', size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-[13px]', variant === 'primary' && 'bg-[#1b1b21] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_1px_2px_rgba(0,0,0,0.25)] hover:bg-black disabled:opacity-35', variant === 'secondary' && 'border border-border-strong bg-surface shadow-[0_1px_1px_rgba(16,24,40,0.04)] hover:bg-surface-2', variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text', variant === 'danger' && 'text-err hover:bg-err-soft', className)}>{icon}{children}</button>
 }
 export type MenuItem = { label: string; icon?: ReactNode; onClick: () => void; disabled?: boolean; danger?: boolean }
 /** Three-dot menu for row and card actions (edit, copy, delete…), same trigger as the chart actions menu. */
@@ -54,7 +54,7 @@ export function Card({ title, sub, info, right, children, className, pad = true,
   /** Muted outer frame around a white inner panel for the body, titlebar sitting on the frame itself. */
   frame?: boolean }) {
   return (
-    <section className={cx('min-w-0 rounded-lg border border-border', frame ? 'bg-surface-2' : 'bg-surface shadow-[0_1px_2px_rgba(16,24,40,0.04)]', fill && 'flex h-full flex-col', className)}>
+    <section className={cx('min-w-0 rounded-[20px] border border-border', frame ? 'bg-surface-2' : 'bg-surface shadow-card', fill && 'flex h-full flex-col', className)}>
       {title && <header className={cx('flex flex-wrap items-start justify-between gap-3 pb-0.5', frame ? 'px-3 pt-2.5' : 'px-4 pt-3.5')}>
         <div className="min-w-0">
           <h3 className={cx('flex items-center gap-1.5 font-semibold', frame ? 'text-[11px] uppercase tracking-wider text-text-3' : 'text-[13.5px]')}>{title}{info && <InfoTip text={info} />}</h3>
@@ -67,7 +67,7 @@ export function Card({ title, sub, info, right, children, className, pad = true,
   )
 }
 export function Tag({ tone = 'neutral', children }: { tone?: 'neutral' | 'brand' | 'ok' | 'warn' | 'err'; children: ReactNode }) {
-  return <span className={cx('inline-flex items-center gap-1 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[12px] font-medium', tone === 'neutral' && 'bg-surface-2 text-text-2', tone === 'brand' && 'bg-brand-soft text-brand', tone === 'ok' && 'bg-ok-soft text-ok', tone === 'warn' && 'bg-warn-soft text-warn', tone === 'err' && 'bg-err-soft text-err')}>{children}</span>
+  return <span className={cx('tag inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold', tone === 'neutral' && 'bg-surface-2 text-text-2', tone === 'brand' && 'bg-brand-soft text-brand', tone === 'ok' && 'bg-ok-soft text-ok', tone === 'warn' && 'bg-warn-soft text-warn', tone === 'err' && 'bg-err-soft text-err')}>{children}</span>
 }
 export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
@@ -78,8 +78,8 @@ export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boo
 }
 export function Seg<T extends string>({ value, options, onChange, label }: { value: T; options: { id: T; label: ReactNode }[]; onChange: (v: T) => void; label: string }) {
   return (
-    <div role="radiogroup" aria-label={label} className="inline-flex flex-wrap rounded-lg bg-surface-2 p-0.5">
-      {options.map(o => <button key={o.id} type="button" role="radio" aria-checked={value === o.id} onClick={() => onChange(o.id)} className={cx('rounded-md px-2.5 py-1 text-[13px] font-medium transition-colors', value === o.id ? 'bg-surface text-text shadow-[0_1px_2px_rgba(16,24,40,0.1)]' : 'text-text-2 hover:text-text')}>{o.label}</button>)}
+    <div role="radiogroup" aria-label={label} className="inline-flex flex-wrap rounded-[14px] bg-surface-2 p-0.5">
+      {options.map(o => <button key={o.id} type="button" role="radio" aria-checked={value === o.id} onClick={() => onChange(o.id)} className={cx('rounded-[11px] px-2.5 py-1 text-[13px] font-medium transition-colors', value === o.id ? 'bg-surface text-text shadow-[0_1px_2px_rgba(16,24,40,0.1)]' : 'text-text-2 hover:text-text')}>{o.label}</button>)}
     </div>
   )
 }

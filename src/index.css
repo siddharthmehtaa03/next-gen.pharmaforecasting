@@ -34,6 +34,9 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+[role="dialog"] { border-radius: 20px; }
+.tag:not(:has(svg))::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 9999px; background: currentColor; opacity: .8; }
+
 ::selection { background: #0000c9; color: #fff; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
