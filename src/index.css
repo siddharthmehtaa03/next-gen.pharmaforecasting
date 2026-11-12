@@ -37,6 +37,21 @@ body {
 [role="dialog"] { border-radius: 20px; }
 .tag:not(:has(svg))::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 9999px; background: currentColor; opacity: .8; }
 
+/* tables: no single shared <table> component, so the tint/hover live here once instead of in every file */
+table thead th { background: var(--color-surface-2); font-weight: 500; color: var(--color-text-3); }
+table tbody tr:hover { background: var(--color-surface-2); }
+
+/* clickable "picker tile" buttons (forecast map nodes, option cards): lift on hover, pinned state stays flat */
+button[class*="rounded-xl"][class*="border-border"]:not(:disabled):not([aria-current="true"]),
+button[class*="rounded-md"][class*="border-border"][class*="text-left"]:not(:disabled):not([aria-current="true"]) { transition: box-shadow .15s, transform .15s, border-color .15s; }
+button[class*="rounded-xl"][class*="border-border"]:not(:disabled):not([aria-current="true"]):hover,
+button[class*="rounded-md"][class*="border-border"][class*="text-left"]:not(:disabled):not([aria-current="true"]):hover {
+  border-color: rgb(0 0 201 / .35); box-shadow: var(--shadow-card); transform: translateY(-1px);
+}
+
+/* modal scrim: frosted instead of flat, matches the existing bg-brand-dark/40 overlay used across every dialog */
+div[class*="fixed"][class*="inset-0"][class*="bg-brand-dark"] { backdrop-filter: blur(3px); }
+
 ::selection { background: #0000c9; color: #fff; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
