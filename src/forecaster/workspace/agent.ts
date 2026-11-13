@@ -21,7 +21,7 @@ export type CopilotProps = {
 export type AgentStatus = { running: boolean; title: string; body: string; step?: string; progress?: [number, number]; before?: number; after?: number }
 type Edits = Partial<Record<DriverId, Edit>>
 type State = { edits: Edits; events: EventDef[]; scenarios: Scenario[]; selId: string }
-export type AgentView = 'Overview' | 'Assumptions' | 'Scenarios' | 'Events' | 'Sensitivity' | 'Goal seek' | 'Summary' | 'Review'
+export type AgentView = 'Assumptions' | 'Scenarios' | 'Events' | 'Sensitivity' | 'Goal seek' | 'Summary' | 'Review'
 type Wait = (ms: number) => Promise<void>
 /** One step of a chat request: what it is, where it shows, and how to animate it. */
 type Action = { label: string; view: AgentView; section: string; field: string | null; run: (wait: Wait) => Promise<void> }
@@ -88,7 +88,7 @@ export function useForecastAgent({ name, brand, state, set, show, blocked, edita
     }
     const note = (id: DriverId, text: string) => set.edits(e => ({ ...e, [id]: { ...editOf(id, e), notes: text } }))
     try {
-      step(0, null); show('Overview'); await wait(1300)
+      step(0, null); show('Assumptions'); await wait(1300)
       show('Assumptions')
       const plan: [number, DriverId, 'target' | 'growth', number, Partial<Edit>, string][] = [
         [1, 'share', 'target', 11.5, { method: 'target', curve: 's', start: ACT, end: idxOf(FY, 11), hold: true }, 'brief asks for 11.5% exit share; S-curve matches the last two launches.'],

@@ -12,7 +12,6 @@ import { FunnelChart, funnelLevels } from './FunnelChart'
 import { FullModelGrid } from './WorkspaceModel'
 import type { DriverActions, Edits, Notify, Sel } from './Drivers'
 import { ScenarioBar, ScenarioDriverView, FORECAST } from './WorkspaceScenarios'
-import { BaselineTrend } from './BaselineTrend'
 import { EventsStage, GoalSeekStage, ReviewStage, ScenariosStage } from './Stages'
 import { SensitivityStage } from './Analysis'
 import { ScenarioSummary } from './Summary'
@@ -32,27 +31,27 @@ import { RotateCcw } from 'lucide-react'
 
 type View = AgentView
 // Scenarios are created inside the Forecast workspace (ScenarioBar), so there is no separate step for them.
-const STEPS: View[] = ['Overview', 'Assumptions', 'Events', 'Summary', 'Sensitivity', 'Goal seek', 'Review']
+const STEPS: View[] = ['Assumptions', 'Events', 'Summary', 'Sensitivity', 'Goal seek', 'Review']
 // Tab names shown to forecasters; internal ids stay stable for the assistant.
 // CR-004: analytics layer below the workflow tabs. Tab content is defined in follow-up change requests.
 const ANALYTICS = ['Performance Dashboard', 'Financial Bridges', 'Patient Funnel', 'Sales Drivers', 'Judgement Layer', 'Long Range Plan', 'Competition', 'Needs-to-Meet', 'GTN Analysis']
 // Only these views are built; the rest show as coming soon and can't be opened.
 const AN_BUILT = ['Performance Dashboard', 'Financial Bridges']
-// Tab structure per the forecaster team's reference: eight tabs; Actuals under Baseline trend, Analytics under Forecast workspace.
+// Analytics views live in a separate dropdown below the workflow tabs.
 // 'Scenario' stays in GROUPS (for the assistant's own `view` lookups) but is left out of the rendered tab bar below.
 const GROUPS: { id: string; items: string[] }[] = [
-  { id: 'Baseline trend', items: ['Overview'] }, { id: 'Forecast workspace', items: ['Assumptions'] },
+  { id: 'Forecast workspace', items: ['Assumptions'] },
   { id: 'Events', items: ['Events'] }, { id: 'Scenario summary', items: ['Summary'] },
   { id: 'Sensitivity', items: ['Sensitivity'] }, { id: 'Goal seek', items: ['Goal seek'] }, { id: 'Review', items: ['Review'] },
   { id: 'Scenario', items: ['Scenarios'] },
 ]
-const LABEL: Record<View, string> = { Overview: 'Baseline trend', Assumptions: 'Forecast workspace', Events: 'Events', Scenarios: 'Scenario', Sensitivity: 'Sensitivity', 'Goal seek': 'Goal seek', Summary: 'Scenario summary', Review: 'Review' }
+const LABEL: Record<View, string> = { Assumptions: 'Forecast workspace', Events: 'Events', Scenarios: 'Scenario', Sensitivity: 'Sensitivity', 'Goal seek': 'Goal seek', Summary: 'Scenario summary', Review: 'Review' }
 const NEXT: Partial<Record<View, View>> = Object.fromEntries(STEPS.slice(0, -1).map((v, i) => [v, STEPS[i + 1]!]))
 
 export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', brandId = 'nurtec', cycle = 'AOP 2027', stream = 'US net revenue', model = DEFAULT_MODEL, insights, setInsights, onAsk, Copilot, assistant = 'Charles', onPublished }: { notify: Notify; onHome?: () => void; brand?: string; brandId?: string; cycle?: string; stream?: string; model?: ModelCfg; insights: Insight[]; setInsights: (f: (x: Insight[]) => Insight[]) => void; onAsk?: (brandId?: string) => void; Copilot?: ComponentType<CopilotProps>; assistant?: string
   /** Called when a scenario is finalised: files it as the brand's submitted version for Forecast AI. */
   onPublished?: (brandId: string, scenario: string) => void }) {
-  const [view, setView] = useState<View>('Overview')
+  const [view, setView] = useState<View>('Assumptions')
   const [an, setAn] = useState<string | null>(null)
   const [ue, setUe] = useState(ueDefault)
   // A default module picked in the forecast map replaces the driver view; picking a driver clears it.
@@ -191,7 +190,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
                     {isAn && k === 1 && <span className="mx-1 shrink-0 self-center text-[10.5px] font-semibold uppercase tracking-wider text-text-3">Analytics</span>}
                     <button type="button" role="tab" aria-selected={on} onClick={() => isAn ? openAn(v) : go(v as View)}
                       className={cx('inline-flex shrink-0 items-center gap-1.5 rounded-md px-3 py-1.5 text-[13px] font-medium transition-colors', on ? 'bg-surface text-brand shadow-[0_1px_2px_rgba(16,24,40,0.08)] ring-1 ring-border' : 'text-text-2 hover:bg-surface hover:text-text')}>
-                      {v === 'Overview' ? 'Dashboard' : v === 'Assumptions' ? 'Workspace' : isAn ? v : LABEL[v as View]}{badge > 0 && <span className={cx('rounded-full px-1.5 text-[11px] font-semibold', on ? 'bg-brand-soft text-brand' : 'bg-surface-2 text-text-2')}>{badge}</span>}
+                      {v === 'Assumptions' ? 'Workspace' : isAn ? v : LABEL[v as View]}{badge > 0 && <span className={cx('rounded-full px-1.5 text-[11px] font-semibold', on ? 'bg-brand-soft text-brand' : 'bg-surface-2 text-text-2')}>{badge}</span>}
                     </button>
                     </Fragment>
                   )
@@ -228,7 +227,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
             info={`${DRV[sel as DriverId].desc} Source: Data Science baseline · monthly · brand level.`} />
         </div>
       )}
-      <div className={cx('mx-auto px-10', view === 'Overview' ? 'pb-8 pt-6' : mapView && !presenting && !mod && sel !== 'rev' ? 'pb-8 pt-4' : 'py-8', mapView && !presenting && 'grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]')}>
+      <div className={cx('mx-auto px-10', mapView && !presenting && !mod && sel !== 'rev' ? 'pb-8 pt-4' : 'py-8', mapView && !presenting && 'grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]')}>
         {mapView && (
           <aside className="flex flex-col gap-3 lg:sticky lg:top-[98px] lg:self-start lg:max-h-[calc(100dvh-124px)] lg:overflow-y-auto">
             <FunnelChart levels={funnelLevels(work.layer, model, edits)} sel={mod ? null : (sel as DriverId)} onSel={pick}
@@ -237,7 +236,6 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
           </aside>
         )}
         <main className="min-w-0">
-          {view === 'Overview' && <BaselineTrend onWorkspace={() => go('Assumptions')} />}
           {mapView && mod && <ModuleView id={mod} net={work.fy} gp={fyAvg(work.layer.price)} ue={ue} setUe={setUe} editable={view === 'Assumptions'} onEdit={() => go('Assumptions')} />}
           {mapView && !mod && (view === 'Assumptions' && scope !== FORECAST && sel !== 'rev'
             ? <ScenarioDriverView id={sel} scenario={scenarios.find(s => s.id === scope)!} setScenarios={setScenarios} work={work.layer} layer={calc[scope]!.layer} events={events} model={model} notify={notify} />
