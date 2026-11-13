@@ -29,7 +29,7 @@ import {
   AlertCircle, AlertTriangle, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, ArrowRight, Bell, Boxes, Check, CheckCircle2, ChevronDown, ChevronRight,
   Clock, Copy, Database, FileText, GitBranch, History, Info, Layers, Loader2, Lock, Plus, PanelRightClose, PanelRightOpen, Maximize2, Minimize2,
   RefreshCw, RotateCcw, Search, Send, Settings2, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, Upload, Download, Users, Workflow, X, Eye, Zap, ArrowUpRight, LogOut, Mail, ChevronUp,
-  House, MessagesSquare, LineChart, SquarePen, MessageSquare, ArrowUpRight as SendArrow, Wand2,
+  House, MessagesSquare, SquarePen, MessageSquare, ArrowUpRight as SendArrow, Wand2,
   Bookmark, Trash2, Pencil, HelpCircle, ListChecks, MoreVertical, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
 
 /* ───────────────────────── Domain data (model taxonomy, working draft v2) ───────────────────────── */
@@ -990,12 +990,12 @@ export default function App() {
     <AppFrame dock="split" collab={collab && (view === 'config' || (view === 'forecast' && fcSection === 'forecasts' && fcWs))} onCollab={setCollab}
       footer={<ProfileMenu placement="rail" onAdmin={() => { setView('admin'); toTop() }} onLogout={() => { setView('landing'); setToast({ tone: 'info', text: 'You’ve been logged out.' }) }} />} onHome={() => setView('landing')}
       items={view === 'forecast'
-        ? [{ id: 'forecasts', label: 'My forecasts', icon: LineChart, go: () => { setFcSection('forecasts'); setFcKey(k => k + 1); toTop() } },
+        ? [{ id: 'forecasts', label: 'My forecasts', icon: House, go: () => { setFcSection('forecasts'); setFcKey(k => k + 1); toTop() } },
            { id: 'fchat', label: 'Ask & Understand', icon: MessagesSquare, go: () => { setFcSection('chat'); toTop() },
              sub: { onNew: () => { setFcCur(null); setFcSection('chat') }, items: fcThreads.map(t => ({ id: t.id, label: t.title, active: fcSection === 'chat' && fcCur === t.id, go: () => { setFcCur(t.id); setFcSection('chat'); toTop() },
                dup: () => { const id = Date.now(); setFcThreads(ts => { const i = ts.findIndex(x => x.id === t.id); const c = { ...t, id, title: t.title + ' (copy)' }; return [...ts.slice(0, i + 1), c, ...ts.slice(i + 1)] }); setFcCur(id); setFcSection('chat') },
                del: () => { setFcThreads(ts => ts.filter(x => x.id !== t.id)); if (fcCur === t.id) setFcCur(null) } })) } }]
-        : [{ id: 'models', label: 'Model workspace', icon: Boxes, go: () => { setView('models'); toTop() } },
+        : [{ id: 'models', label: 'Model workspace', icon: House, go: () => { setView('models'); toTop() } },
            { id: 'chat', label: 'Build & Configure', icon: Workflow, go: () => { setView('chat'); toTop() },
              sub: { onNew: () => { setCurThread(null); setView('chat') }, items: threads.map(t => ({ id: t.id, label: t.title, active: view === 'chat' && curThread === t.id, go: () => { setCurThread(t.id); setView('chat'); toTop() },
                dup: () => { const id = Date.now(); setThreads(ts => { const i = ts.findIndex(x => x.id === t.id); const c = { ...t, id, title: t.title + ' (copy)' }; return [...ts.slice(0, i + 1), c, ...ts.slice(i + 1)] }); setCurThread(id); setView('chat') },
@@ -4497,7 +4497,6 @@ function ForecastFlowPanel({ c, stage, go, onPick, open, aiOpen, onOpen, onClose
 function StagePreview({ c, ind, go, issues, warns, fix }: Ctx & { issues: Issue[][]; warns: { msg: string; stage: number }[] }) {
   const errs = STAGES.slice(0, REVIEW - 1).flatMap(s => issues[s.id - 1].map(i => ({ ...i, stage: s.id })))
   const all = [...errs.map(e => ({ ...e, tone: 'err' as const })), ...warns.map(w => ({ ...w, tone: 'warn' as const }))]
-  const [code, setCode] = useState(false)
   const editMap = <MoreMenu label="Edit a section" items={[{ label: 'Edit the module map', icon: <Pencil size={13} />, onClick: () => go(4) }]} />
   return (
     <>
@@ -4530,13 +4529,7 @@ function StagePreview({ c, ind, go, issues, warns, fix }: Ctx & { issues: Issue[
       </Card>
 
       <Card title="Configuration document" info="What is saved as a version when you finalise.">
-        <div className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="min-w-[220px] flex-1 text-[13px] text-text-2">Finalising saves {c.version} as a configuration document.</p>
-            <Btn variant="secondary" size="sm" onClick={() => setCode(v => !v)}>{code ? 'Hide configuration' : 'View configuration as code'}</Btn>
-          </div>
-          {code && <pre className="max-h-80 overflow-auto rounded-md bg-text p-4 text-[12px] text-white">{JSON.stringify({ model: c.brand, asset: c.asset, version: c.version, streams: c.inds.map(i => ({ name: i.name, parent: c.inds.find(x => x.id === i.parent)?.name, archetype: i.arch, engine: i.engine, modes: i.modes, modules: i.modules.map(id => MODULES.find(m => m.id === id)?.name), patientFlow: inputFlow(i.inputMap).map(x => ({ input: x.name, groupClass: x.lane, snowflakeSources: x.tables })) })) }, null, 2)}</pre>}
-        </div>
+        <p className="text-[13px] text-text-2">Finalising saves {c.version} as a configuration document.</p>
       </Card>
     </>
   )
