@@ -1,5 +1,4 @@
-import { useState } from 'react'
-import { Plus, RotateCcw } from 'lucide-react'
+import { RotateCcw } from 'lucide-react'
 import { ACTUALS, DRV, FC_YEARS, UNBIASED, fmtDelta, fmtRev, fmtV, fyAvg, fySum } from './engine'
 import type { DriverId, EventDef, Layer, ModelCfg, Scenario } from './engine'
 import { Btn, Card, ForecastChart, Legend, cx, field, PageTitle } from './ui'
@@ -14,26 +13,17 @@ type SetScenarios = (f: (s: Scenario[]) => Scenario[]) => void
 /** Scope of the workspace: the active forecast every scenario starts from, or one scenario's own changes. */
 export const FORECAST = '__forecast'
 
-/** Compact chart controls for scope, forecast year, time aggregation and scenario creation. */
-export function ScenarioBar({ scenarios, setScenarios, scope, setScope, year, setYear, grain, setGrain, notify }: {
-  scenarios: Scenario[]; setScenarios: SetScenarios; scope: string; setScope: (s: string) => void; year: number; setYear: (y: number) => void
-  grain: Grain; setGrain: (grain: Grain) => void; notify: Notify
+/** Compact chart controls for scope, forecast year and time aggregation. */
+export function ScenarioBar({ scenarios, scope, setScope, year, setYear, grain, setGrain }: {
+  scenarios: Scenario[]; scope: string; setScope: (s: string) => void; year: number; setYear: (y: number) => void
+  grain: Grain; setGrain: (grain: Grain) => void
 }) {
-  const [form, setForm] = useState<{ name: string; from: string } | null>(null)
-  const create = () => {
-    if (!form || !form.name.trim()) return
-    const src = form.from === FORECAST ? null : scenarios.find(s => s.id === form.from) ?? null
-    const stamp = Date.now()
-    const n: Scenario = { id: `sc${stamp}`, name: form.name.trim(), active: src ? [...src.active] : [], adj: src ? { ...src.adj } : {}, locked: false, ovr: src?.ovr ? src.ovr.map((o, k) => ({ ...o, id: `ov${stamp}${k}` })) : [] }
-    setScenarios(ss => [...ss, n]); setScope(n.id); setForm(null)
-    notify({ tone: 'ok', text: src ? `${n.name} created as a copy of ${src.name}. Change anything in it; ${src.name} is untouched.` : `${n.name} created. It replicates the active forecast assumptions: nothing is changed in it yet.` })
-  }
   return (
-    <div data-tour="scenario-bar" className="min-w-0 space-y-2">
+    <div data-tour="scenario-bar" className="min-w-0">
       <div className="flex flex-wrap items-end justify-end gap-x-2.5 gap-y-2">
         <label className="block">
           <span className="mb-1 block text-[10px] font-medium text-text-2">Working on</span>
-          <select aria-label="Working on" value={scope} onChange={e => { setScope(e.target.value); setForm(null) }}
+          <select aria-label="Working on" value={scope} onChange={e => setScope(e.target.value)}
             className="h-7 w-[128px] rounded-md border border-border bg-surface px-2 text-[11px] text-text outline-none focus:border-brand focus:ring-2 focus:ring-brand/15">
             <option value={FORECAST}>Active forecast</option>
             {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}{s.locked ? ' · Final' : ''}</option>)}
@@ -55,22 +45,7 @@ export function ScenarioBar({ scenarios, setScenarios, scope, setScope, year, se
             <option value="year">Annual</option>
           </select>
         </label>
-        <Btn size="sm" icon={<Plus size={13} />} onClick={() => setForm({ name: `Scenario ${scenarios.length + 1}`, from: FORECAST })}>New scenario</Btn>
       </div>
-      {form && (
-        <form className="flex flex-wrap items-end gap-3 rounded-lg border border-brand/30 bg-brand-soft/30 px-4 py-3" onSubmit={e => { e.preventDefault(); create() }}>
-          <label className="block"><span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-text-3">New scenario name</span>
-            <input autoFocus aria-label="Scenario name" value={form.name} onFocus={e => e.target.select()} onChange={e => setForm({ ...form, name: e.target.value })} className={cx(field, 'w-60')} /></label>
-          <label className="block"><span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-text-3">Start from</span>
-            <select aria-label="Start from" value={form.from} onChange={e => setForm({ ...form, from: e.target.value })} className={cx(field, 'w-64')}>
-              <option value={FORECAST}>Active forecast assumptions (replicate)</option>
-              {scenarios.map(s => <option key={s.id} value={s.id}>Copy of {s.name}</option>)}
-            </select></label>
-          <Btn onClick={create} disabled={!form.name.trim()}>Create scenario</Btn>
-          <Btn variant="ghost" onClick={() => setForm(null)}>Cancel</Btn>
-        </form>
-      )}
-
     </div>
   )
 }

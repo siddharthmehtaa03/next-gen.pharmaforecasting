@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react'
 import type { MutableRefObject } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Check, ClipboardPaste, Lock, PanelRightClose, PencilLine, Upload, Users } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown, ClipboardPaste, Lock, PanelRightClose, PencilLine, Upload, Users } from 'lucide-react'
 import {
   ACT, ACTUALS, BASELINE, CURVE_LABEL, DRIVERS, DRV, FY, GTN, METHOD_LABEL, MONTHS, N, OUTPUTS, UNBIASED, YEARS,
   applyEdit, defaultEdit, fmtV, fyAvg, idxOf, mLong, netPrice, revenue, yearOf, fySum,
 } from './engine'
 import type { Curve, DriverId, Edit, Layer, Method, ModelCfg, OutputId } from './engine'
-import { Btn, Card, ForecastChart, Label, Legend, Tag, Toggle, cx, field, PageTitle, InfoTip } from './ui'
+import { Btn, Card, ForecastChart, Label, Legend, Toggle, cx, field, PageTitle, InfoTip } from './ui'
 import { AgentFrame } from '../../chat/Agent'
 import type { Grain } from './ui'
 import { TrendPanel } from './Trend'
@@ -34,7 +34,7 @@ export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, on
   funnelHandled?: boolean }) {
   const agent = useAgentFocus()
   const node = (id: DriverId, editable: boolean) => {
-    const d = DRV[id], on = !mod && sel === id, changed = !!edits[id]
+    const d = DRV[id], on = !mod && sel === id
     return (
       <button key={id} type="button" onClick={() => onSel(id)} aria-current={on ? 'true' : undefined}
         className={cx('group mx-auto flex w-full min-w-0 items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-2.5 text-left transition-all', on ? 'border-brand ring-2 ring-brand/15 shadow-[0_1px_2px_rgba(16,24,40,0.06)]' : 'border-border hover:border-border-strong hover:shadow-[0_1px_2px_rgba(16,24,40,0.04)]', on && agent.section === 'assume' && 'agent-ring')}>
@@ -45,7 +45,6 @@ export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, on
         <span className="flex shrink-0 flex-col items-end">
           <span className="font-mono text-[13px] text-text" title={id === 'rx' ? `${fmtV(id, fyAvg(working[id]))} Rx per patient` : undefined}>{id === 'rx' ? OUTPUTS.trx.fmt(fySum(OUTPUTS.trx.fn(working))) : fmtV(id, fyAvg(working[id]))}</span>
           {!editable ? <span className="inline-flex items-center gap-1 text-[10.5px] text-text-3"><Lock size={9} />System-fed</span>
-            : changed ? <span className="inline-flex items-center gap-1 text-[10.5px] font-medium text-brand"><span className="h-1.5 w-1.5 rounded-full bg-[#e07b18]" />Modified</span>
             : <span className="text-[10.5px] text-text-3">{id === 'rx' ? `TRx FY${FY}` : `FY${FY} avg`}</span>}
         </span>
       </button>
@@ -136,6 +135,19 @@ export function GridCell({ value, dp, state, onCommit, onCancel }: { value: numb
 }
 
 const parseNums = (t: string) => t.split(/[\s,;]+/).map(s => s.replace(/[%$]/g, '')).filter(s => s !== '' && Number.isFinite(+s)).map(Number)
+
+function AssumptionAccordion({ title, children, defaultOpen = false }: { title: string; children: ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen)
+  return (
+    <section className="overflow-hidden rounded-xl border border-border">
+      <button type="button" aria-expanded={open} onClick={() => setOpen(v => !v)}
+        className="flex w-full items-center justify-between gap-3 bg-surface-2 px-3 py-2.5 text-left text-[13px] font-medium text-text">
+        {title}<ChevronDown size={15} className={cx('shrink-0 text-text-2 transition-transform', open && 'rotate-180')} />
+      </button>
+      {open && <div className="space-y-3 border-t border-border bg-surface p-3">{children}</div>}
+    </section>
+  )
+}
 
 /* ───────── Driver workspace ───────── */
 export type DriverMode = 'overview' | 'assumptions'
@@ -241,64 +253,64 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
 
   const adjustPanel = editing && (
     <AgentFrame on={agent.section === 'assume'} label={`${agent.name} is adjusting ${d.label.toLowerCase()}`}>
-    <Card title="Adjust Assumptions" info="Override permitted values or change the projection method. The calculation formula stays locked and the reference baseline never changes."
+    <Card title="Adjust Assumptions" sub="Override permitted values or change the projection method. The calculation formula stays locked and the reference baseline never changes."
       frame fill className="lg:h-[calc(100dvh-220px)]"
-      right={<div className="flex items-center gap-1.5">
-        <Btn variant="ghost" size="sm" disabled={!applied && !dirty} onClick={reset}>Reset</Btn>
-        {dirty ? <Tag tone="warn">Unapplied changes</Tag> : applied ? <Tag tone="brand">Applied</Tag> : null}
-      </div>}>
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto">
-        <label className="block"><Label className="mb-1">Projection method</Label>
+      right={<Btn variant="ghost" size="sm" disabled={!applied && !dirty} onClick={reset}>Reset</Btn>}>
+      <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
+        <label className="block"><Label className="mb-1">Project method</Label>
           <select value={eff.method} onChange={e => patch({ method: e.target.value as Method })} className={field}>{(Object.keys(METHOD_LABEL) as Method[]).map(m => <option key={m} value={m}>{METHOD_LABEL[m]}</option>)}</select></label>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Period label="Start" value={eff.start} min={ACT} max={N - 1} onChange={v => patch({ start: v, end: Math.max(eff.end, v) })} />
-          <Period label="End" value={eff.end} min={eff.start} max={N - 1} onChange={v => patch({ end: v })} />
+        <AssumptionAccordion title="Date" defaultOpen>
+          <div className="space-y-3">
+            <Period label="Start date" value={eff.start} min={ACT} max={N - 1} onChange={v => patch({ start: v, end: Math.max(eff.end, v) })} />
+            <Period label="End date" value={eff.end} min={eff.start} max={N - 1} onChange={v => patch({ end: v })} />
+          </div>
+        </AssumptionAccordion>
+
+        {eff.method !== 'direct' && <AssumptionAccordion title="Projection settings">
           {eff.method === 'target' && <>
             <NumField live={agent.field === 'target'} label="Target value" value={eff.target} suffix={d.unit === '%' ? '%' : '$'} onChange={v => patch({ target: v })} />
             <label className="block"><Label className="mb-1">Phase to target</Label><select value={eff.curve} onChange={e => patch({ curve: e.target.value as Curve })} className={field}>{(Object.keys(CURVE_LABEL) as Curve[]).map(c => <option key={c} value={c}>{CURVE_LABEL[c]}</option>)}</select></label>
           </>}
           {eff.method === 'linear' && <NumField label="Change per month" value={eff.step} suffix={d.unit === '%' ? 'pts' : '$'} step={d.pct ? 0.05 : 0.25} onChange={v => patch({ step: v })} />}
           {eff.method === 'growth' && <NumField live={agent.field === 'growth'} label="Growth / change per year" value={eff.growth} suffix="%" onChange={v => patch({ growth: v })} />}
-          {eff.method === 'hold' && <div className="sm:col-span-2"><Label className="mb-1">Carried value</Label><p className="flex h-9 items-center rounded-md bg-surface-2 px-3 font-mono text-sm">{fmtV(id, lastActual)} <span className="ml-2 font-sans text-text-3">last actual, {mLong(ACT - 1)}</span></p></div>}
-        </div>
+          {eff.method === 'hold' && <div><Label className="mb-1">Carried value</Label><p className="flex h-9 items-center rounded-md bg-surface-2 px-3 font-mono text-sm">{fmtV(id, lastActual)} <span className="ml-2 font-sans text-text-3">last actual, {mLong(ACT - 1)}</span></p></div>}
 
-        {eff.method === 'target' && (
-          <p className="rounded-md bg-surface-2 p-3 text-[13px] text-text-2"><b className="font-medium text-text">Phase to target</b> is how the value travels from {fmtV(id, lastActual)} (last actual, {mLong(ACT - 1)}) to {fmtV(id, eff.target)} by {mLong(eff.end)} · {CURVE_LABEL[eff.curve].toLowerCase()}.</p>
-        )}
+          {eff.method === 'target' && (
+            <p className="rounded-md bg-surface-2 p-3 text-[13px] text-text-2"><b className="font-medium text-text">Phase to target</b> is how the value travels from {fmtV(id, lastActual)} (last actual, {mLong(ACT - 1)}) to {fmtV(id, eff.target)} by {mLong(eff.end)} · {CURVE_LABEL[eff.curve].toLowerCase()}.</p>
+          )}
 
-        {eff.method !== 'direct' && (
-          <label className="flex items-center gap-3 text-sm"><Toggle on={eff.hold} onChange={v => patch({ hold: v })} label="Hold flat after end" />
-            <span><b className="font-medium">Hold flat after end</b><span className="text-text-2"> · {eff.hold ? 'the end value carries forward' : 'the series rejoins the reference baseline'}</span></span></label>
-        )}
+        </AssumptionAccordion>}
 
         <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.txt" className="hidden" onChange={e => onFile(e.target.files?.[0])} />
-        <div>
-          <Label className="mb-1.5">Bring in values</Label>
-          <div className="flex flex-wrap gap-2">
-            <Btn variant="secondary" icon={<Upload size={14} />} onClick={() => fileRef.current?.click()}>Upload Excel</Btn>
-            <Btn variant="secondary" icon={<ClipboardPaste size={14} />} onClick={() => setPaste(p => p === null ? '' : null)}>{paste !== null ? 'Close paste box' : 'Paste from Excel'}</Btn>
+        <AssumptionAccordion title="Values and notes">
+          <div>
+            <Label className="mb-1.5">Bring in values</Label>
+            <div className="flex flex-wrap gap-2">
+              <Btn variant="secondary" icon={<Upload size={14} />} onClick={() => fileRef.current?.click()}>Upload Excel</Btn>
+              <Btn variant="secondary" icon={<ClipboardPaste size={14} />} onClick={() => setPaste(p => p === null ? '' : null)}>{paste !== null ? 'Close paste box' : 'Paste from Excel'}</Btn>
+            </div>
+            {eff.method === 'direct' && eff.source !== 'manual' && <p className="mt-2 text-[12px] text-text-3">Values from {eff.source === 'excel' ? 'file' : 'paste'}</p>}
           </div>
-          {eff.method === 'direct' && eff.source !== 'manual' && <p className="mt-2"><Tag tone="brand">Values from {eff.source === 'excel' ? 'file' : 'paste'}</Tag></p>}
-        </div>
-        {paste !== null && (
-          <div className="rounded-md border border-border bg-surface-2 p-3">
-            <textarea autoFocus value={paste} onChange={e => setPaste(e.target.value)} rows={3} placeholder={`Paste a row or column of monthly values, starting ${mLong(eff.start)}`} className="w-full resize-y rounded-md border border-border-strong bg-surface p-2.5 font-mono text-[12px] outline-none focus:border-brand" />
-            <div className="mt-2 flex items-center justify-between gap-2"><span className="text-[12px] text-text-2">{parseNums(paste).length} values detected</span>
-              <div className="flex gap-2"><Btn variant="ghost" onClick={() => setPaste(null)}>Cancel</Btn>
-                <Btn disabled={!parseNums(paste).length} onClick={() => { const n = loadValues(parseNums(paste), 'paste', eff.start); setPaste(null); notify({ tone: 'ok', text: `Pasted ${n} monthly values. Review the chart, then Apply.` }) }}>Use values</Btn></div></div>
-          </div>
-        )}
+          {paste !== null && (
+            <div className="rounded-md border border-border bg-surface-2 p-3">
+              <textarea autoFocus value={paste} onChange={e => setPaste(e.target.value)} rows={3} placeholder={`Paste a row or column of monthly values, starting ${mLong(eff.start)}`} className="w-full resize-y rounded-md border border-border-strong bg-surface p-2.5 font-mono text-[12px] outline-none focus:border-brand" />
+              <div className="mt-2 flex items-center justify-between gap-2"><span className="text-[12px] text-text-2">{parseNums(paste).length} values detected</span>
+                <div className="flex gap-2"><Btn variant="ghost" onClick={() => setPaste(null)}>Cancel</Btn>
+                  <Btn disabled={!parseNums(paste).length} onClick={() => { const n = loadValues(parseNums(paste), 'paste', eff.start); setPaste(null); notify({ tone: 'ok', text: `Pasted ${n} monthly values. Review the chart, then Apply.` }) }}>Use values</Btn></div></div>
+            </div>
+          )}
 
-        <div>
-          <div className="mb-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-            <label className="flex items-center gap-3 text-sm"><Toggle on={cascade} onChange={setCascade} label="Recalculate later periods" />
-              <span><b className="font-medium">Recalculate later periods</b><span className="text-text-2"> · {cascade ? 'editing a month moves every later month by the same change' : 'editing a month changes only that month'}</span></span></label>
-          </div>
-        </div>
+          <label className="block"><Label className="mb-1" hint="optional">Notes on change</Label>
+            <textarea value={draft.notes} onChange={e => patch({ notes: e.target.value })} rows={2} placeholder="What changed, and why? Shown on the Review screen." className="w-full resize-y rounded-md border border-border-strong bg-surface p-2.5 text-sm outline-none focus:border-brand" /></label>
+        </AssumptionAccordion>
 
-        <label className="block"><Label className="mb-1" hint="optional">Notes on change</Label>
-          <textarea value={draft.notes} onChange={e => patch({ notes: e.target.value })} rows={2} placeholder="What changed, and why? Shown on the Review screen." className="w-full resize-y rounded-md border border-border-strong bg-surface p-2.5 text-sm outline-none focus:border-brand" /></label>
+        {eff.method !== 'direct' && <label className="flex items-center justify-between gap-3 text-sm">
+          <span className="font-medium">Hold flat after end</span><Toggle on={eff.hold} onChange={v => patch({ hold: v })} label="Hold flat after end" />
+        </label>}
+        <label className="flex items-center justify-between gap-3 text-sm">
+          <span className="font-medium">Recalculate later period</span><Toggle on={cascade} onChange={setCascade} label="Recalculate later period" />
+        </label>
 
       </div>
     </Card>

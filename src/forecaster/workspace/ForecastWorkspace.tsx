@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { createPortal } from 'react-dom'
 import type { ComponentType } from 'react'
 import { scrollFrameTop } from '../../frame'
-import { ArrowLeft, ArrowRight, Check, ChevronDown, PanelRightOpen, Save } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, ChevronDown, PanelRightOpen, Plus, Save } from 'lucide-react'
 import { DEFAULT_MODEL, DRV, FY, SEED_EVENTS, SEED_SCENARIOS, UNBIASED, fyAvg, fySum, revenue, scenarioLayer, workingLayer } from './engine'
 import type { DriverId, EventDef, ModelCfg, OutputId, Scenario } from './engine'
 import { Btn, Tag, cx, field } from './ui'
@@ -14,7 +14,7 @@ import type { DriverActions, Edits, Notify, Sel } from './Drivers'
 import { ScenarioBar, ScenarioDriverView, FORECAST } from './WorkspaceScenarios'
 import { EventsStage, GoalSeekStage, ReviewStage, ScenariosStage } from './Stages'
 import { SensitivityStage } from './Analysis'
-import { ScenarioSummary } from './Summary'
+import { ScenarioBuilder, ScenarioSummary } from './Summary'
 import type { Calc } from './Stages'
 import { ActualKpis } from './Actuals'
 import { PerformanceView } from './Performance'
@@ -71,6 +71,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
   const [streamSelection, setStreamSelection] = useState('all')
   // Tabbed model panel under the workspace: the full grid, and the plan-version comparison.
   const [modelTab, setModelTab] = useState<'model' | 'versions'>('model')
+  const [scenarioBuilderOpen, setScenarioBuilderOpen] = useState(false)
   const [presenting, setPresenting] = useState(false)
   const [driverDirty, setDriverDirty] = useState(false)
   const actions = useRef<DriverActions | null>(null)
@@ -149,7 +150,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
         {onHome && <button type="button" onClick={home} aria-label="Back to your forecasts" title="Back to your forecasts" className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><ArrowLeft size={15} /></button>}
         <span className="truncate text-[13.5px] font-semibold text-text">{brand} forecast</span>
         <span className="hidden truncate text-[12px] text-text-3 md:inline">{cycle} · {stream}</span>
-        <Tag tone={finalised ? 'ok' : modified ? 'brand' : 'neutral'}>{finalised ? 'Finalised' : modified ? `Modified · ${modified} assumption${modified === 1 ? '' : 's'}` : 'Draft'}</Tag>
+        <Tag tone={finalised ? 'ok' : 'neutral'}>{finalised ? 'Finalised' : 'Draft'}</Tag>
       </>,
       wsSlot
     )}
@@ -196,7 +197,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
               <div data-tour="subtabs" role="tablist" aria-label={`${group} views`} className="mx-auto flex gap-1 overflow-x-auto px-6 py-2">
                 {subs.map((v, k) => {
                   const isAn = ANALYTICS.includes(v), on = isAn ? an === v : !an && view === v
-                  const badge = v === 'Assumptions' ? modified : v === 'Summary' ? scenarios.length : v === 'Events' ? events.length : 0
+                  const badge = v === 'Summary' ? scenarios.length : v === 'Events' ? events.length : 0
                   return (
                     <Fragment key={v}>
                     {isAn && k === 1 && <span className="mx-1 shrink-0 self-center text-[10.5px] font-semibold uppercase tracking-wider text-text-3">Analytics</span>}
@@ -235,10 +236,29 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
       ) : <>
       {mapView && !presenting && (
         <div className="mx-auto px-6 pt-4">
-          <div className="border-b border-border pb-3">
+          <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
             <h2 className="text-[18px] font-semibold tracking-tight">Forecast Workspace</h2>
+            <Btn onClick={() => setScenarioBuilderOpen(true)} icon={<Plus size={14} />} className="shrink-0">New scenario</Btn>
           </div>
         </div>
+      )}
+      {scenarioBuilderOpen && (
+        <ScenarioBuilder
+          scenarios={scenarios}
+          calc={calc}
+          events={events}
+          model={model}
+          year={wsYear}
+          base={scenarios.find(s => s.id === selId) ?? scenarios[0]!}
+          onAdd={s => {
+            setScenarios(ss => [...ss, s])
+            setSelId(s.id)
+            setScope(s.id)
+            setScenarioBuilderOpen(false)
+            notify({ tone: 'ok', text: `${s.name} created and added to scenarios.` })
+          }}
+          onClose={() => setScenarioBuilderOpen(false)}
+        />
       )}
       <div className={cx('mx-auto px-6', mapView && !presenting && !mod && sel !== 'rev' ? 'pb-8 pt-4' : 'py-8', mapView && !presenting && 'grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)]')}>
         {mapView && (
@@ -257,7 +277,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
             ? <ScenarioDriverView id={sel} scenario={scenarios.find(s => s.id === scope)!} setScenarios={setScenarios} work={work.layer} layer={calc[scope]!.layer} events={events} model={model} notify={notify} />
             : <DriverWorkspace mode="assumptions" sel={sel} edits={edits} setEdits={setEdits}
                 grain={wsGrain} setGrain={setWsGrain}
-                bar={view === 'Assumptions' ? <ScenarioBar scenarios={scenarios} setScenarios={setScenarios} scope={scope} setScope={setScope} year={wsYear} setYear={setWsYear} grain={wsGrain} setGrain={setWsGrain} notify={notify} /> : undefined}
+                bar={view === 'Assumptions' ? <ScenarioBar scenarios={scenarios} scope={scope} setScope={setScope} year={wsYear} setYear={setWsYear} grain={wsGrain} setGrain={setWsGrain} /> : undefined}
                 scenarioLayer={sc.layer} scenarioName={scName} workingLayer={work.layer} model={model} metric={metric} setMetric={setMetric}
                 onOpenAssumptions={() => go('Assumptions')} onGo={() => go('Assumptions')} onDirty={onDirty} actions={actions} notify={notify} />)}
           {view === 'Scenarios' && <ScenariosStage events={events} scenarios={scenarios} setScenarios={setScenarios} selId={selId} setSelId={setSelId} calc={calc} workFy={work.fy} model={model} metric={metric} setMetric={setMetric} toggleFinal={toggleFinal} notify={notify} />}
