@@ -5,10 +5,11 @@ import type { ScenarioPart } from './Stages'
 import { useAgentFocus } from './agent'
 import { UE_PRIOR, bridgeOf, fmtB } from './Modules'
 import { ChartActions } from '../../chart/ChartActions'
-import { ArrowDown, ArrowUp, Check, Info, Lock, Pencil, Plus, Sparkles, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Check, Info, Lock, Pencil, Plus, X } from 'lucide-react'
 import { DRV, FC_YEARS, FY, describeOverride, fmtRev, fmtV, funnelOf, fySum, mLong, revenue, scenarioLayer } from './engine'
 import type { DriverId, EventDef, FunnelRow, Layer, ModelCfg, Override, Scenario } from './engine'
 import { Btn, COLOR, Label, Seg, Tag, Toggle, cx, field, PageTitle, MoreMenu } from './ui'
+import { AssumptionAccordion } from './Drivers'
 import type { Notify } from './Drivers'
 
 /* Scenario summary: every scenario as a column with its own funnel, the parameters behind it and the gap to the
@@ -311,89 +312,18 @@ export function ScenarioBuilder({ scenarios, calc, events, model, year, base, on
   const taken = scenarios.some(s => s.name.trim().toLowerCase() === name.trim().toLowerCase())
   const editable = model.modules.filter(m => m.editable).map(m => DRV[m.id])
   const width = (v: number) => 34 + 66 * ((Math.log10(Math.max(1, v)) - Math.log10(Math.max(1, x.share))) / Math.max(1e-9, Math.log10(x.prev) - Math.log10(Math.max(1, x.share))))
-  const sec = (n: number, t: string, sub: string) => <div className="mb-2.5 flex items-start gap-2.5"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand text-[11.5px] font-semibold text-white">{n}</span><div><p className="text-[14px] font-semibold">{t}</p><p className="text-[12px] text-text-2">{sub}</p></div></div>
-
   return (
     <div className="fixed inset-0 z-[60] flex justify-end">
       <div className="absolute inset-0 bg-text/30 backdrop-blur-[1px]" onClick={onClose} aria-hidden />
       <aside role="dialog" aria-modal="true" aria-labelledby="sb-title" className="relative flex h-full w-full max-w-[880px] flex-col bg-surface shadow-2xl">
         <header className="flex items-start justify-between gap-3 border-b border-border px-6 py-4">
-          <div><p className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-brand"><Sparkles size={12} />Scenario builder</p>
-            <h3 id="sb-title" className="mt-0.5 text-[18px] font-semibold">Build a new scenario</h3>
+          <div><h3 id="sb-title" className="text-[18px] font-semibold">Build a new scenario</h3>
             <p className="mt-0.5 text-[13px] text-text-2">The preview updates as you go.</p></div>
           <Btn variant="ghost" onClick={onClose} icon={<X size={16} />} title="Close" />
         </header>
 
-        <div className="grid min-h-0 flex-1 md:grid-cols-[minmax(0,1fr)_280px]">
-          <div className="min-h-0 space-y-6 overflow-y-auto px-6 py-5">
-            <section>{sec(1, 'Name and starting point', 'Start from the active forecast or copy a scenario.')}
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block"><Label className="mb-1">Scenario name</Label><input autoFocus value={name} onChange={e => setName(e.target.value)} onFocus={e => e.target.select()} className={cx(field, taken && 'border-err')} />
-                  {taken && <span className="mt-1 block text-[12px] text-err">A scenario with this name already exists.</span>}</label>
-                <label className="block"><Label className="mb-1">Start from</Label>
-                  <select value={from} onChange={e => pickFrom(e.target.value)} className={field}><option value="active">Active forecast</option>{scenarios.map(s => <option key={s.id} value={s.id}>Copy of {s.name}</option>)}</select></label>
-              </div>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
-                <label className="block"><Label className="mb-1">Target stream</Label>
-                  <select value={stream} onChange={e => setStream(e.target.value)} className={field}>
-                    <option value="all">All revenue streams (Model total)</option>
-                    <option value="main">Primary stream · US net revenue</option>
-                    <option value="sub">Specialty & hospital channel</option>
-                  </select></label>
-                <label className="block"><Label className="mb-1">Effective horizon</Label>
-                  <select value={horizon} onChange={e => setHorizon(e.target.value)} className={field}>
-                    <option value="carry">FY27 onwards (carry forward)</option>
-                    <option value="fy27">FY27 only</option>
-                    <option value="fy28">FY28 only</option>
-                    <option value="phased">FY27–FY29 phased change</option>
-                  </select></label>
-              </div>
-              <label className="mt-3 block"><Label className="mb-1" hint="optional">Description / rationale</Label>
-                <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="e.g. Higher diagnosis rate from new treatment guidelines" className={field} /></label>
-              <div className="mt-3"><Label className="mb-1.5">Colour</Label>
-                <div role="radiogroup" aria-label="Scenario colour" className="flex flex-wrap gap-2">
-                  {PALETTE.map(c => { const taken_ = used.has(c.toLowerCase()); return (
-                    <button key={c} type="button" role="radio" aria-checked={color === c} aria-label={`${c}${taken_ ? ', already used' : ''}`} title={taken_ ? 'Already used by another scenario' : undefined} onClick={() => setColor(c)}
-                      className={cx('relative grid h-7 w-7 place-items-center rounded-full ring-offset-2 transition-shadow', color === c ? 'ring-2 ring-text' : 'hover:ring-2 hover:ring-border-strong', taken_ && color !== c && 'opacity-40')} style={{ background: c }}>
-                      {color === c && <Check size={13} className="text-white" />}</button>) })}
-                </div>
-                {used.has(color.toLowerCase()) && <p className="mt-1 text-[12px] text-warn">Another scenario already uses this colour, which may be confusing in comparisons.</p>}</div>
-              {src && (src.ovr?.length ?? 0) > 0 && <p className="mt-2 text-[12px] text-text-3">Includes {src.ovr!.length} override{src.ovr!.length === 1 ? '' : 's'} from {src.name}. Edit them later under Edit scenario.</p>}
-            </section>
-
-            <section>{sec(2, 'Events', 'Switch on the events this scenario assumes.')}
-              <ul className="divide-y divide-border rounded-md border border-border">
-                {events.map(e => {
-                  const on = active.includes(e.id)
-                  return (
-                    <li key={e.id} className={cx('flex items-center gap-3 px-3 py-2.5', on && 'bg-brand-soft/30')}>
-                      <div className="min-w-0 flex-1"><p className="text-[13px] font-medium">{e.name}</p>
-                        <p className="text-[12px] text-text-3">{mLong(e.date)} · {e.prob}% likely · {e.impacts.map(i => `${DRV[i.metric].label} ${i.dir === 'up' ? '+' : '−'}${i.mag}%`).join(', ')}</p></div>
-                      <Toggle on={on} onChange={v => setActive(a => v ? [...a, e.id] : a.filter(z => z !== e.id))} label={`${e.name} in this scenario`} />
-                    </li>
-                  )
-                })}
-                {!events.length && <li className="px-3 py-4 text-center text-[13px] text-text-3">No events in the library yet.</li>}
-              </ul>
-            </section>
-
-            <section>{sec(3, 'Assumption adjustments', 'Adjust assumptions for the whole period. 0 keeps the forecast.')}
-              <ul className="space-y-2">
-                {editable.map(d => {
-                  const v = adj[d.id] ?? 0
-                  return (
-                    <li key={d.id} className="grid grid-cols-[minmax(0,1fr)_120px_92px] items-center gap-3 rounded-md border border-border px-3 py-2">
-                      <div className="min-w-0"><p className="text-[13px] font-medium">{d.label}</p><p className="text-[11.5px] text-text-3">FY{year} {fmtV(d.id, get(f, d.id).rate!)}</p></div>
-                      <div className="relative"><input type="number" step={d.pct ? 0.1 : 0.5} aria-label={`${d.label} adjustment`} value={v} onChange={e => setAdj(a => ({ ...a, [d.id]: e.target.value === '' ? 0 : +e.target.value }))} className={cx(field, 'pr-10 font-mono', v !== 0 && 'border-brand bg-brand-soft/50')} /><span className="pointer-events-none absolute right-2.5 top-2 text-[12px] text-text-3">{d.pct ? 'pts' : '%'}</span></div>
-                      {v !== 0 ? <button type="button" onClick={() => setAdj(a => { const n = { ...a }; delete n[d.id]; return n })} className="justify-self-end text-[12px] font-semibold text-text-2 hover:text-brand">Reset</button> : <span className="justify-self-end text-[11.5px] text-text-3">Inherited</span>}
-                    </li>
-                  )
-                })}
-              </ul>
-            </section>
-          </div>
-
-          <aside className="min-h-0 space-y-4 overflow-y-auto border-t border-border bg-background px-5 py-5 md:border-l md:border-t-0" aria-label="Preview">
+        <div className="grid min-h-0 flex-1 md:grid-cols-[280px_minmax(0,1fr)]">
+          <aside className="min-h-0 space-y-4 overflow-y-auto border-b border-border bg-background px-5 py-5 md:border-b-0 md:border-r" aria-label="Preview">
             <div>
               <p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Preview · FY{year} net revenue</p>
               <p className="mt-0.5 font-mono text-[24px] font-semibold tracking-tight">{fmtRev(x.rev, 1)}</p>
@@ -412,6 +342,76 @@ export function ScenarioBuilder({ scenarios, calc, events, model, year, base, on
               <li className="flex items-center gap-1.5"><Check size={12} className="text-ok" />{Object.values(adj).filter(Boolean).length} assumption adjustment{Object.values(adj).filter(Boolean).length === 1 ? '' : 's'}</li>
             </ul>
           </aside>
+
+          <div className="min-h-0 space-y-4 overflow-y-auto px-6 py-5">
+            <div className="space-y-3">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block"><Label className="mb-1">Scenario name</Label><input autoFocus value={name} onChange={e => setName(e.target.value)} onFocus={e => e.target.select()} className={cx(field, taken && 'border-err')} />
+                  {taken && <span className="mt-1 block text-[12px] text-err">A scenario with this name already exists.</span>}</label>
+                <label className="block"><Label className="mb-1">Start from</Label>
+                  <select value={from} onChange={e => pickFrom(e.target.value)} className={field}><option value="active">Active forecast</option>{scenarios.map(s => <option key={s.id} value={s.id}>Copy of {s.name}</option>)}</select></label>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="block"><Label className="mb-1">Target stream</Label>
+                  <select value={stream} onChange={e => setStream(e.target.value)} className={field}>
+                    <option value="all">All revenue streams (Model total)</option>
+                    <option value="main">Primary stream · US net revenue</option>
+                    <option value="sub">Specialty & hospital channel</option>
+                  </select></label>
+                <label className="block"><Label className="mb-1">Effective horizon</Label>
+                  <select value={horizon} onChange={e => setHorizon(e.target.value)} className={field}>
+                    <option value="carry">FY27 onwards (carry forward)</option>
+                    <option value="fy27">FY27 only</option>
+                    <option value="fy28">FY28 only</option>
+                    <option value="phased">FY27–FY29 phased change</option>
+                  </select></label>
+              </div>
+              <label className="block"><Label className="mb-1" hint="optional">Description / rationale</Label>
+                <input value={desc} onChange={e => setDesc(e.target.value)} placeholder="e.g. Higher diagnosis rate from new treatment guidelines" className={field} /></label>
+              <div><Label className="mb-1.5">Colour</Label>
+                <div role="radiogroup" aria-label="Scenario colour" className="flex flex-wrap gap-2">
+                  {PALETTE.map(c => { const taken_ = used.has(c.toLowerCase()); return (
+                    <button key={c} type="button" role="radio" aria-checked={color === c} aria-label={`${c}${taken_ ? ', already used' : ''}`} title={taken_ ? 'Already used by another scenario' : undefined} onClick={() => setColor(c)}
+                      className={cx('relative grid h-7 w-7 place-items-center rounded-full ring-offset-2 transition-shadow', color === c ? 'ring-2 ring-text' : 'hover:ring-2 hover:ring-border-strong', taken_ && color !== c && 'opacity-40')} style={{ background: c }}>
+                      {color === c && <Check size={13} className="text-white" />}</button>) })}
+                </div>
+                {used.has(color.toLowerCase()) && <p className="mt-1 text-[12px] text-warn">Another scenario already uses this colour, which may be confusing in comparisons.</p>}</div>
+              {src && (src.ovr?.length ?? 0) > 0 && <p className="text-[12px] text-text-3">Includes {src.ovr!.length} override{src.ovr!.length === 1 ? '' : 's'} from {src.name}. Edit them later under Edit scenario.</p>}
+            </div>
+
+            <AssumptionAccordion title="Events" defaultOpen>
+              <p className="text-[12px] text-text-2">Switch on the events this scenario assumes.</p>
+              <ul className="-mx-3 divide-y divide-border">
+                {events.map(e => {
+                  const on = active.includes(e.id)
+                  return (
+                    <li key={e.id} className={cx('flex items-center gap-3 px-3 py-2.5', on && 'bg-brand-soft/30')}>
+                      <div className="min-w-0 flex-1"><p className="text-[13px] font-medium">{e.name}</p>
+                        <p className="text-[12px] text-text-3">{mLong(e.date)} · {e.prob}% likely · {e.impacts.map(i => `${DRV[i.metric].label} ${i.dir === 'up' ? '+' : '−'}${i.mag}%`).join(', ')}</p></div>
+                      <Toggle on={on} onChange={v => setActive(a => v ? [...a, e.id] : a.filter(z => z !== e.id))} label={`${e.name} in this scenario`} />
+                    </li>
+                  )
+                })}
+                {!events.length && <li className="px-3 py-4 text-center text-[13px] text-text-3">No events in the library yet.</li>}
+              </ul>
+            </AssumptionAccordion>
+
+            <AssumptionAccordion title="Assumption adjustments" defaultOpen>
+              <p className="text-[12px] text-text-2">Adjust assumptions for the whole period. 0 keeps the forecast.</p>
+              <ul className="-mx-3 divide-y divide-border">
+                {editable.map(d => {
+                  const v = adj[d.id] ?? 0
+                  return (
+                    <li key={d.id} className="grid grid-cols-[minmax(0,1fr)_120px_92px] items-center gap-3 px-3 py-2">
+                      <div className="min-w-0"><p className="text-[13px] font-medium">{d.label}</p><p className="text-[11.5px] text-text-3">FY{year} {fmtV(d.id, get(f, d.id).rate!)}</p></div>
+                      <div className="relative"><input type="number" step={d.pct ? 0.1 : 0.5} aria-label={`${d.label} adjustment`} value={v} onChange={e => setAdj(a => ({ ...a, [d.id]: e.target.value === '' ? 0 : +e.target.value }))} className={cx(field, 'pr-10 font-mono', v !== 0 && 'border-brand bg-brand-soft/50')} /><span className="pointer-events-none absolute right-2.5 top-2 text-[12px] text-text-3">{d.pct ? 'pts' : '%'}</span></div>
+                      {v !== 0 ? <button type="button" onClick={() => setAdj(a => { const n = { ...a }; delete n[d.id]; return n })} className="justify-self-end text-[12px] font-semibold text-text-2 hover:text-brand">Reset</button> : <span className="justify-self-end text-[11.5px] text-text-3">Inherited</span>}
+                    </li>
+                  )
+                })}
+              </ul>
+            </AssumptionAccordion>
+          </div>
         </div>
 
         <footer className="flex items-center justify-end gap-2 border-t border-border bg-surface px-6 py-3">

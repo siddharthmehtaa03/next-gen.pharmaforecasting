@@ -136,7 +136,7 @@ export function GridCell({ value, dp, state, onCommit, onCancel }: { value: numb
 
 const parseNums = (t: string) => t.split(/[\s,;]+/).map(s => s.replace(/[%$]/g, '')).filter(s => s !== '' && Number.isFinite(+s)).map(Number)
 
-function AssumptionAccordion({ title, children, defaultOpen = false }: { title: string; children: ReactNode; defaultOpen?: boolean }) {
+export function AssumptionAccordion({ title, children, defaultOpen = false }: { title: string; children: ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen)
   return (
     <section className="overflow-hidden rounded-xl border border-border">
