@@ -4,9 +4,7 @@ import type { DriverId, Layer, ModelCfg } from './engine'
 import { cx, InfoTip } from './ui'
 
 /*
- * Vertical patient funnel, drawn as cards. Each card's width tracks the population still in
- * the funnel at that stage, so the stack tapers, but the surfaces stay white with hairline
- * borders so the labels are always legible. Clicking a card selects that driver.
+ * Vertical patient funnel, drawn as equal-width cards. Clicking a card selects that driver.
  */
 
 /** The percentage drivers, in model order. Non-percentage inputs (Rx, price) sit outside the funnel. */
@@ -38,10 +36,10 @@ export function FunnelChart({ levels, sel, onSel, startLabel, startValue }: {
     <div className="rounded-xl border border-border bg-surface p-3">
       <div className="mb-2 flex items-center gap-1.5 px-1">
         <h3 className="text-[11px] font-semibold uppercase tracking-wider text-text-3">Patient funnel</h3>
-        <InfoTip text="Each card is the population still in the funnel after that stage, as an FY average. Cards narrow as the population falls, on a compressed scale so every label stays readable. Click a stage to edit its assumption; formulas come from the CoE model and stay locked." />
+        <InfoTip text="Each card is the population still in the funnel after that stage, as an FY average. Click a stage to edit its assumption; formulas come from the CoE model and stay locked." />
       </div>
 
-      {/* Starting pool: the only full-width level, and never editable. */}
+      {/* Starting pool is never editable. */}
       <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-border-strong bg-surface-2 px-3 py-2">
         <span className="min-w-0">
           <span className="block text-[10px] font-semibold uppercase tracking-wider text-text-3">Starting point</span>
@@ -50,21 +48,17 @@ export function FunnelChart({ levels, sel, onSel, startLabel, startValue }: {
         <span className="flex shrink-0 items-center gap-1 font-data text-[12.5px] text-text-2"><Lock size={10} />{startValue}</span>
       </div>
 
-      <ul>
+      <ul className="w-full">
         {levels.map(l => {
           const on = sel === l.id
-          // Headcount collapses by orders of magnitude (39M to 0.9M), so a linear width would clamp
-          // every card at the readable floor. A cube root compresses it: still monotonic in
-          // headcount, but the whole range lands between 72% and 100%.
-          const width = `${72 + 28 * Math.cbrt(l.headcount / POP)}%`
           return (
-            <li key={l.id} className="flex flex-col items-center">
+            <li key={l.id} className="flex w-full flex-col items-center">
               <span aria-hidden className="h-2.5 w-px bg-border-strong" />
               <button
-                type="button" onClick={() => onSel(l.id)} aria-current={on ? 'true' : undefined} style={{ width }}
+                type="button" onClick={() => onSel(l.id)} aria-current={on ? 'true' : undefined}
                 aria-label={`${l.label}, ${fmtV(l.id, l.pct)}, ${people(l.headcount)} patients`}
                 className={cx(
-                  'flex min-w-0 items-center justify-between gap-2 rounded-lg border bg-surface px-3 py-2 text-left transition-[border-color,box-shadow]',
+                  'flex w-full min-w-0 items-center justify-between gap-2 rounded-lg border bg-surface px-3 py-2 text-left transition-[border-color,box-shadow]',
                   on ? 'border-brand shadow-[var(--ring-glow-strong)]' : 'border-border hover:border-border-strong',
                 )}
               >

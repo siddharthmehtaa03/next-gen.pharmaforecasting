@@ -56,14 +56,14 @@ export function Card({ title, sub, info, right, children, className, pad = true,
   /** Muted outer frame around a white inner panel for the body, titlebar sitting on the frame itself. */
   frame?: boolean }) {
   return (
-    <section className={cx('min-w-0 rounded-[20px] border border-border', frame ? 'bg-surface-2' : 'bg-surface shadow-card', fill && 'flex h-full flex-col', className)}>
+    <section className={cx('min-w-0 border border-border', frame ? 'rounded-xl bg-surface-2' : 'rounded-[20px] bg-surface shadow-card', fill && 'flex h-full flex-col', className)}>
       {title && <header className={cx('flex flex-wrap items-start justify-between gap-3 pb-0.5', frame ? 'px-3 pt-2.5' : 'px-4 pt-3.5')}>
         <div className="min-w-0">
-          <h3 className={cx('flex items-center gap-1.5 font-semibold', frame ? 'text-[11px] uppercase tracking-wider text-text-3' : 'text-[13.5px]')}>{title}{info && <InfoTip text={info} />}</h3>
+          <h3 className="flex items-center gap-1.5 text-[13.5px] font-semibold">{title}{info && <InfoTip text={info} />}</h3>
           {sub && <p className="mt-0.5 text-[12.5px] text-text-3">{sub}</p>}
         </div>{right}</header>}
-      <div className={cx(pad && (frame ? 'px-2.5 pb-2.5 pt-2' : title ? 'px-4 pb-4 pt-3' : 'p-4'), fill && 'flex flex-1 flex-col')}>
-        {frame ? <div className={cx('rounded-md bg-surface p-2.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]', fill && 'flex flex-1 flex-col')}>{children}</div> : children}
+      <div className={cx(pad && (frame ? 'px-1.5 pb-2.5 pt-1.5' : title ? 'px-4 pb-4 pt-3' : 'p-4'), fill && 'flex min-h-0 flex-1 flex-col')}>
+        {frame ? <div className={cx('rounded-lg bg-surface p-2.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]', fill && 'flex min-h-0 flex-1 flex-col')}>{children}</div> : children}
       </div>
     </section>
   )
@@ -120,7 +120,7 @@ export function Legend({ s }: { s: ChartSeries }) {
   )
 }
 
-type Grain = 'month' | 'quarter' | 'year'
+export type Grain = 'month' | 'quarter' | 'year'
 const YEARS_N = N / 12
 const SPAN: Record<Grain, number> = { month: 1, quarter: 3, year: 12 }
 const roll = (a: number[] | undefined, y: number, agg: 'sum' | 'avg', n = 12) => {
@@ -134,13 +134,15 @@ const roll = (a: number[] | undefined, y: number, agg: 'sum' | 'avg', n = 12) =>
 const BUDGET_YEAR = START_YEAR + Math.floor((ACT - 1) / 12), BUDGET_UPLIFT = 1.02
 const esc = (s: string) => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]!)
 
-export function ForecastChart({ s, fmt, height = 300, dp = 1, unit, title = 'Forecast chart', context, toolbar, defaultGrain = 'month', canSave = true, ownActions, domId }: { s: ChartSeries; fmt: (v: number) => string; height?: number; dp?: number; unit?: string; title?: string; context?: string; toolbar?: boolean; defaultGrain?: Grain; canSave?: boolean
+export function ForecastChart({ s, fmt, height = 300, dp = 1, unit, title = 'Forecast chart', context, toolbar, toolbarStart, defaultGrain = 'month', grain: controlledGrain, onGrainChange, hideAggregation = false, canSave = true, ownActions, domId }: { s: ChartSeries; fmt: (v: number) => string; height?: number; dp?: number; unit?: string; title?: string; context?: string; toolbar?: boolean; toolbarStart?: ReactNode; defaultGrain?: Grain; grain?: Grain; onGrainChange?: (grain: Grain) => void; hideAggregation?: boolean; canSave?: boolean
   /** Set when the caller renders its own ChartActions (e.g. next to a card-header badge) instead of this chart's own floating one. */
   ownActions?: boolean; domId?: string }) {
   const ins = useInsights()
   const showBar = toolbar ?? height >= 250
   const agg: 'sum' | 'avg' = unit === '$M' ? 'sum' : 'avg'
-  const [grain, setGrain] = useState<Grain>(defaultGrain)
+  const [localGrain, setLocalGrain] = useState<Grain>(defaultGrain)
+  const grain = controlledGrain ?? localGrain
+  const changeGrain = onGrainChange ?? setLocalGrain
   const [status, setStatus] = useState('')
   const ref = useRef<HTMLDivElement>(null)
   const yr = grain !== 'month', n = SPAN[grain], P = N / n
@@ -207,9 +209,10 @@ export function ForecastChart({ s, fmt, height = 300, dp = 1, unit, title = 'For
     <div>
       {showBar && (
         <div className="mb-2 flex flex-wrap items-center justify-end gap-2">
+          {toolbarStart}
           <span className="mr-auto text-[12px] text-text-3" aria-live="polite">{status}</span>
           {ins && canSave && <Btn variant="secondary" icon={<Bookmark size={14} />} onClick={() => { ins.save({ title, scenario: s.scenarioName, snap: { series: s, unit: unit ?? '', dp, fmt, grain } }); flash('Saved to Insights.') }}>Save to Insights</Btn>}
-          <Seg label="Time aggregation" value={grain} onChange={setGrain} options={[{ id: 'month', label: 'Monthly' }, { id: 'quarter', label: 'Quarterly' }, { id: 'year', label: 'Annual' }]} />
+          {!hideAggregation && <Seg label="Time aggregation" value={grain} onChange={changeGrain} options={[{ id: 'month', label: 'Monthly' }, { id: 'quarter', label: 'Quarterly' }, { id: 'year', label: 'Annual' }]} />}
           {!ownActions && <ChartActions target={() => ref.current} title={title} subtitle={[context, scope].filter(Boolean).join(' · ')} onPptx={exportPptx} />}
         </div>
       )}

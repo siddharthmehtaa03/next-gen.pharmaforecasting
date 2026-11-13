@@ -1918,16 +1918,7 @@ function useDismiss(open: boolean, close: () => void) {
 
 
 
-function AiButton({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
-  return (
-    <button data-tour="ai-btn" type="button" onClick={onClick} aria-pressed={on}
-      className="ai-btn mr-1 inline-flex h-9 shrink-0 items-center gap-1.5 rounded-full px-3.5 text-[13px] font-semibold text-white outline-none focus-visible:ring-2 focus-visible:ring-brand focus-visible:ring-offset-2">
-      {on ? <X size={14} /> : <Sparkles size={14} />}<span className="max-sm:sr-only">{on ? `Close ${label}` : label}</span>
-    </button>
-  )
-}
-
-function TopBar({ collab, crumbs, back, onHome, onAdmin, onLogout, models, onResume, fixtures, onFull }: { onFull?: () => void; collab?: { on: boolean; toggle: () => void; label: string }; crumbs: string[];
+function TopBar({ crumbs, back, onHome, onAdmin, onLogout, models, onResume, fixtures, onFull }: { onFull?: () => void; collab?: { on: boolean; toggle: () => void; label: string }; crumbs: string[];
   /** Replaces the breadcrumb trail with a single back action. Used by the forecast workspace, where the trail repeated the page title. */
   back?: { label: string; onClick: () => void }; onHome: () => void; onAdmin: () => void; onLogout: () => void; models: ModelRow[]; onResume: (m: ModelRow) => void; ai: boolean; onAI: () => void; notify: (t: Toast) => void; fixtures: boolean; onFixtures: () => void }) {
   return (
@@ -1937,7 +1928,6 @@ function TopBar({ collab, crumbs, back, onHome, onAdmin, onLogout, models, onRes
         : <nav aria-label="Breadcrumb"><ol className="flex items-center gap-1.5 text-[13px]">{crumbs.filter(Boolean).map((c, k, a) => <li key={c} className="flex items-center gap-1.5">{k > 0 && <ChevronRight size={13} className="text-text-3" />}{k === a.length - 1 ? <span aria-current="page" className="font-semibold text-brand">{c}</span> : <button type="button" onClick={onHome} className="rounded text-text-2 hover:text-brand hover:underline">{c}</button>}</li>)}</ol></nav>}
       <div id="topbar-ws" className="flex min-w-0 items-center gap-2.5" />
       <div className="ml-auto flex items-center gap-1.5">
-        {collab && <AiButton on={collab.on} onClick={collab.toggle} label={collab.label} />}
         {onFull && <button type="button" onClick={onFull} aria-label="Enter full view" title="Full view" className="grid h-9 w-9 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><Maximize2 size={16} /></button>}
         <Notifications models={models} onResume={onResume} fixtures={fixtures} />
       </div>

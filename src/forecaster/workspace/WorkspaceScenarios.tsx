@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { ArrowUpRight, Copy, Pencil, Plus, RotateCcw, Trash2 } from 'lucide-react'
+import { Plus, RotateCcw } from 'lucide-react'
 import { ACTUALS, DRV, FC_YEARS, UNBIASED, fmtDelta, fmtRev, fmtV, fyAvg, fySum } from './engine'
 import type { DriverId, EventDef, Layer, ModelCfg, Scenario } from './engine'
-import { Btn, Card, ForecastChart, Legend, MoreMenu, cx, field, PageTitle } from './ui'
+import { Btn, Card, ForecastChart, Legend, cx, field, PageTitle } from './ui'
 import type { ChartSeries } from './ui'
+import type { Grain } from './ui'
 import { NumField } from './Drivers'
 import type { CompareProps, Notify } from './Drivers'
 import { ScenarioOverrides } from './Analysis'
@@ -13,15 +14,12 @@ type SetScenarios = (f: (s: Scenario[]) => Scenario[]) => void
 /** Scope of the workspace: the active forecast every scenario starts from, or one scenario's own changes. */
 export const FORECAST = '__forecast'
 
-/** Scenario bar of the forecast page: pick what you are working on, create a scenario that replicates the forecast assumptions, and set the year the funnel shows. */
-export function ScenarioBar({ scenarios, setScenarios, scope, setScope, year, setYear, calc, notify, onManage }: {
-  scenarios: Scenario[]; setScenarios: SetScenarios; scope: string; setScope: (s: string) => void; year: number; setYear: (y: number) => void; calc: Calc; notify: Notify
-  /** Opens the scenario summary page. Rendered as a text link, since it navigates away rather than acting here. */
-  onManage?: () => void
+/** Compact chart controls for scope, forecast year, time aggregation and scenario creation. */
+export function ScenarioBar({ scenarios, setScenarios, scope, setScope, year, setYear, grain, setGrain, notify }: {
+  scenarios: Scenario[]; setScenarios: SetScenarios; scope: string; setScope: (s: string) => void; year: number; setYear: (y: number) => void
+  grain: Grain; setGrain: (grain: Grain) => void; notify: Notify
 }) {
-  const [form, setForm] = useState<{ mode: 'new' | 'rename'; name: string; from: string } | null>(null)
-  const sc = scenarios.find(s => s.id === scope) ?? null
-  const lock = !!sc?.locked
+  const [form, setForm] = useState<{ name: string; from: string } | null>(null)
   const create = () => {
     if (!form || !form.name.trim()) return
     const src = form.from === FORECAST ? null : scenarios.find(s => s.id === form.from) ?? null
@@ -30,61 +28,45 @@ export function ScenarioBar({ scenarios, setScenarios, scope, setScope, year, se
     setScenarios(ss => [...ss, n]); setScope(n.id); setForm(null)
     notify({ tone: 'ok', text: src ? `${n.name} created as a copy of ${src.name}. Change anything in it; ${src.name} is untouched.` : `${n.name} created. It replicates the active forecast assumptions: nothing is changed in it yet.` })
   }
-  const rename = () => { if (!form || !sc || !form.name.trim()) return; setScenarios(ss => ss.map(s => s.id === sc.id ? { ...s, name: form.name.trim() } : s)); setForm(null) }
-  const dup = () => {
-    if (!sc) return
-    const stamp = Date.now(), n: Scenario = { ...sc, id: `sc${stamp}`, name: `${sc.name} (copy)`, active: [...sc.active], adj: { ...sc.adj }, locked: false, ovr: (sc.ovr ?? []).map((o, k) => ({ ...o, id: `ov${stamp}${k}` })) }
-    setScenarios(ss => [...ss, n]); setScope(n.id); notify({ tone: 'info', text: `${sc.name} duplicated with the same events, adjustments and overrides.` })
-  }
-  const del = () => {
-    if (!sc || scenarios.length < 2 || !window.confirm(`Delete “${sc.name}”? Its events, adjustments and overrides go with it.`)) return
-    setScenarios(ss => ss.filter(s => s.id !== sc.id)); setScope(FORECAST); notify({ tone: 'info', text: `${sc.name} deleted.` })
-  }
-  const total = (id: string) => fmtRev(fySum((calc[id] ?? calc.__working!).rev, year))
   return (
-    <div data-tour="scenario-bar" className="space-y-3">
-      {/* Labels sit above their controls so the row stays shallow and the chart keeps the height. */}
-      <div className="flex flex-wrap items-end gap-x-4 gap-y-3 rounded-xl border border-border bg-surface px-4 py-3">
-        <div className="flex min-w-0 items-end gap-2">
-          <label className="block min-w-0">
-            <span className="mb-1 block text-[10.5px] font-semibold uppercase tracking-wider text-text-3">Working on</span>
-            <select aria-label="Working on" value={scope} onChange={e => { setScope(e.target.value); setForm(null) }} className={cx(field, 'h-9 w-72 font-semibold text-text')}>
-              <option value={FORECAST}>Active forecast · {total('__working')}</option>
-              {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}{s.locked ? ' · Final' : ''} · {total(s.id)}</option>)}
-            </select>
-          </label>
-          <MoreMenu label="Scenario actions" align="left" items={[
-            { label: 'Duplicate', icon: <Copy size={14} />, disabled: !sc, onClick: dup },
-            { label: 'Rename', icon: <Pencil size={14} />, disabled: !sc || lock, onClick: () => sc && setForm({ mode: 'rename', name: sc.name, from: FORECAST }) },
-            { label: 'Delete', icon: <Trash2 size={14} />, danger: true, disabled: !sc || lock || scenarios.length < 2, onClick: del },
-          ]} />
-        </div>
+    <div data-tour="scenario-bar" className="min-w-0 space-y-2">
+      <div className="flex flex-wrap items-end justify-end gap-x-2.5 gap-y-2">
         <label className="block">
-          <span className="mb-1 block text-[10.5px] font-semibold uppercase tracking-wider text-text-3">Values for</span>
-          <select aria-label="Values for" value={year} onChange={e => setYear(+e.target.value)} className={cx(field, 'h-9 w-24 text-text')}>
+          <span className="mb-1 block text-[10px] font-medium text-text-2">Working on</span>
+          <select aria-label="Working on" value={scope} onChange={e => { setScope(e.target.value); setForm(null) }}
+            className="h-7 w-[128px] rounded-md border border-border bg-surface px-2 text-[11px] text-text outline-none focus:border-brand focus:ring-2 focus:ring-brand/15">
+            <option value={FORECAST}>Active forecast</option>
+            {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}{s.locked ? ' · Final' : ''}</option>)}
+          </select>
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-[10px] font-medium text-text-2">Values for</span>
+          <select aria-label="Forecast year" value={year} onChange={e => setYear(+e.target.value)}
+            className="h-7 w-[90px] rounded-md border border-border bg-surface px-2 text-[11px] text-text outline-none focus:border-brand focus:ring-2 focus:ring-brand/15">
             {FC_YEARS.map(y => <option key={y} value={y}>FY{y}</option>)}
           </select>
         </label>
-        <div className="ml-auto flex items-center gap-3 pb-0.5">
-          <Btn size="sm" variant="secondary" icon={<Plus size={14} />} onClick={() => setForm({ mode: 'new', name: `Scenario ${scenarios.length + 1}`, from: FORECAST })}>New scenario</Btn>
-          {onManage && (
-            <button type="button" onClick={onManage}
-              className="inline-flex items-center gap-1 rounded-lg px-1.5 py-1 text-[13px] font-medium text-brand transition-colors hover:bg-brand-soft">
-              Manage scenarios<ArrowUpRight size={14} />
-            </button>
-          )}
-        </div>
+        <label className="block">
+          <span className="mb-1 block text-[10px] font-medium text-text-2">Values for</span>
+          <select aria-label="Time aggregation" value={grain} onChange={e => setGrain(e.target.value as Grain)}
+            className="h-7 w-[105px] rounded-md border border-border bg-surface px-2 text-[11px] text-text outline-none focus:border-brand focus:ring-2 focus:ring-brand/15">
+            <option value="month">Monthly</option>
+            <option value="quarter">Quarterly</option>
+            <option value="year">Annual</option>
+          </select>
+        </label>
+        <Btn size="sm" icon={<Plus size={13} />} onClick={() => setForm({ name: `Scenario ${scenarios.length + 1}`, from: FORECAST })}>New scenario</Btn>
       </div>
       {form && (
-        <form className="flex flex-wrap items-end gap-3 rounded-lg border border-brand/30 bg-brand-soft/30 px-4 py-3" onSubmit={e => { e.preventDefault(); form.mode === 'new' ? create() : rename() }}>
-          <label className="block"><span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-text-3">{form.mode === 'new' ? 'New scenario name' : 'Scenario name'}</span>
+        <form className="flex flex-wrap items-end gap-3 rounded-lg border border-brand/30 bg-brand-soft/30 px-4 py-3" onSubmit={e => { e.preventDefault(); create() }}>
+          <label className="block"><span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-text-3">New scenario name</span>
             <input autoFocus aria-label="Scenario name" value={form.name} onFocus={e => e.target.select()} onChange={e => setForm({ ...form, name: e.target.value })} className={cx(field, 'w-60')} /></label>
-          {form.mode === 'new' && <label className="block"><span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-text-3">Start from</span>
+          <label className="block"><span className="mb-1 block text-[11px] font-semibold uppercase tracking-wide text-text-3">Start from</span>
             <select aria-label="Start from" value={form.from} onChange={e => setForm({ ...form, from: e.target.value })} className={cx(field, 'w-64')}>
               <option value={FORECAST}>Active forecast assumptions (replicate)</option>
               {scenarios.map(s => <option key={s.id} value={s.id}>Copy of {s.name}</option>)}
-            </select></label>}
-          <Btn onClick={form.mode === 'new' ? create : rename} disabled={!form.name.trim()}>{form.mode === 'new' ? 'Create scenario' : 'Save name'}</Btn>
+            </select></label>
+          <Btn onClick={create} disabled={!form.name.trim()}>Create scenario</Btn>
           <Btn variant="ghost" onClick={() => setForm(null)}>Cancel</Btn>
         </form>
       )}

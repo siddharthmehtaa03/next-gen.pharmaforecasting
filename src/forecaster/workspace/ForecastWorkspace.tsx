@@ -6,8 +6,8 @@ import { ArrowLeft, ArrowRight, Check, ChevronDown, PanelRightOpen, Save } from 
 import { DEFAULT_MODEL, DRV, FY, SEED_EVENTS, SEED_SCENARIOS, UNBIASED, fyAvg, fySum, revenue, scenarioLayer, workingLayer } from './engine'
 import type { DriverId, EventDef, ModelCfg, OutputId, Scenario } from './engine'
 import { Btn, Tag, cx, field } from './ui'
+import type { Grain } from './ui'
 import { DriverWorkspace, ForecastMap } from './Drivers'
-import { PageTitle } from './ui'
 import { FunnelChart, funnelLevels } from './FunnelChart'
 import { FullModelGrid } from './WorkspaceModel'
 import type { DriverActions, Edits, Notify, Sel } from './Drivers'
@@ -67,6 +67,8 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
   // Scope of the Forecast workspace: the active forecast every scenario starts from, or one scenario's own changes.
   const [scope, setScope] = useState(FORECAST)
   const [wsYear, setWsYear] = useState(FY)
+  const [wsGrain, setWsGrain] = useState<Grain>('month')
+  const [streamSelection, setStreamSelection] = useState('all')
   // Tabbed model panel under the workspace: the full grid, and the plan-version comparison.
   const [modelTab, setModelTab] = useState<'model' | 'versions'>('model')
   const [presenting, setPresenting] = useState(false)
@@ -155,33 +157,43 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
       {!presenting && (
         <div className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur">
           {/* Two levels: a few global tabs, and one sub-tab row for the active group. */}
-          <nav data-tour="tabs" aria-label="Forecast sections" className="mx-auto px-10">
-            <div role="tablist" className="flex flex-wrap items-center gap-0.5 py-2">
-              {GROUPS.filter(g => g.id !== 'Scenario').map(g => (
-                <button key={g.id} type="button" role="tab" aria-selected={g.id === group} onClick={() => g.id !== group && go(g.items[0] as View)}
-                  className={cx('inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-medium transition-colors', g.id === group ? 'bg-[#f1f1f3] text-text shadow-[inset_0_0_0_1px_rgba(16,24,40,0.04)]' : 'text-text-2 hover:bg-black/[0.04] hover:text-text')}>
-                  {g.id}</button>
-              ))}
-              {/* Analytics views live in one dropdown so they don't crowd the workflow tabs. */}
-              <div ref={anRef} className="relative">
-                <button data-tour="analytics" type="button" role="tab" aria-selected={group === 'Analytics'} aria-haspopup="menu" aria-expanded={anMenu} onClick={() => setAnMenu(v => !v)}
-                  className={cx('inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-medium transition-colors', group === 'Analytics' ? 'bg-[#f1f1f3] text-text shadow-[inset_0_0_0_1px_rgba(16,24,40,0.04)]' : 'text-text-2 hover:bg-black/[0.04] hover:text-text')}>
-                  {an ? `Analytics · ${an}` : 'Analytics'}<ChevronDown size={14} className={cx('transition-transform', anMenu && 'rotate-180')} /></button>
-                {anMenu && <>
-                  <div role="menu" className="rise absolute left-0 top-full z-50 mt-1 w-60 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-xl">
-                    <p className="px-3 pb-1 pt-1.5 text-[12px] text-text-3">Analytics views · read-only</p>
-                    {ANALYTICS.map(a => !AN_BUILT.includes(a)
-                      ? <span key={a} role="menuitem" aria-disabled="true" title="Coming soon" className="flex w-full cursor-not-allowed items-center justify-between px-3 py-1.5 text-[13px] text-text-3">{a}<span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-text-3">Coming soon</span></span>
-                      : <button key={a} type="button" role="menuitem" onClick={() => { setAnMenu(false); openAn(a) }}
-                      className={cx('flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px] hover:bg-surface-2', an === a ? 'font-medium text-text' : 'text-text-2')}>{a}{an === a && <Check size={14} className="text-brand" />}</button>)}
-                  </div>
-                </>}
+          <nav data-tour="tabs" aria-label="Forecast sections" className="mx-auto px-6">
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2">
+              <div role="tablist" className="flex flex-wrap items-center gap-0.5">
+                {GROUPS.filter(g => g.id !== 'Scenario').map(g => (
+                  <button key={g.id} type="button" role="tab" aria-selected={g.id === group} onClick={() => g.id !== group && go(g.items[0] as View)}
+                    className={cx('inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-medium transition-colors', g.id === group ? 'bg-[#f1f1f3] text-text shadow-[inset_0_0_0_1px_rgba(16,24,40,0.04)]' : 'text-text-2 hover:bg-black/[0.04] hover:text-text')}>
+                    {g.id}</button>
+                ))}
+                {/* Analytics views live in one dropdown so they don't crowd the workflow tabs. */}
+                <div ref={anRef} className="relative">
+                  <button data-tour="analytics" type="button" role="tab" aria-selected={group === 'Analytics'} aria-haspopup="menu" aria-expanded={anMenu} onClick={() => setAnMenu(v => !v)}
+                    className={cx('inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-medium transition-colors', group === 'Analytics' ? 'bg-[#f1f1f3] text-text shadow-[inset_0_0_0_1px_rgba(16,24,40,0.04)]' : 'text-text-2 hover:bg-black/[0.04] hover:text-text')}>
+                    {an ? `Analytics · ${an}` : 'Analytics'}<ChevronDown size={14} className={cx('transition-transform', anMenu && 'rotate-180')} /></button>
+                  {anMenu && <>
+                    <div role="menu" className="rise absolute left-0 top-full z-50 mt-1 w-60 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-xl">
+                      <p className="px-3 pb-1 pt-1.5 text-[12px] text-text-3">Analytics views · read-only</p>
+                      {ANALYTICS.map(a => !AN_BUILT.includes(a)
+                        ? <span key={a} role="menuitem" aria-disabled="true" title="Coming soon" className="flex w-full cursor-not-allowed items-center justify-between px-3 py-1.5 text-[13px] text-text-3">{a}<span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-text-3">Coming soon</span></span>
+                        : <button key={a} type="button" role="menuitem" onClick={() => { setAnMenu(false); openAn(a) }}
+                        className={cx('flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px] hover:bg-surface-2', an === a ? 'font-medium text-text' : 'text-text-2')}>{a}{an === a && <Check size={14} className="text-brand" />}</button>)}
+                    </div>
+                  </>}
+                </div>
               </div>
+              <label className="ml-auto flex shrink-0 items-center gap-2">
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-brand">Revenue stream</span>
+                <select aria-label="Revenue stream" value={streamSelection} onChange={e => setStreamSelection(e.target.value)}
+                  className="h-7 min-w-[140px] rounded-md border border-border-strong bg-surface px-2.5 text-[11px] text-text outline-none focus:border-brand focus:ring-2 focus:ring-brand/15">
+                  <option value="all">All streams (roll-up)</option>
+                  {stream && stream !== 'All streams (roll-up)' && <option value="current">{stream}</option>}
+                </select>
+              </label>
             </div>
           </nav>
           {subs.length > 1 && (
             <div>
-              <div data-tour="subtabs" role="tablist" aria-label={`${group} views`} className="mx-auto flex gap-1 overflow-x-auto px-10 py-2">
+              <div data-tour="subtabs" role="tablist" aria-label={`${group} views`} className="mx-auto flex gap-1 overflow-x-auto px-6 py-2">
                 {subs.map((v, k) => {
                   const isAn = ANALYTICS.includes(v), on = isAn ? an === v : !an && view === v
                   const badge = v === 'Assumptions' ? modified : v === 'Summary' ? scenarios.length : v === 'Events' ? events.length : 0
@@ -221,26 +233,31 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
           </div>
         </div>
       ) : <>
-      {mapView && !presenting && !mod && sel !== 'rev' && (
-        <div className="mx-auto px-10 pt-6">
-          <PageTitle title={DRV[sel as DriverId].label}
-            info={`${DRV[sel as DriverId].desc} Source: Data Science baseline · monthly · brand level.`} />
+      {mapView && !presenting && (
+        <div className="mx-auto px-6 pt-4">
+          <div className="border-b border-border pb-3">
+            <h2 className="text-[18px] font-semibold tracking-tight">Forecast Workspace</h2>
+          </div>
         </div>
       )}
-      <div className={cx('mx-auto px-10', mapView && !presenting && !mod && sel !== 'rev' ? 'pb-8 pt-4' : 'py-8', mapView && !presenting && 'grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)]')}>
+      <div className={cx('mx-auto px-6', mapView && !presenting && !mod && sel !== 'rev' ? 'pb-8 pt-4' : 'py-8', mapView && !presenting && 'grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)]')}>
         {mapView && (
-          <aside className="flex flex-col gap-3 lg:sticky lg:top-[98px] lg:self-start lg:max-h-[calc(100dvh-124px)] lg:overflow-y-auto">
-            <FunnelChart levels={funnelLevels(work.layer, model, edits)} sel={mod ? null : (sel as DriverId)} onSel={pick}
-              startLabel={model.start.label} startValue={model.start.value} />
-            <ForecastMap sel={sel} onSel={pick} edits={edits} working={work.layer} model={model} metric={metric} mod={mod} onMod={m => { if (m !== mod && leaveOk()) setMod(m) }} uePct={ueFy(ue)} onCollapse={undefined} funnelHandled />
+          <aside aria-label="Assumptions" className="flex min-w-0 flex-col gap-2 rounded-xl bg-surface-2 p-2 lg:sticky lg:top-[98px] lg:self-start lg:h-[calc(100dvh-220px)]">
+            <h3 className="px-1 text-[13px] font-semibold">Assumptions</h3>
+            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
+              <FunnelChart levels={funnelLevels(work.layer, model, edits)} sel={mod ? null : (sel as DriverId)} onSel={pick}
+                startLabel={model.start.label} startValue={model.start.value} />
+              <ForecastMap sel={sel} onSel={pick} edits={edits} working={work.layer} model={model} metric={metric} mod={mod} onMod={m => { if (m !== mod && leaveOk()) setMod(m) }} uePct={ueFy(ue)} onCollapse={undefined} funnelHandled />
+            </div>
           </aside>
         )}
         <main className="min-w-0">
           {mapView && mod && <ModuleView id={mod} net={work.fy} gp={fyAvg(work.layer.price)} ue={ue} setUe={setUe} editable={view === 'Assumptions'} onEdit={() => go('Assumptions')} />}
           {mapView && !mod && (view === 'Assumptions' && scope !== FORECAST && sel !== 'rev'
             ? <ScenarioDriverView id={sel} scenario={scenarios.find(s => s.id === scope)!} setScenarios={setScenarios} work={work.layer} layer={calc[scope]!.layer} events={events} model={model} notify={notify} />
-            : <DriverWorkspace mode="assumptions" sel={sel} edits={edits} setEdits={setEdits} hideTitle
-                bar={view === 'Assumptions' ? <ScenarioBar scenarios={scenarios} setScenarios={setScenarios} scope={scope} setScope={setScope} year={wsYear} setYear={setWsYear} calc={calc} notify={notify} onManage={() => go('Summary')} /> : undefined}
+            : <DriverWorkspace mode="assumptions" sel={sel} edits={edits} setEdits={setEdits}
+                grain={wsGrain} setGrain={setWsGrain}
+                bar={view === 'Assumptions' ? <ScenarioBar scenarios={scenarios} setScenarios={setScenarios} scope={scope} setScope={setScope} year={wsYear} setYear={setWsYear} grain={wsGrain} setGrain={setWsGrain} notify={notify} /> : undefined}
                 scenarioLayer={sc.layer} scenarioName={scName} workingLayer={work.layer} model={model} metric={metric} setMetric={setMetric}
                 onOpenAssumptions={() => go('Assumptions')} onGo={() => go('Assumptions')} onDirty={onDirty} actions={actions} notify={notify} />)}
           {view === 'Scenarios' && <ScenariosStage events={events} scenarios={scenarios} setScenarios={setScenarios} selId={selId} setSelId={setSelId} calc={calc} workFy={work.fy} model={model} metric={metric} setMetric={setMetric} toggleFinal={toggleFinal} notify={notify} />}
@@ -253,13 +270,13 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
         </main>
       </div>
       {mapView && view === 'Assumptions' && !presenting && (
-        <div className="mx-auto px-10 pb-8">
-          <div className="overflow-hidden rounded-xl border border-border bg-surface">
-            <div role="tablist" aria-label="Model views" className="flex gap-1 border-b border-border px-3 py-2">
+        <div className="mx-auto px-6 pb-8">
+          <div className="rounded-xl border border-border bg-surface-2 p-2">
+            <div role="tablist" aria-label="Model views" className="flex gap-1 px-1 pb-2">
               {([['model', 'Full model'], ['versions', 'Plan versions · 10-year view']] as const).map(([id, label]) => (
                 <button key={id} type="button" role="tab" aria-selected={modelTab === id} onClick={() => setModelTab(id)}
                   className={cx('rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors',
-                    modelTab === id ? 'bg-surface-2 text-text' : 'text-text-2 hover:bg-surface-2/60 hover:text-text')}>
+                    modelTab === id ? 'bg-surface text-text shadow-[0_1px_2px_rgba(16,24,40,0.08)]' : 'text-text-2 hover:bg-surface/60 hover:text-text')}>
                   {label}
                 </button>
               ))}
@@ -270,7 +287,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
                 onRow={go2 => { const d = model.modules.find(m => m.id === go2); if (d) pick(d.id) }}
                 onCell={() => null} />
             ) : (
-              <div className="grid place-items-center px-6 py-16 text-center">
+              <div className="grid min-h-[300px] place-items-center rounded-lg bg-surface px-6 py-16 text-center">
                 <div>
                   <p className="text-[15px] font-semibold">Plan versions · 10-year view</p>
                   <p className="mx-auto mt-1 max-w-md text-[13px] text-text-3">

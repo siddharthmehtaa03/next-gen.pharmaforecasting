@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import type { MutableRefObject } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Check, ClipboardPaste, Lock, PanelRightClose, PencilLine, RotateCcw, Upload, Users } from 'lucide-react'
+import { ArrowRight, Check, ClipboardPaste, Lock, PanelRightClose, PencilLine, Upload, Users } from 'lucide-react'
 import {
   ACT, ACTUALS, BASELINE, CURVE_LABEL, DRIVERS, DRV, FY, GTN, METHOD_LABEL, MONTHS, N, OUTPUTS, UNBIASED, YEARS,
   applyEdit, defaultEdit, fmtV, fyAvg, idxOf, mLong, netPrice, revenue, yearOf, fySum,
@@ -9,6 +9,7 @@ import {
 import type { Curve, DriverId, Edit, Layer, Method, ModelCfg, OutputId } from './engine'
 import { Btn, Card, ForecastChart, Label, Legend, Tag, Toggle, cx, field, PageTitle, InfoTip } from './ui'
 import { AgentFrame } from '../../chat/Agent'
+import type { Grain } from './ui'
 import { TrendPanel } from './Trend'
 import { MODS, bridgeOf, fmtB } from './Modules'
 import type { ModId } from './Modules'
@@ -32,11 +33,11 @@ export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, on
   /** The percentage stages are drawn by FunnelChart above, so this map only shows what the funnel cannot: non-percentage inputs and the revenue bridge. */
   funnelHandled?: boolean }) {
   const agent = useAgentFocus()
-  const node = (id: DriverId, editable: boolean, width?: string) => {
+  const node = (id: DriverId, editable: boolean) => {
     const d = DRV[id], on = !mod && sel === id, changed = !!edits[id]
     return (
-      <button key={id} type="button" onClick={() => onSel(id)} aria-current={on ? 'true' : undefined} style={{ width }}
-        className={cx('group mx-auto flex min-w-0 items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-2.5 text-left transition-all', on ? 'border-brand ring-2 ring-brand/15 shadow-[0_1px_2px_rgba(16,24,40,0.06)]' : 'border-border hover:border-border-strong hover:shadow-[0_1px_2px_rgba(16,24,40,0.04)]', on && agent.section === 'assume' && 'agent-ring')}>
+      <button key={id} type="button" onClick={() => onSel(id)} aria-current={on ? 'true' : undefined}
+        className={cx('group mx-auto flex w-full min-w-0 items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-2.5 text-left transition-all', on ? 'border-brand ring-2 ring-brand/15 shadow-[0_1px_2px_rgba(16,24,40,0.06)]' : 'border-border hover:border-border-strong hover:shadow-[0_1px_2px_rgba(16,24,40,0.04)]', on && agent.section === 'assume' && 'agent-ring')}>
         <span className="min-w-0">
           <span className="block truncate text-[11px] text-text-3">{d.step}</span>
           <span className="block truncate text-[13px] font-medium text-text">{d.label}</span>
@@ -62,10 +63,10 @@ export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, on
         <span className="min-w-0"><span className="block text-[10px] font-semibold uppercase tracking-wider text-text-3">Starting point</span><span className="block truncate text-[13px] font-semibold">{model.start.label}</span></span>
         <span className="flex items-center gap-1 font-mono text-[13px] text-text-2"><Lock size={11} />{model.start.value}</span>
       </div>}
-      {funnel.flatMap((m, k) => [link(`l${m.id}`), node(m.id, m.editable, `${Math.max(60, 100 - k * 8)}%`)])}
+      {funnel.flatMap(m => [link(`l${m.id}`), node(m.id, m.editable)])}
       {side.length > 0 && !funnelHandled && <div className="relative mx-auto my-2 flex items-center gap-2 pl-2 text-[11px] text-text-3"><span className="h-px flex-1 bg-border" />combined with<span className="h-px flex-1 bg-border" /></div>}
-      {side.map(m => node(m.id, m.editable, '70%'))}
-      {side.some(m => m.id === 'price') && <div className="mx-auto mt-1 flex w-[70%] items-center justify-between gap-2 rounded-xl border border-dashed border-border bg-surface-2 px-3 py-2">
+      {side.map(m => node(m.id, m.editable))}
+      {side.some(m => m.id === 'price') && <div className="mt-1 flex w-full items-center justify-between gap-2 rounded-xl border border-dashed border-border bg-surface-2 px-3 py-2">
         <span className="min-w-0"><span className="block truncate text-[11px] text-text-3">Calculated</span><span className="block truncate text-[13px] font-medium text-text-2">Net sales price</span></span>
         <span className="flex shrink-0 flex-col items-end"><span className="font-mono text-[13px] text-text-2">{fmtV('price', netPrice(fyAvg(working.price)))}</span><span className="inline-flex items-center gap-1 text-[10.5px] text-text-3"><Lock size={9} />× (1 − {Math.round(GTN * 100)}% GTN)</span></span>
       </div>}
@@ -140,18 +141,17 @@ const parseNums = (t: string) => t.split(/[\s,;]+/).map(s => s.replace(/[%$]/g, 
 export type DriverMode = 'overview' | 'assumptions'
 
 export type DriverActions = { apply: () => void; discard: () => void }
-export function DriverWorkspace({ mode, sel, edits, setEdits, scenarioLayer, scenarioName, workingLayer, model, metric, setMetric, onOpenAssumptions, onGo, onDirty, actions, notify, hideTitle, bar }: {
+export function DriverWorkspace({ mode, sel, edits, setEdits, scenarioLayer, scenarioName, workingLayer, model, metric, setMetric, onOpenAssumptions, onGo, onDirty, actions, notify, bar, grain, setGrain }: {
   mode: DriverMode; sel: Sel; edits: Edits; setEdits: (f: (e: Edits) => Edits) => void; scenarioLayer: Layer; scenarioName: string; workingLayer: Layer
   model: ModelCfg; metric: OutputId; setMetric: (m: OutputId) => void; onOpenAssumptions: () => void
   onGo: (s: 'assumptions' | 'events') => void; onDirty: (v: boolean) => void; actions?: MutableRefObject<DriverActions | null>; notify: Notify
-  /** The parent renders the page title above the whole grid, so it spans the funnel column too. */
-  hideTitle?: boolean
+  grain: Grain; setGrain: (grain: Grain) => void
   /** Sits in the chart column, directly above the chart (the scenario "Working on" bar). */
   bar?: ReactNode
 }) {
   if (sel === 'rev') return <RevenueView {...{ workingLayer, scenarioLayer, scenarioName, model, metric, setMetric }} />
   const cfg = model.modules.find(m => m.id === sel)
-  return <DriverEditorView key={sel} id={sel} locked={!!cfg && !cfg.editable} {...{ mode, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify, hideTitle, bar }} />
+  return <DriverEditorView key={sel} id={sel} locked={!!cfg && !cfg.editable} {...{ mode, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify, bar, grain, setGrain }} />
 }
 
 function RevenueView({ workingLayer, scenarioLayer, scenarioName, model, metric, setMetric }: { workingLayer: Layer; scenarioLayer: Layer; scenarioName: string; model: ModelCfg; metric: OutputId; setMetric: (m: OutputId) => void }) {
@@ -168,10 +168,11 @@ function RevenueView({ workingLayer, scenarioLayer, scenarioName, model, metric,
   )
 }
 
-function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify, hideTitle, bar }: {
+function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify, bar, grain, setGrain }: {
   id: DriverId; mode: DriverMode; locked: boolean; edits: Edits; setEdits: (f: (e: Edits) => Edits) => void; scenarioLayer: Layer; scenarioName: string; workingLayer: Layer
   onOpenAssumptions: () => void; onGo: (s: 'assumptions' | 'events') => void; onDirty: (v: boolean) => void; actions?: MutableRefObject<DriverActions | null>; notify: Notify
-  hideTitle?: boolean; bar?: ReactNode
+  grain: Grain; setGrain: (grain: Grain) => void
+  bar?: ReactNode
 }) {
   const d = DRV[id], applied = edits[id]
   // The draft follows the applied value (including changes Charles makes) until the user starts their own edit.
@@ -240,9 +241,13 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
 
   const adjustPanel = editing && (
     <AgentFrame on={agent.section === 'assume'} label={`${agent.name} is adjusting ${d.label.toLowerCase()}`}>
-    <Card title="Adjust assumption" info="Override permitted values or change the projection method. The calculation formula stays locked and the reference baseline never changes."
-      right={dirty ? <Tag tone="warn">Unapplied changes</Tag> : applied ? <Tag tone="brand">Applied</Tag> : null}>
-      <div className="space-y-5">
+    <Card title="Adjust Assumptions" info="Override permitted values or change the projection method. The calculation formula stays locked and the reference baseline never changes."
+      frame fill className="lg:h-[calc(100dvh-220px)]"
+      right={<div className="flex items-center gap-1.5">
+        <Btn variant="ghost" size="sm" disabled={!applied && !dirty} onClick={reset}>Reset</Btn>
+        {dirty ? <Tag tone="warn">Unapplied changes</Tag> : applied ? <Tag tone="brand">Applied</Tag> : null}
+      </div>}>
+      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto">
         <label className="block"><Label className="mb-1">Projection method</Label>
           <select value={eff.method} onChange={e => patch({ method: e.target.value as Method })} className={field}>{(Object.keys(METHOD_LABEL) as Method[]).map(m => <option key={m} value={m}>{METHOD_LABEL[m]}</option>)}</select></label>
 
@@ -290,31 +295,30 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
             <label className="flex items-center gap-3 text-sm"><Toggle on={cascade} onChange={setCascade} label="Recalculate later periods" />
               <span><b className="font-medium">Recalculate later periods</b><span className="text-text-2"> · {cascade ? 'editing a month moves every later month by the same change' : 'editing a month changes only that month'}</span></span></label>
           </div>
-          <AssumptionGrid id={id} preview={preview} cellState={cellState} onCell={setCell} onCancel={() => setGridErr(null)} />
-          {gridErr && <p role="alert" className="mt-2 rounded-md border border-err/30 bg-err-soft px-3 py-2 text-[13px] text-err">{gridErr}</p>}
         </div>
 
         <label className="block"><Label className="mb-1" hint="optional">Notes on change</Label>
           <textarea value={draft.notes} onChange={e => patch({ notes: e.target.value })} rows={2} placeholder="What changed, and why? Shown on the Review screen." className="w-full resize-y rounded-md border border-border-strong bg-surface p-2.5 text-sm outline-none focus:border-brand" /></label>
 
-        <Btn variant="ghost" size="sm" icon={<RotateCcw size={14} />} disabled={!applied && !dirty} onClick={reset}>Reset to system value</Btn>
       </div>
     </Card>
     </AgentFrame>
   )
 
   return editing ? (
-    <div className="space-y-4">
-      {!hideTitle && <div><PageTitle title={d.label} info={`${d.desc} Source: Data Science baseline · monthly · brand level.`} /></div>}
-      {/* Bento: working-on sits over the chart, the chart is the hero cell, adjust rides beside both. */}
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex min-w-0 flex-col gap-4">
-          {bar}
-          <div data-tour="chart" className="min-w-0"><Card title={`${d.label} · monthly`} sub={d.unit === '%' ? 'Percent' : d.unit} right={<Legend s={series} />} fill>
-            <ForecastChart title={`${d.label} forecast`} s={series} fmt={v => fmtV(id, v)} dp={d.dp} unit={d.unit} height={400} />
-          </Card></div>
-        </div>
-        <div className="lg:sticky lg:top-[98px] lg:self-start overflow-y-auto lg:max-h-[calc(100dvh-140px)]">{adjustPanel}</div>
+    <div>
+      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
+        <Card title={d.label} sub={d.unit === '%' ? 'Percent' : d.unit} frame fill className="lg:h-[calc(100dvh-220px)]" right={bar}>
+          <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
+            <div data-tour="chart" className="min-w-0">
+              <ForecastChart title={`${d.label} forecast`} s={series} fmt={v => fmtV(id, v)} dp={d.dp} unit={d.unit}
+                height={460} grain={grain} onGrainChange={setGrain} hideAggregation toolbarStart={<Legend s={series} />} />
+            </div>
+            <AssumptionGrid id={id} preview={preview} cellState={cellState} onCell={setCell} onCancel={() => setGridErr(null)} />
+            {gridErr && <p role="alert" className="rounded-md border border-err/30 bg-err-soft px-3 py-2 text-[13px] text-err">{gridErr}</p>}
+          </div>
+        </Card>
+        <div className="min-w-0 lg:sticky lg:top-[98px] lg:self-start">{adjustPanel}</div>
       </div>
     </div>
   ) : (
