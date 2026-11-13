@@ -130,8 +130,8 @@ export function GridCell({ value, dp, state, onCommit, onCancel }: { value: numb
   }
   const cancel = () => { setTxt(null); setBad(false); onCancel() }
   return <input aria-label="Monthly value" aria-invalid={bad} inputMode="decimal" value={txt ?? value.toFixed(dp)} onFocus={e => e.target.select()} onChange={e => setTxt(e.target.value)} onBlur={commit} onKeyDown={e => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); if (e.key === 'Escape') cancel() }}
-    className={cx('block h-full w-full min-w-[52px] cursor-text bg-[#FFF9E0] px-2 py-[5px] text-right font-mono text-[11.5px] tabular-nums text-text outline-none focus:bg-surface focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-brand',
-      bad ? 'bg-err-soft text-err outline outline-2 -outline-offset-2 outline-err' : state === 'override' ? 'bg-[#FDE9A8] font-semibold' : state === 'recalc' ? 'underline decoration-dashed decoration-text-3 underline-offset-[5px]' : '')} />
+    className={cx('block h-full w-full min-w-[52px] cursor-text border border-[#F0D98A] bg-[#FFF9E0] px-2 py-[5px] text-right font-mono text-[11.5px] tabular-nums text-text outline-none focus:border-brand focus:bg-surface focus:outline focus:outline-2 focus:-outline-offset-2 focus:outline-brand',
+      bad ? 'border-err bg-err-soft text-err outline outline-2 -outline-offset-2 outline-err' : state === 'override' ? 'bg-[#FDE9A8] font-semibold' : state === 'recalc' ? 'underline decoration-dashed decoration-text-3 underline-offset-[5px]' : '')} />
 }
 
 const parseNums = (t: string) => t.split(/[\s,;]+/).map(s => s.replace(/[%$]/g, '')).filter(s => s !== '' && Number.isFinite(+s)).map(Number)
@@ -253,7 +253,7 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
 
   const adjustPanel = editing && (
     <AgentFrame on={agent.section === 'assume'} label={`${agent.name} is adjusting ${d.label.toLowerCase()}`}>
-    <Card title="Adjust Assumptions" sub="Override permitted values or change the projection method. The calculation formula stays locked and the reference baseline never changes."
+    <Card title="Adjust Assumptions"
       frame fill className="lg:h-[calc(100dvh-220px)]"
       right={<Btn variant="ghost" size="sm" disabled={!applied && !dirty} onClick={reset}>Reset</Btn>}>
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">

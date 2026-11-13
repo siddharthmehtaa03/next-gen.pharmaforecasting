@@ -63,10 +63,11 @@ export function PeriodGrowth({ series, id, range, setRange, fmt, onCarry, carryN
 }
 
 /* ───────── Full model grid: every metric of the funnel by month or year ───────── */
-const TH = 'sticky top-0 z-[2] h-[29px] whitespace-nowrap border-b border-border bg-surface px-2 py-[5px] text-right text-[10.5px] font-bold text-text-3'
-const TD = 'whitespace-nowrap border-b border-border/60 px-2 py-[5px] text-right font-mono text-[11.5px] tabular-nums'
-const ROWH = 'sticky left-0 z-[3] min-w-[220px] max-w-[280px] whitespace-normal border-r border-border bg-surface text-left'
-const FYH = 'sticky right-0 border-l border-border bg-surface font-mono text-[11.5px] font-bold'
+const TH = 'sticky top-0 z-[4] h-[29px] whitespace-nowrap border-b border-r border-border bg-surface-2 px-2 py-[5px] text-right text-[10.5px] font-bold text-text-3'
+const TD = 'whitespace-nowrap border-b border-r border-border px-2 py-[5px] text-right font-mono text-[11.5px] tabular-nums'
+const ROWH = 'sticky left-0 z-[5] w-[300px] min-w-[300px] max-w-[300px] whitespace-nowrap border-r border-border bg-background text-left'
+const PINNED_HEADER_STYLE = { backgroundColor: 'var(--color-background)' }
+const FYH = 'sticky right-0 z-[4] border-b border-l border-border bg-background font-mono text-[11.5px] font-bold'
 
 type Row = { key: string; label: string; stage: string; series: number[]; fmt: (v: number) => string; sum: boolean; kind: 'input' | 'calc' | 'out'; id?: DriverId; dp: number; go?: string }
 const stages: { id: string; name: string; what: string }[] = [
@@ -77,12 +78,12 @@ const stages: { id: string; name: string; what: string }[] = [
   { id: 'bridge', name: 'Revenue bridge', what: 'default modules · required in every model' },
 ]
 
-export function FullModelGrid({ layer, reference, year, title, editable, locked, ue, woh = WOH_DEFAULT, selected, onRow, onCell }: {
+export function FullModelGrid({ layer, reference, year, title, editable, locked, ue, woh = WOH_DEFAULT, selected, onRow, onCell, hidden = false }: {
   layer: Layer; reference: Layer; year: number; title: string; editable: DriverId[]; locked?: boolean; ue: number[]; woh?: number
   selected: string | null; onRow: (go: string) => void; onCell: (id: DriverId, i: number, v: number) => string | null
+  hidden?: boolean
 }) {
   const [period, setPeriod] = useState<'monthly' | 'annual'>('monthly')
-  const [hidden, setHidden] = useState(false)
   const lastActYear = yearOf(ACT - 1)
   const [folded, setFolded] = useState<Set<number>>(() => new Set(YEARS.filter(y => idxOf(y, 11) < ACT)))
   const fold = (y: number) => setFolded(f => { const n = new Set(f); if (n.has(y)) n.delete(y); else n.add(y); return n })
@@ -124,44 +125,53 @@ export function FullModelGrid({ layer, reference, year, title, editable, locked,
     <div data-tour="model-grid" className="overflow-hidden rounded-lg border border-border bg-surface">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-2.5">
         <b className="text-[13px] font-semibold">Full model · {title}</b>
-        <span className="text-[11.5px] text-text-3">{hidden ? 'hidden · every metric by month or by year' : <>grey = actual · <i className="mx-0.5 inline-block h-1.5 w-1.5 rounded-full bg-brand align-middle" /> assumption you can type over (later months follow) · dashed underline = differs from {locked ? 'the forecast' : 'the reference baseline'} · click a year to fold it</>}</span>
-        <span className="ml-auto flex items-center gap-2">
-          {!hidden && <span role="group" aria-label="Grid period" className="inline-flex rounded-md border border-border bg-surface-2 p-0.5">
+        {hidden
+          ? <span className="text-[11.5px] text-text-3">hidden · every metric by month or by year</span>
+          : <div role="group" aria-label="Full model legend" className="ml-auto flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-border bg-surface px-2.5 py-1.5 text-[10.5px] text-text-3">
+            <span className="inline-flex items-center gap-1.5"><i aria-hidden className="h-3 w-3 rounded-sm border border-border bg-[#F1F3F8]" />Actual · locked</span>
+            <span className="inline-flex items-center gap-1.5"><i aria-hidden className="h-3 w-3 rounded-sm border border-[#F0D98A] bg-[#FFF9E0]" />Editable forecast</span>
+            <span className="inline-flex items-center gap-1.5"><i aria-hidden className="w-4 border-t border-dashed border-text-3" />Differs from {locked ? 'the forecast' : 'the reference baseline'}</span>
+            <span>Click a year to fold</span>
+          </div>}
+        {!hidden && <span className="ml-auto flex items-center gap-2">
+          <span role="group" aria-label="Grid period" className="inline-flex rounded-md border border-border bg-surface-2 p-0.5">
             {(['monthly', 'annual'] as const).map(p => <button key={p} type="button" aria-pressed={period === p} onClick={() => setPeriod(p)} className={cx('rounded px-2.5 py-1 text-[10.5px] font-semibold capitalize', period === p ? 'bg-surface text-text shadow-sm' : 'text-text-2 hover:text-text')}>{p}</button>)}
-          </span>}
-          <button type="button" onClick={() => setHidden(h => !h)} className="rounded-md px-2 py-1 text-[11.5px] font-medium text-text-2 hover:bg-surface-2 hover:text-text">{hidden ? 'Show model' : 'Hide model'}</button>
-        </span>
+          </span>
+        </span>}
       </div>
       {!hidden && (
         <div className="max-h-[70vh] overflow-auto border-t border-border">
           <table className="min-w-full border-separate border-spacing-0 text-[12px]">
             <thead>
               <tr>
-                <th className={cx(TH, ROWH, 'z-[4] px-2')}>Metric</th>
+                <th style={PINNED_HEADER_STYLE} className={cx(TH, ROWH, 'z-[6] px-2')}>Metric</th>
                 {period === 'monthly'
                   ? YEARS.map(y => folded.has(y)
-                    ? <th key={y} onClick={() => fold(y)} title="Click to show the months" className={cx(TH, 'cursor-pointer select-none bg-[#EEF0F6] text-center tracking-[.06em] hover:text-brand')}>{y} ▸</th>
-                    : <th key={y} colSpan={12} onClick={() => fold(y)} title="Click to fold the year to one column" className={cx(TH, 'cursor-pointer select-none bg-background text-center tracking-[.06em] hover:text-brand', y === year && 'text-brand')}>{y} ▾</th>)
-                  : <th colSpan={cols.length} title="Totals for flows, averages for rates and stocks" className={cx(TH, 'bg-background text-center tracking-[.06em] text-brand')}>by year</th>}
-                <th className={cx(TH, FYH, 'z-[3] text-[10.5px]')} title="Year total for flows, year average for rates">Year {year}</th>
+                    ? <th key={y} onClick={() => fold(y)} title="Click to show the months" className={cx(TH, 'cursor-pointer select-none bg-surface-2 text-center tracking-[.06em] hover:text-brand', y === year && 'bg-brand-soft text-brand')}>{y} ▸</th>
+                    : <th key={y} colSpan={12} onClick={() => fold(y)} title="Click to fold the year to one column" className={cx(TH, 'cursor-pointer select-none text-center tracking-[.06em] hover:text-brand', y === year ? 'bg-brand-soft text-brand' : 'bg-surface-2')}>{y} ▾</th>)
+                  : <th colSpan={cols.length} title="Totals for flows, averages for rates and stocks" className={cx(TH, 'bg-surface-2 text-center tracking-[.06em] text-brand')}>by year</th>}
+                <th style={PINNED_HEADER_STYLE} className={cx(TH, FYH, 'z-[4] text-[10.5px]')} title="Year total for flows, year average for rates">Year {year}</th>
               </tr>
               <tr>
-                <th className={cx(TH, ROWH, 'top-[29px] z-[4] px-2 font-semibold')}>{period}</th>
+                <th style={PINNED_HEADER_STYLE} className={cx(TH, ROWH, 'top-[29px] z-[6] px-2 font-semibold')}>{period}</th>
                 {cols.map((c, k) => c.i === null
                   ? <th key={k} className={cx(TH, 'top-[29px]', c.y < lastActYear && 'text-text-3/70')}>{period === 'annual' ? <>{c.y}{c.y === lastActYear && <span className="ml-1 font-normal">actual + forecast</span>}</> : 'year'}</th>
                   : <th key={k} className={cx(TH, 'top-[29px]', c.i < ACT && 'text-text-3/70')}>{MONTHS[c.i % 12]}</th>)}
-                <th className={cx(TH, FYH, 'top-[29px] z-[3]')} />
+                <th style={PINNED_HEADER_STYLE} className={cx(TH, FYH, 'top-[29px] z-[4]')} />
               </tr>
             </thead>
             <tbody>
               {stages.flatMap(st => [
-                <tr key={`s-${st.id}`}><td colSpan={cols.length + 2} className="sticky left-0 border-b border-border/60 bg-background px-2 py-[5px] text-left text-[10.5px] font-bold uppercase tracking-[.06em] text-brand">{st.name} <span className="font-normal normal-case tracking-normal text-text-3">{st.what}</span></td></tr>,
+                <tr key={`s-${st.id}`}>
+                  <td className={cx(ROWH, 'border-y border-border px-2 py-[5px] text-[10.5px] font-bold uppercase tracking-[.06em] text-brand')}>{st.name} <span className="font-normal normal-case tracking-normal text-text-3">{st.what}</span></td>
+                  <td colSpan={cols.length + 1} aria-hidden="true" className="border-y border-border bg-surface-2" />
+                </tr>,
                 ...rows.filter(r => r.stage === st.id).map(r => {
                   const can = r.kind === 'input' && !!r.id && editable.includes(r.id) && !locked
                   return (
                     <tr key={r.key} className={cx(r.kind === 'out' && 'font-semibold', selected === (r.go ?? r.key) && 'bg-brand-soft/30')}>
                       <td className={cx(TD, ROWH, 'px-2 font-sans')}>
-                        {r.go ? <button type="button" onClick={() => onRow(r.go!)} className="flex w-full items-center gap-1.5 text-left hover:text-brand">{r.kind === 'input' && <i className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" title="Assumption" />}<b className="text-[11.5px] font-semibold">{r.label}</b></button>
+                        {r.go ? <button type="button" onClick={() => onRow(r.go!)} className="flex w-full items-center gap-1.5 text-left hover:text-brand"><b className="text-[11.5px] font-semibold">{r.label}</b></button>
                           : <span className="flex items-center gap-1.5"><b className="text-[11.5px] font-semibold text-text-2">{r.label}</b></span>}
                       </td>
                       {cols.map((c, k) => {

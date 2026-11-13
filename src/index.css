@@ -207,8 +207,21 @@
 [role="dialog"] { border-radius: calc(var(--radius) + 4px); }  /* 16px, matching the overlay-drawer reference */
 .tag:not(:has(svg))::before { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 9999px; background: currentColor; opacity: .8; }
 
-/* tables: no single shared <table> component, so the tint/hover live here once instead of in every file */
-table thead th { background: transparent; font-weight: 500; color: var(--color-text-3); border-bottom: 1px solid var(--gray-20); }
+/* Shared data-table treatment; component utilities can still set table-specific fills. */
+@layer base {
+  table { border-collapse: separate; border-spacing: 0; }
+  table :is(th, td) { border-right: 1px solid var(--gray-20); border-bottom: 1px solid var(--gray-20); }
+  table thead th { background-color: var(--background); font-weight: 500; color: var(--color-text-3); }
+  table tr > :first-child:not([colspan]) {
+    position: sticky;
+    left: 0;
+    z-index: 2;
+    background-color: var(--background);
+    border-left: 1px solid var(--gray-20);
+  }
+  table thead tr > :first-child:not([colspan]) { z-index: 3; }
+  table tr:first-child > * { border-top: 1px solid var(--gray-20); }
+}
 table tbody tr:hover { background: color-mix(in oklab, var(--gray-10) 60%, transparent); }
 
 /* clickable "picker tile" buttons (forecast map nodes, option cards): lift on hover, pinned state stays flat */

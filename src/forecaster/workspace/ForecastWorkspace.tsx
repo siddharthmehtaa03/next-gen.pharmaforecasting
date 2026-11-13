@@ -2,8 +2,8 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'rea
 import { createPortal } from 'react-dom'
 import type { ComponentType } from 'react'
 import { scrollFrameTop } from '../../frame'
-import { ArrowLeft, ArrowRight, Check, ChevronDown, PanelRightOpen, Plus, Save } from 'lucide-react'
-import { DEFAULT_MODEL, DRV, FY, SEED_EVENTS, SEED_SCENARIOS, UNBIASED, fyAvg, fySum, revenue, scenarioLayer, workingLayer } from './engine'
+import { ArrowLeft, ArrowRight, Check, ChevronDown, Eye, EyeOff, PanelRightOpen, Plus, Save } from 'lucide-react'
+import { ACT, DEFAULT_MODEL, DRV, FY, N, SEED_EVENTS, SEED_SCENARIOS, UNBIASED, defaultEdit, fyAvg, fySum, revenue, scenarioLayer, workingLayer } from './engine'
 import type { DriverId, EventDef, ModelCfg, OutputId, Scenario } from './engine'
 import { Btn, Tag, cx, field } from './ui'
 import type { Grain } from './ui'
@@ -71,6 +71,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
   const [streamSelection, setStreamSelection] = useState('all')
   // Tabbed model panel under the workspace: the full grid, and the plan-version comparison.
   const [modelTab, setModelTab] = useState<'model' | 'versions'>('model')
+  const [modelHidden, setModelHidden] = useState(false)
   const [scenarioBuilderOpen, setScenarioBuilderOpen] = useState(false)
   const [presenting, setPresenting] = useState(false)
   const [driverDirty, setDriverDirty] = useState(false)
@@ -100,6 +101,20 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
   const work = calc.__working!
   const sc = calc[selId] ?? calc[scenarios[0]!.id]!
   const scName = (scenarios.find(s => s.id === selId) ?? scenarios[0]!).name
+  const updateModelCell = (id: DriverId, i: number, value: number): string | null => {
+    if (!Number.isFinite(value)) return 'Enter a valid number.'
+    if (value < 0) return 'Values cannot be negative.'
+    if (DRV[id].pct && value > 100) return 'Percentage values cannot exceed 100.'
+    setEdits(current => {
+      const series = workingLayer(current)[id]
+      const values: Record<number, number> = {}
+      for (let month = ACT; month < N; month++) values[month] = series[month]!
+      values[i] = value
+      const edit = current[id] ?? defaultEdit(id)
+      return { ...current, [id]: { ...edit, method: 'direct', start: ACT, end: N - 1, values, source: 'manual' } }
+    })
+    return null
+  }
   const finalised = scenarios.some(s => s.locked)
   const modified = Object.keys(edits).length
   const leaveOk = () => !driverDirty || window.confirm('You have unapplied changes to this assumption. Discard them?')
@@ -292,20 +307,26 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
       {mapView && view === 'Assumptions' && !presenting && (
         <div className="mx-auto px-6 pb-8">
           <div className="rounded-xl border border-border bg-surface-2 p-2">
-            <div role="tablist" aria-label="Model views" className="flex gap-1 px-1 pb-2">
-              {([['model', 'Full model'], ['versions', 'Plan versions · 10-year view']] as const).map(([id, label]) => (
-                <button key={id} type="button" role="tab" aria-selected={modelTab === id} onClick={() => setModelTab(id)}
-                  className={cx('rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors',
-                    modelTab === id ? 'bg-surface text-text shadow-[0_1px_2px_rgba(16,24,40,0.08)]' : 'text-text-2 hover:bg-surface/60 hover:text-text')}>
-                  {label}
-                </button>
-              ))}
+            <div className="flex items-center gap-1 px-1 pb-2">
+              <div role="tablist" aria-label="Model views" className="flex gap-1">
+                {([['model', 'Full model'], ['versions', 'Plan versions · 10-year view']] as const).map(([id, label]) => (
+                  <button key={id} type="button" role="tab" aria-selected={modelTab === id} onClick={() => setModelTab(id)}
+                    className={cx('rounded-lg px-3 py-1.5 text-[13px] font-medium transition-colors',
+                      modelTab === id ? 'bg-surface text-text shadow-[0_1px_2px_rgba(16,24,40,0.08)]' : 'text-text-2 hover:bg-surface/60 hover:text-text')}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {modelTab === 'model' && <button type="button" aria-label={modelHidden ? 'Show model' : 'Hide model'} title={modelHidden ? 'Show model' : 'Hide model'}
+                onClick={() => setModelHidden(h => !h)} className="ml-auto inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[12px] font-medium text-text-2 hover:bg-surface hover:text-text">
+                {modelHidden ? <Eye size={14} /> : <EyeOff size={14} />}{modelHidden ? 'Show model' : 'Hide model'}
+              </button>}
             </div>
             {modelTab === 'model' ? (
-              <FullModelGrid layer={work.layer} reference={UNBIASED} year={wsYear} title={scope === FORECAST ? 'Active forecast' : scName}
-                editable={[]} locked ue={ue} selected={mod ? null : (sel as string)}
+              <FullModelGrid layer={work.layer} reference={UNBIASED} year={wsYear} title={scope === FORECAST ? 'Active forecast' : scName} hidden={modelHidden}
+                editable={scope === FORECAST ? model.modules.filter(m => m.editable).map(m => m.id) : []} ue={ue} selected={mod ? null : (sel as string)}
                 onRow={go2 => { const d = model.modules.find(m => m.id === go2); if (d) pick(d.id) }}
-                onCell={() => null} />
+                onCell={updateModelCell} />
             ) : (
               <div className="grid min-h-[300px] place-items-center rounded-lg bg-surface px-6 py-16 text-center">
                 <div>
