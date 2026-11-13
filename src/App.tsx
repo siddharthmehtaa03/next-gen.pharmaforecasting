@@ -21,11 +21,10 @@ import { ChartActions } from './chart/ChartActions'
 import { MoreMenu } from './forecaster/workspace/ui'
 import { InputCanvas, ModelFlowTree, PatientFlowList, SnowflakeSources } from './ConfigInputs'
 import type { StreamRef } from './ConfigInputs'
-import { flowRows as inputFlow, withPatientFlow, onCanvas } from './configCatalog'
+import { flowRows as inputFlow, withPatientFlow, onCanvas, FLOW_INPUTS } from './configCatalog'
 import type { InputMap } from './configCatalog'
 import pfizerMark from './assets/pfizer-mark-color.png'
 import pfizerLogo from './assets/pfizer-logo-color.png'
-import { ChartTip, useHoverTip } from './chart/ChartTip'
 import {
   AlertCircle, AlertTriangle, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, ArrowRight, Bell, Boxes, Check, CheckCircle2, ChevronDown, ChevronRight,
   Clock, Copy, Database, FileText, GitBranch, History, Info, Layers, Loader2, Lock, Plus, PanelRightClose, PanelRightOpen, Maximize2, Minimize2,
@@ -4367,125 +4366,82 @@ const flowRows = (c: Config): FlowRow[] => c.inds.map((i, k) => {
   }
 })
 
-/* A simple top-to-bottom flow: streams → archetype engines → total net revenue. Streams on the same archetype merge.
-   Band widths follow each stream's net revenue (square-root scaled so small streams stay visible). */
-type VNode = { key: string; row: number; x: number; w: number; label: string; pending?: boolean; hue?: string; stream?: string; tone: 'stream' | 'engine' | 'total' }
-type VLink = { key: string; d: string; hue: string; stream: string; pending?: boolean }
-const SK = { BH: 10, PAD: 10, ROW: 84, TOP: 30 }
-const FLOW_ROWS = ['Streams', 'Archetype', 'Net revenue']
-const vband = (x0: number, y0: number, x1: number, y1: number, w: number) => {
-  const m = (y0 + y1) / 2
-  return `M${x0},${y0}C${x0},${m} ${x1},${m} ${x1},${y1}L${x1 + w},${y1}C${x1 + w},${m} ${x0 + w},${m} ${x0 + w},${y0}Z`
-}
-function layoutFlow(rows: FlowRow[], W: number) {
-  const { BH, PAD, ROW, TOP } = SK
-  const n = rows.length
-  const live = (r: FlowRow) => !!r.arch && r.net > 0
-  const roots = rows.map(r => (live(r) ? Math.sqrt(r.net) : 0))
-  const known = roots.filter(Boolean)
-  const avg = known.length ? known.reduce((a, b) => a + b, 0) / known.length : 1
-  const raw = roots.map(v => v || avg * 0.55)
-  const avail = W - PAD * (n - 1), sum = raw.reduce((a, b) => a + b, 0) || 1
-  let w = raw.map(v => Math.max(24, (v / sum) * avail))
-  const ws = w.reduce((a, b) => a + b, 0)
-  if (ws > avail) w = w.map(v => (v * avail) / ws)
-  const by = (row: number) => TOP + row * ROW
-  const center = (t: number) => Math.max(0, (W - t) / 2)
-  const nodes: VNode[] = [], links: VLink[] = []
-
-  const s0: number[] = []
-  let x = 0
-  rows.forEach((r, k) => { nodes.push({ key: `s-${r.id}`, row: 0, x, w: w[k]!, label: r.name, hue: r.hue, stream: r.id, tone: 'stream' }); s0[k] = x; x += w[k]! + PAD })
-
-  const groups = Array.from(new Set(rows.map(r => r.arch ?? 'pending'))).map(g => ({ g, idx: rows.flatMap((r, k) => ((r.arch ?? 'pending') === g ? [k] : [])) }))
-  const gw = groups.map(G => G.idx.reduce((a, k) => a + w[k]!, 0))
-  const s1: number[] = []
-  x = center(gw.reduce((a, b) => a + b, 0) + PAD * (groups.length - 1))
-  groups.forEach((G, j) => {
-    const pending = G.g === 'pending'
-    nodes.push({ key: `e-${G.g}`, row: 1, x, w: gw[j]!, label: pending ? 'No archetype yet' : archName(G.g as ArchId), pending, tone: 'engine' })
-    let off = x
-    G.idx.forEach(k => { s1[k] = off; links.push({ key: `a-${rows[k]!.id}`, d: vband(s0[k]!, by(0) + BH, off, by(1), w[k]!), hue: rows[k]!.hue, stream: rows[k]!.id, pending: !rows[k]!.arch }); off += w[k]! })
-    x += gw[j]! + PAD
-  })
-
-  const liveIdx = groups.flatMap(G => G.idx).filter(k => live(rows[k]!))
-  let H = by(1) + BH + 4
-  if (liveIdx.length) {
-    const tw = liveIdx.reduce((a, k) => a + w[k]!, 0)
-    let off = center(tw)
-    nodes.push({ key: 'total', row: 2, x: off, w: tw, label: `Total ${fmtFunnel(liveIdx.reduce((a, k) => a + rows[k]!.net, 0), '$')}`, tone: 'total' })
-    liveIdx.forEach(k => { links.push({ key: `t-${rows[k]!.id}`, d: vband(s1[k]!, by(1) + BH, off, by(2), w[k]!), hue: rows[k]!.hue, stream: rows[k]!.id }); off += w[k]! })
-    H = by(2) + BH + 4
-  }
-  return { nodes, links, H, by, rowsShown: liveIdx.length ? 3 : 2 }
-}
 const FLOW_MIN = 280, FLOW_MAX = 680
-const clipText = (s: string, n: number) => (s.length > n ? `${s.slice(0, n - 1)}…` : s)
-const HALO = { paintOrder: 'stroke' as const, stroke: '#f6f7fb', strokeWidth: 3, strokeLinejoin: 'round' as const }
 
-function useWidth<T extends HTMLElement>() {
-  const ref = useRef<T>(null)
-  const [w, setW] = useState(0)
-  useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const ro = new ResizeObserver(([e]) => setW(e!.contentRect.width))
-    ro.observe(el)
-    return () => ro.disconnect()
-  }, [])
-  return [ref, w] as const
+/* Per-stream build checklist for the Full flow preview: model setup, then the four per-stream
+   steps. Status is the stream's position against the current wizard stage (done / now / to do);
+   the lines under each step summarise the actual configuration. */
+type StepState = 'done' | 'now' | 'todo'
+const stepState = (idx: number, stage: number): StepState => (idx + 1 < stage ? 'done' : idx + 1 === stage ? 'now' : 'todo')
+
+function StepCard({ n, title, state, lines, solid }: { n: number; title: string; state: StepState; lines: (string | undefined | false)[]; solid?: boolean }) {
+  const shown = lines.filter(Boolean) as string[]
+  const tag = state === 'done' ? ['text-ok-strong', 'Done'] : state === 'now' ? ['text-brand', 'In progress'] : ['text-text-3', 'To do']
+  return (
+    <li className={cx('rounded-xl px-3 py-2.5', solid ? 'border border-brand bg-brand-soft/30' : 'border border-dashed border-border')}>
+      <div className="flex items-center gap-2.5">
+        {state === 'done'
+          ? <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand text-white"><Check size={13} /></span>
+          : <span className={cx('grid h-6 w-6 shrink-0 place-items-center rounded-full text-[12px] font-semibold', state === 'now' ? 'bg-brand text-white' : 'border border-border-strong text-text-3')}>{n}</span>}
+        <span className="min-w-0 flex-1 text-[13px] font-semibold">{title}</span>
+        <span className={cx('shrink-0 text-[10px] font-semibold uppercase tracking-wider', tag[0])}>{tag[1]}</span>
+      </div>
+      {shown.length > 0 && <div className="mt-1.5 space-y-0.5 pl-[34px] text-[11.5px] text-text-2">{shown.map((l, i) => <p key={i} className="truncate">{l}</p>)}</div>}
+    </li>
+  )
 }
 
-function FlowSankey({ rows, onPick, go, hov, setHov, id }: { rows: FlowRow[]; onPick: (id: string) => void; go: (n: number) => void; hov: string | null; setHov: (id: string | null) => void; id: string }) {
-  const [ref, cw] = useWidth<HTMLDivElement>()
-  const W = Math.max(200, cw || 280)
-  const { nodes, links, H, by, rowsShown } = useMemo(() => layoutFlow(rows, W), [rows, W])
-  const dim = (s?: string) => !!hov && !!s && s !== hov
-  const tip = useHoverTip()
-  // One card per stream, shown from its band or any of its nodes; the total node gets its own.
-  const streamCard = (stream: string) => {
-    const r = rows.find(x => x.id === stream); if (!r) return null
-    const live = !!r.arch && r.net > 0
-    return (
-      <ChartTip title={r.name} sections={[{ rows: [
-        { label: 'Archetype', value: r.arch ? archName(r.arch) : 'Not chosen', tone: r.arch ? undefined : 'muted' },
-        { label: 'Net revenue', value: live ? fmtFunnel(r.net, '$') : '—', tone: live ? undefined : 'muted' },
-        { label: 'Gross revenue', value: live ? fmtFunnel(r.gross, '$') : '—', tone: live ? undefined : 'muted' },
-        { label: 'Modes set', value: `${r.modes[0]} of ${r.modes[1]}` },
-        { label: 'Modules', value: String(r.mods) },
-        { label: 'Inputs with a source table', value: `${r.ins[0]} of ${r.ins[1]}` },
-      ] }]} footer={r.arch ? undefined : 'Choose an archetype in step 2 to include this stream in the total.'} />
-    )
-  }
-  const totalCard = () => {
-    const live = rows.filter(r => r.arch && r.net > 0)
-    return <ChartTip title="Total net revenue" sections={[{ rows: [
-      { label: 'Net revenue', value: fmtFunnel(live.reduce((a, r) => a + r.net, 0), '$') },
-      { label: 'Streams counted', value: `${live.length} of ${rows.length}` },
-    ] }]} />
-  }
+function FlowStepper({ c, rows, stage, onPick }: { c: Config; rows: FlowRow[]; stage: number; onPick: (id: string) => void }) {
+  const active = c.inds.find(i => i.id === c.active) ?? c.inds[0]
+  const ar = rows.find(r => r.id === active?.id) ?? rows[0]
+  const done2to5 = Math.max(0, Math.min(4, stage - 2)) // steps 2–5 cleared; stage-driven, so shared across streams
+  const groups = active?.arch ? new Set(orderedModules(active).map(m => m.cat)).size : 0
+  const names = c.inds.map(i => i.name.trim() || 'Untitled').join(', ')
+  const ready = stage > 5
   return (
-    <div ref={ref} className="w-full">
-      <div ref={tip.wrap} className="relative">
-      <svg viewBox={`0 0 ${W} ${H}`} className="block w-full overflow-visible" role="img" aria-label={`Flow: ${rows.map(r => `${r.name}${r.arch ? ` on ${archName(r.arch)}` : ', no archetype yet'}`).join('; ')}`}>
-        <defs><pattern id={`${id}-hatch`} width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="#eef0f7" /><line x1="0" y1="0" x2="0" y2="6" stroke="#b9bed0" strokeWidth="1.5" /></pattern></defs>
-        {FLOW_ROWS.slice(0, rowsShown).map((t, r) => <text key={t} x={0} y={by(r) - 20} className="fill-text-3 font-mono" fontSize={9} fontWeight={600} letterSpacing={0.8} style={HALO}>{t.toUpperCase()}</text>)}
-        {links.map(l => <path key={l.key} d={l.d} onPointerEnter={e => { setHov(l.stream); tip.move(e, streamCard(l.stream)) }} onPointerMove={e => tip.move(e, streamCard(l.stream))} onPointerLeave={() => { setHov(null); tip.hide() }} fill={l.pending ? `url(#${id}-hatch)` : l.hue} fillOpacity={dim(l.stream) ? 0.08 : l.pending ? 0.9 : hov === l.stream ? 0.4 : 0.22} style={{ transition: 'd .45s ease, fill-opacity .2s ease' }} />)}
-        {nodes.map(n => {
-          const y = by(n.row), chars = Math.floor(n.w / 6)
-          const fill = n.tone === 'total' ? '#000a5c' : n.pending ? '#ffffff' : n.tone === 'engine' ? '#4a5070' : n.hue!
-          const click = n.tone === 'stream' ? () => onPick(n.stream!) : n.pending ? () => go(2) : undefined
-          const card = () => n.stream ? streamCard(n.stream) : n.tone === 'total' ? totalCard() : null
-          return (
-            <g key={n.key} onClick={click} onPointerEnter={e => { if (n.stream) setHov(n.stream); tip.move(e, card()) }} onPointerMove={e => tip.move(e, card())} onPointerLeave={() => { setHov(null); tip.hide() }} className={click ? 'cursor-pointer' : undefined} opacity={dim(n.stream) ? 0.35 : 1}>
-              <rect x={n.x} y={y} width={Math.max(2, n.w)} height={SK.BH} rx={3} fill={fill} stroke={n.pending ? '#8a8fa8' : 'none'} strokeDasharray={n.pending ? '3 2' : undefined} style={{ transition: 'x .45s ease, width .45s ease' }} />
-              {chars >= 4 && <text x={n.x + n.w / 2} y={y - 6} textAnchor="middle" fontSize={n.tone === 'total' ? 12 : 11} fontWeight={600} className={n.pending ? 'fill-warn' : 'fill-text'} style={HALO}>{clipText(n.label, chars)}</text>}
-            </g>
-          )
-        })}
-      </svg>
-      {tip.node}
+    <div className="space-y-3">
+      <div className="rounded-md bg-surface-2 px-2.5 py-1.5 text-xs text-text-2">
+        <span className="font-semibold text-text">{c.brand || 'Untitled model'}</span>
+        <span className="text-text-3"> · </span>{c.market || 'US'}
+        <span className="text-text-3"> · </span>{c.inds.length} stream{c.inds.length === 1 ? '' : 's'}
+      </div>
+      <p className="text-[11.5px] text-text-3">A picture of the setup, step by step. Each step is ticked as you complete it.</p>
+      <ul className="space-y-2">
+        <StepCard n={1} title="Model setup" state={stepState(0, stage)} solid lines={[
+          `${c.brand || 'Untitled'} · ${c.market || 'US'} · ${c.cycle || 'OP 2027'}`,
+          `${c.inds.length} stream${c.inds.length === 1 ? '' : 's'}: ${names}`,
+        ]} />
+      </ul>
+      {c.inds.length > 1 && (
+        <div className="flex gap-1 overflow-x-auto rounded-lg bg-surface-2 p-0.5">
+          {c.inds.map((i, k) => (
+            <button key={i.id} type="button" onClick={() => onPick(i.id)}
+              className={cx('flex min-w-0 shrink-0 items-center gap-1.5 rounded-md px-2.5 py-1 text-[12px] font-medium transition-colors', i.id === active?.id ? 'bg-text text-white' : 'text-text-2 hover:text-text')}>
+              <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: FLOW_HUES[k % FLOW_HUES.length] }} />
+              <span className="truncate">{i.name.trim() || 'Untitled'}</span>
+              <span className={cx('tabular-nums', i.id === active?.id ? 'text-white/70' : 'text-text-3')}>{done2to5}/4</span>
+            </button>
+          ))}
+        </div>
+      )}
+      <ul className="space-y-2">
+        <StepCard n={2} title="Archetype" state={stepState(1, stage)} lines={active?.arch
+          ? [archName(active.arch), active.engine || `v1.0 · ${ARCH_DETAIL[active.arch].status === 'Certified' ? 'certified' : 'under review'}`]
+          : ['Not chosen yet']} />
+        <StepCard n={3} title="Modes" state={stepState(2, stage)} lines={active?.arch
+          ? modesFor(active.arch).slice(0, 3).map(m => `${m.label}: ${active.modes[m.id] ?? modeDefault(active.arch!, m)}`)
+          : ['Set after an archetype is chosen']} />
+        <StepCard n={4} title="Module map" state={stepState(3, stage)} lines={[
+          active?.arch ? `${ar?.mods ?? 0} modules across ${groups} group class${groups === 1 ? '' : 'es'}` : 'Depends on the archetype',
+          !!active?.arch && `${ar?.ins[1] ?? 0} of ${FLOW_INPUTS.length} patient-flow inputs on the canvas`,
+        ]} />
+        <StepCard n={5} title="Data sources" state={stepState(4, stage)} lines={[
+          `${ar?.ins[0] ?? 0} inputs read from Snowflake`,
+          'read-only · governed tables',
+        ]} />
+      </ul>
+      <div className={cx('rounded-xl border border-dashed px-3 py-2.5 text-center text-[11.5px]', ready ? 'border-ok/40 text-ok-strong' : 'border-border text-text-3')}>
+        {active?.name.trim() || 'This stream'} · {ready ? 'ready to review' : 'not ready yet'}
       </div>
     </div>
   )
@@ -4496,11 +4452,9 @@ function ForecastFlowPanel({ c, stage, go, onPick, open, aiOpen, onOpen, onClose
   open: boolean; aiOpen: boolean; onOpen: () => void; onClose: () => void
 }) {
   const rows = useMemo(() => flowRows(c), [c])
-  const [hov, setHov] = useState<string | null>(null)
   const [big, setBig] = useState(false)
   useEffect(() => { if (!big) return; const k = (e: KeyboardEvent) => e.key === 'Escape' && setBig(false); window.addEventListener('keydown', k); return () => window.removeEventListener('keydown', k) }, [big])
-  const live = rows.filter(r => r.arch && r.net > 0)
-  const net = live.reduce((a, r) => a + r.net, 0)
+  const net = rows.filter(r => r.arch && r.net > 0).reduce((a, r) => a + r.net, 0)
   const inBuild = stage < 6
 
   if (!open) return (
@@ -4510,52 +4464,6 @@ function ForecastFlowPanel({ c, stage, go, onPick, open, aiOpen, onOpen, onClose
       <span className="text-[11px] font-semibold uppercase tracking-widest [writing-mode:vertical-rl]">Full flow preview</span>
       {net > 0 && !inBuild && <span className="font-mono text-[11px] font-semibold text-brand [writing-mode:vertical-rl]">{fmtFunnel(net, '$')}</span>}
     </button>
-  )
-
-  const kpi = (
-    <div>
-      <div className="mb-2.5 rounded-md bg-surface-2 px-2.5 py-1.5 text-xs text-text-2">
-        <span className="font-semibold text-text">{c.brand || 'Untitled model'}</span>
-        <span className="text-text-3"> · </span>
-        <span>{c.market || 'US'}</span>
-        <span className="text-text-3"> · </span>
-        <span>{c.inds.length} stream{c.inds.length > 1 ? 's' : ''}</span>
-      </div>
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Total net revenue</p>
-      {inBuild ? (
-        <>
-          <p className="mt-0.5 text-[15px] font-medium italic text-text-3">Not yet calculated</p>
-          <p className="mt-0.5 text-[11.5px] text-text-3">Structure is prioritised in build mode. Revenue calculates in Step 6 (Review).</p>
-        </>
-      ) : (
-        <>
-          <p className="mt-0.5 font-mono text-[26px] font-semibold leading-tight tracking-tight text-brand-dark">{net > 0 ? fmtFunnel(net, '$') : '—'}</p>
-          <p className="text-[11.5px] text-text-3">{net > 0 ? 'Annual at peak · calculated' : 'Appears once streams have archetypes'}</p>
-        </>
-      )}
-    </div>
-  )
-  const list = (close?: () => void) => (
-    <ul className="divide-y divide-border rounded-lg border border-border bg-surface">
-      {rows.map(r => {
-        const done = r.steps.filter(Boolean).length
-        return (
-          <li key={r.id} onMouseEnter={() => setHov(r.id)} onMouseLeave={() => setHov(null)}>
-            <button type="button" onClick={() => { onPick(r.id); close?.() }} className={cx('flex w-full items-center gap-2.5 px-3 py-2.5 text-left transition-colors hover:bg-surface-2', c.active === r.id && 'bg-brand-soft/40')}>
-              <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: r.hue }} />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[12.5px] font-semibold">{r.name}</span>
-                <span className={cx('block truncate text-[11.5px]', r.arch ? 'text-text-3' : 'text-warn')}>{r.arch ? archName(r.arch) : 'No archetype yet'}</span>
-              </span>
-              <span className="shrink-0 text-right">
-                <span className="block font-mono text-[12px] font-semibold">{r.arch && r.net > 0 ? fmtFunnel(r.net, '$') : '—'}</span>
-                <span className="block text-[10.5px] text-text-3">{done}/5 steps</span>
-              </span>
-            </button>
-          </li>
-        )
-      })}
-    </ul>
   )
 
   return (
@@ -4568,22 +4476,18 @@ function ForecastFlowPanel({ c, stage, go, onPick, open, aiOpen, onOpen, onClose
           <button type="button" onClick={onClose} aria-label="Fold the full flow preview" title="Fold" className="grid h-7 w-7 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><PanelRightClose size={15} /></button>
         </div>
       </div>
-      <div className="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-4">
-        <div id="export-flow-side" className="space-y-5 bg-background">{kpi}<FlowSankey rows={rows} onPick={onPick} go={go} hov={hov} setHov={setHov} id="flow-side" /></div>
-        {list()}
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4">
+        <div id="export-flow-side" className="bg-background"><FlowStepper c={c} rows={rows} stage={stage} onPick={onPick} /></div>
       </div>
 
       {big && createPortal(
         <div className="fixed inset-0 z-[60] grid place-items-center bg-brand-dark/50 p-4" role="dialog" aria-modal="true" aria-labelledby="flow-big-title" onClick={() => setBig(false)}>
-          <div className="rise flex h-[min(88dvh,820px)] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-surface shadow-xl" onClick={e => e.stopPropagation()}>
+          <div className="rise flex h-[min(88dvh,820px)] w-full max-w-2xl flex-col overflow-hidden rounded-xl bg-surface shadow-xl" onClick={e => e.stopPropagation()}>
             <header className="flex items-center justify-between gap-3 border-b border-border px-5 py-3">
               <h2 id="flow-big-title" className="text-[15px] font-semibold">Full flow preview · {c.brand || 'Untitled model'}</h2>
               <div className="flex items-center gap-1"><ChartActions target="export-flow-big" title="Full flow preview" subtitle={c.brand || 'Untitled model'} /><button type="button" onClick={() => setBig(false)} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><X size={16} /></button></div>
             </header>
-            <div className="grid min-h-0 flex-1 md:grid-cols-[minmax(0,1fr)_300px]">
-              <div className="min-h-0 overflow-y-auto bg-background px-10 py-8"><div id="export-flow-big" className="bg-background p-2"><FlowSankey rows={rows} onPick={id => { onPick(id); setBig(false) }} go={n => { go(n); setBig(false) }} hov={hov} setHov={setHov} id="flow-big" /></div></div>
-              <aside className="min-h-0 space-y-5 overflow-y-auto border-l border-border px-5 py-5">{kpi}{list(() => setBig(false))}</aside>
-            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto bg-background px-6 py-6"><div id="export-flow-big" className="mx-auto max-w-md bg-background"><FlowStepper c={c} rows={rows} stage={stage} onPick={id => { onPick(id); setBig(false) }} /></div></div>
           </div>
         </div>, document.body)}
     </div>
