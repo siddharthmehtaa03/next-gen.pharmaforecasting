@@ -8,7 +8,7 @@ import { ChartActions } from '../../chart/ChartActions'
 import { ArrowDown, ArrowUp, Check, Info, Lock, Pencil, Plus, X } from 'lucide-react'
 import { DRV, FC_YEARS, FY, describeOverride, fmtRev, fmtV, funnelOf, fySum, mLong, revenue, scenarioLayer } from './engine'
 import type { DriverId, EventDef, FunnelRow, Layer, ModelCfg, Override, Scenario } from './engine'
-import { Btn, COLOR, Label, Seg, Tag, Toggle, cx, field, PageTitle, MoreMenu } from './ui'
+import { Btn, COLOR, FiscalYearSelect, Label, PageHeader, PageTitle, Seg, Tag, Toggle, cx, field, MoreMenu } from './ui'
 import { AssumptionAccordion } from './Drivers'
 import type { Notify } from './Drivers'
 
@@ -170,14 +170,14 @@ export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, 
     </div>) }
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <PageHeader>
         <PageTitle title="All scenarios side by side" info={`Every scenario’s funnel and figures, compared against ${base.name}.`} />
         <div className="flex flex-wrap items-center gap-2">
-            <Seg label="Year" value={String(year)} onChange={v => setYear(+v)} options={FC_YEARS.map(y => ({ id: String(y), label: `FY${y}` }))} />
+            <FiscalYearSelect value={year} years={FC_YEARS} onChange={setYear} />
             <select aria-label="Compare against" title="Scenario the others are compared against" value={base.id} onChange={e => setBaseId(e.target.value)} className={cx(field, 'h-8 w-auto max-w-[170px] pr-7 text-[13px]')}>{scenarios.map(s => <option key={s.id} value={s.id}>vs {s.name}</option>)}</select>
             <ChartActions target="export-scenario-comparison" title="Scenario summary" subtitle={`FY${year} · compared against ${base.name}`} />
         </div>
-      </div>
+      </PageHeader>
 
 
       <section data-tour="summary" className="overflow-x-auto rounded-lg border border-border bg-surface" aria-label={`Scenario comparison, FY${year}`}>
@@ -191,7 +191,7 @@ export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, 
                 <span aria-hidden className="absolute inset-x-0 top-0 h-[3px]" style={{ background: c }} />
                 <div className="flex max-w-full items-center justify-center gap-1">
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: c }} />
-                  <span title={s.name} className={cx('min-w-0 truncate text-[13.5px] font-semibold', s.id === selId && 'text-brand')}>{s.name}</span>
+                  <span title={s.name} className={cx('min-w-0 truncate text-[15px] font-semibold', s.id === selId && 'text-brand')}>{s.name}</span>
                   {s.locked && <Lock size={11} className="shrink-0 text-ok" aria-label="Final" />}
                   <MoreMenu label={`${s.name} actions`} items={[{ label: 'Edit scenario', icon: <Pencil size={14} />, onClick: () => openEdit(s.id) }]} />
                 </div>
@@ -268,7 +268,7 @@ export function ScenarioSummary({ scenarios, setScenarios, calc, events, selId, 
         <div className="fixed inset-0 z-[60] grid place-items-center bg-text/40 p-4" role="dialog" aria-modal="true" aria-labelledby="edit-sc-title" onClick={() => setEditing(false)}>
           <div className="rise flex h-[min(92dvh,940px)] w-full max-w-6xl flex-col overflow-hidden rounded-xl bg-background shadow-2xl" onClick={e => e.stopPropagation()}>
             <header className="flex items-center justify-between gap-3 border-b border-border bg-surface px-6 py-3.5">
-              <div><h2 id="edit-sc-title" className="text-[17px] font-semibold">Edit scenario</h2><p className="text-[12.5px] text-text-2">Events, adjustments and overrides for the selected scenario.</p></div>
+              <div><h2 id="edit-sc-title" className="text-[16px] font-semibold">Edit scenario</h2><p className="text-[13px] text-text-2">Events, adjustments and overrides for the selected scenario.</p></div>
               <div className="flex items-center gap-2"><Btn onClick={() => setEditing(false)}>Done</Btn><Btn variant="ghost" onClick={() => setEditing(false)} icon={<X size={16} />} title="Close" /></div>
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">{renderPart('editor')}</div>
@@ -317,7 +317,7 @@ export function ScenarioBuilder({ scenarios, calc, events, model, year, base, on
       <div className="absolute inset-0 bg-text/30 backdrop-blur-[1px]" onClick={onClose} aria-hidden />
       <aside role="dialog" aria-modal="true" aria-labelledby="sb-title" className="relative flex h-full w-full max-w-[880px] flex-col bg-surface shadow-2xl">
         <header className="flex items-start justify-between gap-3 border-b border-border px-6 py-4">
-          <div><h3 id="sb-title" className="text-[18px] font-semibold">Build a new scenario</h3>
+          <div><h3 id="sb-title" className="text-[16px] font-semibold">Build a new scenario</h3>
             <p className="mt-0.5 text-[13px] text-text-2">The preview updates as you go.</p></div>
           <Btn variant="ghost" onClick={onClose} icon={<X size={16} />} title="Close" />
         </header>

@@ -2,6 +2,7 @@ import { Lock } from 'lucide-react'
 import { DRV, POP, fyAvg, fmtV } from './engine'
 import type { DriverId, Layer, ModelCfg } from './engine'
 import { cx, InfoTip } from './ui'
+import { ChartActions } from '../../chart/ChartActions'
 
 /*
  * Vertical patient funnel, drawn as equal-width cards. Clicking a card selects that driver.
@@ -33,10 +34,13 @@ export function FunnelChart({ levels, sel, onSel, startLabel, startValue }: {
   startLabel: string; startValue: string
 }) {
   return (
-    <div className="rounded-xl border border-border bg-surface p-3">
-      <div className="mb-2 flex items-center gap-1.5 px-1">
+    <div id="patient-funnel-chart" className="rounded-xl border border-border bg-surface p-3">
+      <div className="mb-2 flex items-center justify-between gap-1.5 px-1">
+        <div className="flex items-center gap-1.5">
         <h3 className="text-[11px] font-semibold uppercase tracking-wider text-text-3">Patient funnel</h3>
         <InfoTip text="Each card is the population still in the funnel after that stage, as an FY average. Click a stage to edit its assumption; formulas come from the CoE model and stay locked." />
+        </div>
+        <ChartActions target="patient-funnel-chart" title="Patient funnel" subtitle="FY average" />
       </div>
 
       {/* Starting pool is never editable. */}

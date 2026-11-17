@@ -416,7 +416,7 @@ function ForecastFlow({ onHome, notify, brand, model, cycle, cycleName, cycleRow
         </aside>
 
         <main className="min-w-0">
-          <div key={step} className="rise mx-auto w-full px-10 py-7">
+          <div key={step} className="workspace-page rise py-7">
             <p className="font-mono text-xs uppercase tracking-widest text-brand">Step {step} of {N}</p>
             <h1 className="mt-1 text-[28px] font-semibold tracking-tight">{STEP_META[curStep].title}</h1>
 
@@ -489,7 +489,7 @@ function ForecastFlow({ onHome, notify, brand, model, cycle, cycleName, cycleRow
 function ActionBar({ children }: { children: ReactNode }) {
   return (
     <div className="fixed inset-x-0 bottom-0 z-30 border-t border-border-strong bg-surface/95 shadow-[0_-6px_20px_-12px_rgba(0,0,0,0.25)] backdrop-blur">
-      <div className="mx-auto flex min-h-[68px] w-full flex-wrap items-center gap-x-8 gap-y-2 px-10 py-3">{children}</div>
+      <div className="workspace-page flex min-h-[68px] flex-wrap items-center gap-x-8 gap-y-2 py-3">{children}</div>
     </div>
   )
 }
@@ -841,7 +841,7 @@ function CycleWorkspace({ brand, cycleName, sub, tab, setTab, ctx, selected, row
   const [from, setFrom] = useState('')
   const statusOf = (r: ScenarioRow) => subAt[r.base] ? 'Submitted' : r.status
   return (
-    <div className="rise mx-auto w-full px-10 py-8">
+    <div className="workspace-page rise">
       <button type="button" onClick={onBack} className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-text-2 hover:text-brand"><ArrowLeft size={15} />My forecasts</button>
       <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Cycle workspace · {brand}</p>
       <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
@@ -943,7 +943,7 @@ function StepBaseline() {
         ].map(([k, v, s]) => <div key={k} className="rounded-lg border border-border bg-surface p-4"><p className="text-xs text-text-3">{k}</p><p className="mt-1 font-mono text-xl font-semibold">{v}</p><p className="mt-0.5 text-xs text-text-2">{s}</p></div>)}
       </div>
 
-      <Card className="mt-5" title="Product TRx — monthly" sub="Nurtec ODT · Franchise (000s)">
+      <Card frame className="mt-5" title="Product TRx — monthly" sub="Nurtec ODT · Franchise (000s)">
         <div className="flex h-44 items-end gap-2">
           {NUR_TRX.map((v, i) => (
             <div key={i} className="flex flex-1 flex-col items-center gap-1.5">
@@ -1103,7 +1103,7 @@ function StepGtn({ gtn, setGtn, total, gtnNet }: { gtn: Record<string, number>; 
             })}
           </div>
         </Card>
-        <Card title="Where gross goes">
+        <Card frame title="Where gross goes">
           <div className="space-y-2">
             {GTN_LINES.map(l => <div key={l.id}><div className="flex justify-between text-xs"><span className="text-text-2">{l.id}</span><span className="font-mono">−{fmtM(GROSS_FY * gtn[l.id]! / 100)}</span></div><div className="mt-1 h-1.5 rounded-full bg-surface-2"><div className="h-full rounded-full bg-brand/70" style={{ width: `${gtn[l.id]! / max * 100}%` }} /></div></div>)}
             <div className="flex justify-between border-t border-border pt-2 text-sm font-semibold"><span>GTN change vs trend</span><span className={cx('font-mono', gtnNet > 0 ? 'text-ok' : gtnNet < 0 ? 'text-err' : '')}>{fmtM(gtnNet, true)}</span></div>
@@ -1156,7 +1156,7 @@ function StepPressure({ net, eventsNet, gtnNet, gtn, setGtn, sims, pHit, pBudget
         ].map(([k, v, s2, tone]) => <div key={k} className="rounded-lg border border-border bg-surface p-4"><p className="text-xs text-text-3">{k}</p><p className={cx('mt-1 font-mono text-xl font-semibold', tone)}>{v}</p><p className="mt-0.5 text-xs text-text-2">{s2}</p></div>)}
       </div>
 
-      <Card className="mt-5" title="Probability of hitting forecast" sub="2,000 simulated outcomes: each included event lands or not at its probability, plus trend noise on Aug–Dec."
+      <Card frame className="mt-5" title="Probability of hitting forecast" sub="2,000 simulated outcomes: each included event lands or not at its probability, plus trend noise on Aug–Dec."
         right={<PinBtn onClick={() => addInsight(`${pHit.toFixed(0)}% chance of hitting ${fmtM(net)}`, `${pBudget.toFixed(0)}% chance of beating budget. P10 ${fmtM(p10)} · P50 ${fmtM(p50)} · P90 ${fmtM(p90)}.`)} />}>
         <div className="relative flex h-32 items-end gap-px">
           {hist.map((n, i) => { const mid = lo + (i + 0.5) * width; return <div key={i} title={`${fmtM(mid)} · ${n} runs`} className={cx('flex-1 rounded-t-sm', mid >= net ? 'bg-brand' : 'bg-border-strong')} style={{ height: `${(n / hMax) * 100}%` }} /> })}
@@ -1188,7 +1188,7 @@ function StepPressure({ net, eventsNet, gtnNet, gtn, setGtn, sims, pHit, pBudget
         </Card>
       </div>
 
-      <Card className="mt-5" title="Judgment river" sub="How the statistical trend becomes your forecast, layer by layer." right={<PinBtn onClick={() => addInsight('Judgment river', `Trend ${fmtM(NET_FY)} → ${river.map(([k, v]) => `${k} ${fmtM(v, true)}`).join(' → ')} → forecast ${fmtM(net)}.`)} />}>
+      <Card frame className="mt-5" title="Judgment river" sub="How the statistical trend becomes your forecast, layer by layer." right={<PinBtn onClick={() => addInsight('Judgment river', `Trend ${fmtM(NET_FY)} → ${river.map(([k, v]) => `${k} ${fmtM(v, true)}`).join(' → ')} → forecast ${fmtM(net)}.`)} />}>
         <div className="space-y-2">
           {(() => { let run = NET_FY; return [<RiverRow key="t" label="Trended statistical" from={riverMin} to={NET_FY} x={x} tone="base" v={NET_FY} />, ...river.map(([k, v]) => { const a = run; run += v; return <RiverRow key={k} label={k} from={Math.min(a, run)} to={Math.max(a, run)} x={x} tone={v >= 0 ? 'up' : 'down'} v={v} delta /> }), <RiverRow key="f" label="Your forecast" from={riverMin} to={net} x={x} tone="total" v={net} />] })()}
         </div>
@@ -1196,7 +1196,7 @@ function StepPressure({ net, eventsNet, gtnNet, gtn, setGtn, sims, pHit, pBudget
       </Card>
 
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
-        <Card title="Sensitivity" sub="Swing in net if each event lands (100%) or doesn’t (0%)." right={<PinBtn onClick={() => addInsight('Biggest swing events', sens.slice(0, 3).map(r => `${r.e.name}: ${fmtM(-r.adj, true)} to ${fmtM(r.full - r.adj, true)}`).join('\n'), { kind: 'bar', labels: sens.slice(0, 5).map(r => r.e.name), series: [{ name: 'Swing', pts: sens.slice(0, 5).map(r => Math.abs(r.full)), tone: 'brand' }] })} />}>
+        <Card frame title="Sensitivity" sub="Swing in net if each event lands (100%) or doesn’t (0%)." right={<PinBtn onClick={() => addInsight('Biggest swing events', sens.slice(0, 3).map(r => `${r.e.name}: ${fmtM(-r.adj, true)} to ${fmtM(r.full - r.adj, true)}`).join('\n'), { kind: 'bar', labels: sens.slice(0, 5).map(r => r.e.name), series: [{ name: 'Swing', pts: sens.slice(0, 5).map(r => Math.abs(r.full)), tone: 'brand' }] })} />}>
           {!sens.length ? <p className="text-sm text-text-2">No in-year events are included.</p> : (
             <ul className="space-y-2.5">
               {sens.map(r => { const dn = -r.adj, upv = r.full - r.adj, l = Math.min(dn, upv), h = Math.max(dn, upv); return (
@@ -1262,7 +1262,7 @@ function StepReview({ sub, scenario, eventsNet, gtnNet, net, vsBudget, checks, i
         <div className="mt-6 flex gap-3 rounded-lg border border-brand/20 bg-brand-soft/60 p-4 text-sm"><Info size={18} className="mt-px shrink-0 text-brand" /><p><strong>No official FY2026 {sub} forecast on record.</strong> <span className="text-text-2">Clear the checks, then confirm.</span></p></div>
       )}
       <div className="mt-5 grid gap-5 lg:grid-cols-2">
-        <Card title="FY2026 net sales bridge" sub={`${scenario} · ${sub}`}>
+        <Card frame title="FY2026 net sales bridge" sub={`${scenario} · ${sub}`}>
           <Bridge rows={[['Trended statistical', NET_FY], ['Events (risk-adjusted)', eventsNet], ['GTN changes', gtnNet]]} total={net} />
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div className="rounded-md bg-surface-2 p-3"><p className="text-xs text-text-3">Budget</p><p className="font-mono font-semibold">{fmtM(BUDGET_NET)}</p></div>
@@ -1557,7 +1557,7 @@ export function LegacyForecaster({ onHome, notify }: { onHome: () => void; notif
           </ul>
         </nav>
 
-        <main className="mx-auto w-full min-w-0 px-10 py-8">
+        <main className="workspace-page min-w-0">
           {section === 'knowledge' && <KnowledgeBank kb={kb} setKb={setKb} onOpen={(brand, cycle) => { const b = brands.find(x => x.brand === brand); const cy = b?.cycles.find(c => c.name === cycle); if (b && cy) openCycle(b, cy.id) }} />}
 
           {section === 'forecasts' && (
@@ -1696,5 +1696,5 @@ export default function Forecaster({ section, setSection, notify, insights, setI
   if (section === 'chat') return <ForecasterChat {...chat} insights={insights} setInsights={setInsights} notify={notify} />
   if (!brand) return <ForecasterHome onOpen={setBrand} notify={notify} />
   return <ForecastWorkspace key={brand.id} model={brand.model} brand={brand.brand} brandId={brand.id} cycle={brand.cycle} stream={brand.stream} notify={notify}
-    insights={insights} setInsights={setInsights} onAsk={ask} onHome={() => setBrand(null)} Copilot={Copilot} assistant={chat.assistant.name} onPublished={onPublished} />
+    insights={insights} setInsights={setInsights} onAsk={ask} Copilot={Copilot} assistant={chat.assistant.name} onPublished={onPublished} />
 }

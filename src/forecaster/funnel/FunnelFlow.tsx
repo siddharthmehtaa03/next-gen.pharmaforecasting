@@ -38,11 +38,11 @@ const FY = 2027
 function Btn({ children, variant = 'primary', onClick, icon, disabled, size = 'md' }: { children: ReactNode; variant?: 'primary' | 'secondary' | 'ghost'; onClick?: () => void; icon?: ReactNode; disabled?: boolean; size?: 'sm' | 'md' }) {
   return <button type="button" onClick={onClick} disabled={disabled} className={cx('inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-md font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-45', size === 'sm' ? 'h-8 px-2.5 text-[13px]' : 'h-10 px-4 text-sm', variant === 'primary' && 'bg-brand text-white hover:bg-brand-hover', variant === 'secondary' && 'border border-border-strong bg-surface hover:border-text', variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text')}>{icon}{children}</button>
 }
-function Card({ title, sub, right, children, className, pad = true }: { title?: ReactNode; sub?: string; right?: ReactNode; children: ReactNode; className?: string; pad?: boolean }) {
+function Card({ title, sub, right, children, className, pad = true, frame = false }: { title?: ReactNode; sub?: string; right?: ReactNode; children: ReactNode; className?: string; pad?: boolean; frame?: boolean }) {
   return (
-    <section className={cx('min-w-0 rounded-lg border border-border bg-surface', className)}>
-      {title && <header className="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-3.5"><div className="min-w-0"><h3 className="text-[15px] font-semibold">{title}</h3>{sub && <p className="mt-0.5 text-[13px] text-text-2">{sub}</p>}</div>{right}</header>}
-      <div className={cx(pad && 'p-5')}>{children}</div>
+    <section className={cx('min-w-0 border border-border', frame ? 'rounded-xl bg-surface-2' : 'rounded-lg bg-surface', className)}>
+      {title && <header className={cx('flex flex-wrap items-start justify-between gap-3', frame ? 'px-3 pt-2.5' : 'border-b border-border px-5 py-3.5')}><div className="min-w-0"><h3 className="text-[15px] font-semibold">{title}</h3>{sub && <p className="mt-0.5 text-[13px] text-text-2">{sub}</p>}</div>{right}</header>}
+      <div className={cx(pad && (frame ? 'px-1.5 pb-2.5 pt-1.5' : 'p-5'))}>{frame ? <div className="rounded-lg bg-surface p-2.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">{children}</div> : children}</div>
     </section>
   )
 }
@@ -217,7 +217,7 @@ export default function FunnelFlow({ notify, onLegacy }: { notify: Notify; onLeg
 function ModelsHome({ onOpen, onLegacy }: { onOpen: (id: string) => void; onLegacy: () => void }) {
   return (
     <div className="min-h-dvh bg-background">
-      <main className="mx-auto px-10 py-10">
+      <main className="workspace-page py-10">
         <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Forecaster</p>
         <h1 className="mt-1 text-[28px] font-semibold tracking-tight">My models</h1>
         <p className="mt-1 max-w-2xl text-sm text-text-2">Models are the organising object. Cycle and version are attributes. The flow and governance tier for each model are set by the CoE in the configurator.</p>
@@ -283,7 +283,7 @@ function Flow({ row, notify, onBack }: { row: ModelRow; notify: Notify; onBack: 
     <div className="min-h-dvh bg-background pb-20">
       {/* model header */}
       <div className="border-b border-border bg-surface">
-        <div className="mx-auto flex flex-wrap items-center justify-between gap-3 px-10 py-3">
+        <div className="workspace-page flex flex-wrap items-center justify-between gap-3 py-3">
           <div className="flex min-w-0 items-center gap-3">
             <button type="button" onClick={onBack} aria-label="Back to my models" className="grid h-9 w-9 place-items-center rounded-md text-text-2 hover:bg-surface-2"><ArrowLeft size={16} /></button>
             <div className="min-w-0">
@@ -298,7 +298,7 @@ function Flow({ row, notify, onBack }: { row: ModelRow; notify: Notify; onBack: 
           </div>
         </div>
         {/* stage rail */}
-        <div className="mx-auto overflow-x-auto px-10 pb-3">
+        <div className="workspace-page overflow-x-auto pb-3">
           <ol className="flex min-w-[760px] items-stretch gap-1.5">
             {STAGES.map((s, k) => {
               const on = s.id === stage
@@ -316,7 +316,7 @@ function Flow({ row, notify, onBack }: { row: ModelRow; notify: Notify; onBack: 
         </div>
       </div>
 
-      <div className={cx('mx-auto grid gap-5 px-10 py-6', panel ? 'lg:grid-cols-[230px_minmax(0,1fr)_340px]' : 'lg:grid-cols-[230px_minmax(0,1fr)]')}>
+      <div className={cx('workspace-page grid gap-5 py-6', panel ? 'lg:grid-cols-[230px_minmax(0,1fr)_340px]' : 'lg:grid-cols-[230px_minmax(0,1fr)]')}>
         <aside className="lg:sticky lg:top-6 lg:self-start"><FunnelNav model={model} sel={stage === 'baseline' || nodeFilter ? sel : null} onPick={pick} devs={devs} tier={tier} /></aside>
 
         <main className="min-w-0 space-y-5">
@@ -337,7 +337,7 @@ function Flow({ row, notify, onBack }: { row: ModelRow; notify: Notify; onBack: 
 
       {/* always-on bar */}
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-surface/95 backdrop-blur">
-        <div className="mx-auto flex flex-wrap items-center justify-between gap-3 px-10 py-2.5">
+        <div className="workspace-page flex flex-wrap items-center justify-between gap-3 py-2.5">
           <div className="flex flex-wrap items-center gap-5 text-[13px]">
             <span><span className="text-text-3">FY{FY} net revenue </span><b className="font-mono">{fmt('rev', rev)}</b></span>
             <span><span className="text-text-3">vs baseline </span><b className={cx('font-mono', rev >= revB ? 'text-ok' : 'text-err')}>{rev >= revB ? '+' : '−'}{fmt('rev', Math.abs(rev - revB))}</b></span>
@@ -375,7 +375,7 @@ function Orient({ model, devs, tier, gran, saved, published, onGo, onPick }: { m
           <div key={x.k} className="rounded-lg border border-border bg-surface p-4"><p className="text-[12px] text-text-3">{x.k}</p><p className="mt-1 font-mono text-[22px] font-semibold">{x.v}</p><p className="text-[12px] text-text-2">{x.d}</p></div>
         ))}
       </div>
-      <Card title="Net revenue: baseline vs forecast" sub="Dashed line is the trend-only baseline. The gap is explained entirely by logged deviations.">
+      <Card frame title="Net revenue: baseline vs forecast" sub="Dashed line is the trend-only baseline. The gap is explained entirely by logged deviations.">
         <TrendChart model={model} id="rev" gran={gran} />
       </Card>
       <div className="grid gap-5 xl:grid-cols-[1fr_1.2fr]">
@@ -437,7 +437,7 @@ function NodeWorkspace({ model, id, gran, tier, devs, setup, setSetup, add, patc
         <ShieldCheck size={15} className="mt-0.5 shrink-0" /><p><b>{TIERS[tier].label} governance.</b> {TIERS[tier].rule}</p>
       </div>
 
-      <Card title="History and trend" right={derived && <span className="flex flex-wrap gap-1">{n.upstream!.filter(u => NODE[u].kind === 'input').map(u => <Tag key={u}>{NODE[u].label}</Tag>)}</span>}>
+      <Card frame title="History and trend" right={derived && <span className="flex flex-wrap gap-1">{n.upstream!.filter(u => NODE[u].kind === 'input').map(u => <Tag key={u}>{NODE[u].label}</Tag>)}</span>}>
         <TrendChart model={model} id={id} gran={gran} />
       </Card>
 
@@ -506,7 +506,7 @@ function Deviations({ model, devs, tier, filter, setFilter, add, patch, remove }
         <Btn icon={<Plus size={15} />} onClick={() => setForm({ label: '', node: filter && NODE[filter].kind === 'input' ? filter : 'brand', start: idxOf(2027, 0), end: null, value: '-5' })}>Add event</Btn>
       </div>
 
-      <Card title="Events timeline" sub={`${mLabel(ACT)} → ${mLabel(N - 1)}`}>
+      <Card frame title="Events timeline" sub={`${mLabel(ACT)} → ${mLabel(N - 1)}`}>
         <div className="relative h-[86px]">
           <div className="absolute inset-x-0 top-[38px] h-px bg-border-strong" />
           {YEARS.filter(y => idxOf(y, 0) >= ACT).map(y => <span key={y} className="absolute top-[44px] -translate-x-1/2 text-[10px] text-text-3" style={{ left: pos(idxOf(y, 0)) }}>{y}</span>)}
@@ -566,7 +566,7 @@ function Scenarios({ model, devs, setup, saved, scale, gran, onSave, onLoad }: {
         <div><h1 className="text-[24px] font-semibold tracking-tight">Scenarios</h1><p className="mt-1 text-sm text-text-2">Save working versions as you go and compare them. Saving never publishes.</p></div>
         <div className="flex gap-2"><input aria-label="Scenario name" value={name} onChange={e => setName(e.target.value)} className={cx(field, 'w-52')} /><Btn icon={<Save size={15} />} disabled={!name.trim()} onClick={() => { onSave(name.trim()); setName(`Working ${saved.length + 1}`) }}>Save working scenario</Btn></div>
       </div>
-      <Card title="Compare net revenue" right={<div className="flex flex-wrap gap-1.5">{saved.map(s => <button key={s.id} type="button" aria-pressed={cmp.includes(s.id)} onClick={() => setCmp(c => c.includes(s.id) ? c.filter(x => x !== s.id) : [...c, s.id].slice(-3))} className={cx('rounded-md border px-2 py-1 text-[12px] font-medium', cmp.includes(s.id) ? 'border-brand bg-brand-soft text-brand' : 'border-border text-text-2 hover:border-border-strong')}>{s.name}</button>)}</div>}>
+      <Card frame title="Compare net revenue" right={<div className="flex flex-wrap gap-1.5">{saved.map(s => <button key={s.id} type="button" aria-pressed={cmp.includes(s.id)} onClick={() => setCmp(c => c.includes(s.id) ? c.filter(x => x !== s.id) : [...c, s.id].slice(-3))} className={cx('rounded-md border px-2 py-1 text-[12px] font-medium', cmp.includes(s.id) ? 'border-brand bg-brand-soft text-brand' : 'border-border text-text-2 hover:border-border-strong')}>{s.name}</button>)}</div>}>
         <TrendChart model={model} id="rev" gran={gran} extra={extra} />
         <div className="mt-4 overflow-x-auto">
           <table className="w-full min-w-[640px] text-[13px]">

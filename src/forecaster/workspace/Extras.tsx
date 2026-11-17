@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Card, Seg, Tag, cx, field } from './ui'
+import { ChartActions } from '../../chart/ChartActions'
 import { ACT, DRIVERS, FY, GTN, N, POP, YEARS, bridge, fmtDelta, fmtRev, fmtV, funnelOf, fyAvg, fySum, revenue } from './engine'
 import type { Layer } from './engine'
 import type { Calc } from './Stages'
@@ -18,7 +19,7 @@ export function FunnelTable({ calc, scenarios }: { calc: Calc; scenarios: Scenar
   const rows = useMemo(() => YEARS.map(y => funnelOf(layer, y)), [layer])
   const labels = rows[0]!
   return (
-    <div className="mx-auto space-y-4 px-10 py-8">
+    <div className="workspace-page space-y-4">
       <div className="flex flex-wrap items-center gap-3">
         <Seg label="Funnel view" value={mode} onChange={setMode} options={[{ id: 'funnel', label: 'Patient funnel' }, { id: 'channel', label: 'Retail / non-retail' }]} />
         <select aria-label="Scenario" value={src} onChange={e => setSrc(e.target.value)} className={cx(field, 'w-auto min-w-[200px]')}>
@@ -82,7 +83,7 @@ export function CountryCompare({ calc, scenarios }: { calc: Calc; scenarios: Sce
   const layer = (sc ? calc[sc.id] : calc.__working)!.layer
   const rev = revenue(layer)
   return (
-    <div className="mx-auto space-y-4 px-10 py-8">
+    <div className="workspace-page space-y-4">
       <div className="flex flex-wrap items-center gap-2" role="group" aria-label="Countries">
         {COUNTRIES.map(([c]) => { const on = sel.includes(c); return <button key={c} type="button" aria-pressed={on} onClick={() => setSel(s => on ? s.filter(x => x !== c) : [...s, c])}
           className={cx('rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors', on ? 'border-brand bg-brand-soft text-brand' : 'border-border-strong text-text-2 hover:border-brand/60')}>{c}</button> })}
@@ -113,7 +114,7 @@ export function PipelineView() {
   const curve = (a: typeof ASSETS[number], y: number) => y < a.launch ? 0 : Math.min(1, (y - a.launch + 1) / a.ramp)
   const rows = ASSETS.map((a, i) => yrs.map(y => a.peak * curve(a, y) * pos[i]! / 100))
   return (
-    <div className="mx-auto space-y-4 px-10 py-8">
+    <div className="workspace-page space-y-4">
       <Card title="Pipeline to launch" info="Risk-adjusted revenue by asset: peak revenue × launch ramp × probability of success. Edit success rates to see the effect.">
         <div className="overflow-x-auto">
           <table className="w-full min-w-[760px] border-collapse">
@@ -180,13 +181,13 @@ export function Guardrails({ layer }: { layer: Layer }) {
 export function PeakCurve({ years, share, net }: { years: number[]; share: number[]; net: number[] }) {
   const pk = share.indexOf(Math.max(...share)), pn = net.indexOf(Math.max(...net)), top = Math.max(...share)
   return (
-    <Card title="Peak year and launch curve">
+    <Card frame title="Peak year and launch curve" right={<ChartActions target="peak-curve-chart" title="Peak year and launch curve" subtitle={`FY${years[0]}–FY${years[years.length - 1]}`} />}>
       <div className="grid gap-4 sm:grid-cols-3">
         <div><p className="text-[12px] font-semibold text-text-2">Peak share</p><p className="font-display text-[22px] font-semibold">{share[pk]!.toFixed(1)}%</p><p className="text-[12.5px] text-text-3">FY{years[pk]}</p></div>
         <div><p className="text-[12px] font-semibold text-text-2">Peak net revenue</p><p className="font-display text-[22px] font-semibold">{fmtRev(net[pn]!)}</p><p className="text-[12.5px] text-text-3">FY{years[pn]}</p></div>
         <div><p className="text-[12px] font-semibold text-text-2">Years to peak share</p><p className="font-display text-[22px] font-semibold">{pk + 1}</p><p className="text-[12.5px] text-text-3">from FY{years[0]}</p></div>
       </div>
-      <div className="mt-5 flex h-28 items-end gap-2" role="img" aria-label="Brand share by year">
+      <div id="peak-curve-chart" className="mt-5 flex h-28 items-end gap-2" role="img" aria-label="Brand share by year">
         {share.map((v, k) => <div key={years[k]} className="flex flex-1 flex-col items-center gap-1"><div className={cx('w-full rounded-t-md', k === pk ? 'bg-brand' : 'bg-text/25')} style={{ height: `${(v / top) * 100}%` }} title={`FY${years[k]} · ${v.toFixed(1)}%`} /><span className="text-[11px] text-text-3">{String(years[k]).slice(2)}</span></div>)}
       </div>
     </Card>

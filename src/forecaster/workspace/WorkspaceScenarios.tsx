@@ -1,7 +1,7 @@
 import { RotateCcw } from 'lucide-react'
 import { ACTUALS, DRV, FC_YEARS, UNBIASED, fmtDelta, fmtRev, fmtV, fyAvg, fySum } from './engine'
 import type { DriverId, EventDef, Layer, ModelCfg, Scenario } from './engine'
-import { Btn, Card, ForecastChart, Legend, cx, field, PageTitle } from './ui'
+import { Btn, Card, FiscalYearSelect, ForecastChart, Legend, PageHeader, PageTitle, cx, field } from './ui'
 import type { ChartSeries } from './ui'
 import type { Grain } from './ui'
 import { NumField } from './Drivers'
@@ -22,24 +22,18 @@ export function ScenarioBar({ scenarios, scope, setScope, year, setYear, grain, 
     <div data-tour="scenario-bar" className="min-w-0">
       <div className="flex flex-wrap items-end justify-end gap-x-2.5 gap-y-2">
         <label className="block">
-          <span className="mb-1 block text-[10px] font-medium text-text-2">Working on</span>
+          <span className="mb-1 block text-[11px] font-medium text-text-2">Working on</span>
           <select aria-label="Working on" value={scope} onChange={e => setScope(e.target.value)}
-            className="h-7 w-[128px] rounded-md border border-border bg-surface px-2 text-[11px] text-text outline-none focus:border-brand focus:ring-2 focus:ring-brand/15">
+            className="h-8 w-[128px] rounded-md border border-border-strong bg-surface px-2.5 text-[14px] text-text outline-none focus:border-brand focus:ring-2 focus:ring-brand/15">
             <option value={FORECAST}>Active forecast</option>
             {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}{s.locked ? ' · Final' : ''}</option>)}
           </select>
         </label>
+        <FiscalYearSelect value={year} years={FC_YEARS} onChange={setYear} />
         <label className="block">
-          <span className="mb-1 block text-[10px] font-medium text-text-2">Values for</span>
-          <select aria-label="Forecast year" value={year} onChange={e => setYear(+e.target.value)}
-            className="h-7 w-[90px] rounded-md border border-border bg-surface px-2 text-[11px] text-text outline-none focus:border-brand focus:ring-2 focus:ring-brand/15">
-            {FC_YEARS.map(y => <option key={y} value={y}>FY{y}</option>)}
-          </select>
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-[10px] font-medium text-text-2">Values for</span>
+          <span className="mb-1 block text-[11px] font-medium text-text-2">Values for</span>
           <select aria-label="Time aggregation" value={grain} onChange={e => setGrain(e.target.value as Grain)}
-            className="h-7 w-[105px] rounded-md border border-border bg-surface px-2 text-[11px] text-text outline-none focus:border-brand focus:ring-2 focus:ring-brand/15">
+            className="h-8 w-[105px] rounded-md border border-border-strong bg-surface px-2.5 text-[14px] text-text outline-none focus:border-brand focus:ring-2 focus:ring-brand/15">
             <option value="month">Monthly</option>
             <option value="quarter">Quarterly</option>
             <option value="year">Annual</option>
@@ -61,8 +55,8 @@ export function ScenarioDriverView({ id, scenario, setScenarios, work, layer, ev
   const setAdj = (x: number) => setScenarios(ss => ss.map(s => { if (s.id !== scenario.id) return s; const adj = { ...s.adj }; if (Number.isFinite(x) && x) adj[id] = x; else delete adj[id]; return { ...s, adj } }))
   return (
     <div className="space-y-5">
-      <div className="min-w-0"><PageTitle title={d.label} info={d.desc} /></div>
-      <Card title={`${d.label} · ${scenario.name}`} sub={d.unit === '%' ? 'Percent' : d.unit} right={<Legend s={series} />}>
+      <PageHeader><PageTitle title={d.label} info={d.desc} /></PageHeader>
+      <Card frame title={`${d.label} · ${scenario.name}`} sub={d.unit === '%' ? 'Percent' : d.unit} right={<Legend s={series} />}>
         {compare?.header && <div className="mb-3 space-y-3">{compare.header}</div>}
         <ForecastChart title={`${d.label} · ${scenario.name}`} s={series} fmt={x => fmtV(id, x)} dp={d.dp} unit={d.unit} height={300} range={compare?.range} />
       </Card>

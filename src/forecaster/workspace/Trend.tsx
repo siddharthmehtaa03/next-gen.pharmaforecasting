@@ -57,11 +57,11 @@ export function TrendPanel({ series, label, fmt, pct = false }: { series: number
   return (
     <section ref={ref} data-tour="trend" aria-label={`Trend reliability for ${label}`} className="relative rounded-xl border border-border bg-surface p-4 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="flex items-center gap-1.5 text-[13.5px] font-semibold">Can you depend on the trend?<InfoTip text={`Backtest of the last ${c.rows.length} months, refitting the trend each month. Sharpens as snapshots accrue.${ACT < 18 ? ' Fewer than 18 months of actuals: indicative.' : ''}`} /></p>
+        <p className="flex items-center gap-1.5 text-[15px] font-semibold">Can you depend on the trend?<InfoTip text={`Backtest of the last ${c.rows.length} months, refitting the trend each month. Sharpens as snapshots accrue.${ACT < 18 ? ' Fewer than 18 months of actuals: indicative.' : ''}`} /></p>
         <button type="button" aria-expanded={open} onClick={() => setOpen(v => !v)} className="text-[12.5px] font-medium text-text-2 hover:text-text">{open ? 'Hide evidence' : 'Show evidence →'}</button>
       </div>
       {open && (
-        <div role="dialog" aria-label={`Trend backtest evidence for ${label}`} className="rise absolute left-3 right-3 top-12 z-20 max-h-72 overflow-auto rounded-lg border border-border bg-surface p-3 shadow-xl">
+        <div role="dialog" aria-label={`Trend backtest evidence for ${label}`} className="dropdown-container rise absolute left-3 right-3 top-12 z-20 max-h-72 overflow-y-auto p-3">
           <table className="w-full text-[12px]">
             <thead><tr className="text-text-3"><th className="py-1 text-left font-medium">Month</th><th className="py-1 text-right font-medium">Actual</th><th className="py-1 text-right font-medium">Trend</th><th className="py-1 text-right font-medium">Miss</th></tr></thead>
             <tbody>{c.rows.map(r => { const m = r.actual - r.trend; return (

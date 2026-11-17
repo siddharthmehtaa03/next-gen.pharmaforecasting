@@ -1,10 +1,11 @@
 import { useMemo, useState } from 'react'
 import { CartesianGrid, ComposedChart, Line, ReferenceArea, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ChartTip, tipProps } from '../../chart/ChartTip'
+import { ChartActions } from '../../chart/ChartActions'
 import { ACT, MONTHS, OUTPUTS, UNBIASED, idxOf, yearOf } from './engine'
 import type { Layer, Scenario } from './engine'
 import type { Calc } from './Stages'
-import { COLOR, Card, Seg, Tag, cx, field, PageTitle } from './ui'
+import { COLOR, Card, FiscalYearSelect, PageHeader, PageTitle, Seg, Tag, cx, field } from './ui'
 import { bridgeOf } from './Modules'
 
 /* Performance summary (Analytics): how the forecast is tracking against budget, last year and its own trend.
@@ -74,19 +75,18 @@ export function PerformanceView({ brand, scenarios, calc, selId, uePct }: { bran
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <PageHeader>
         <PageTitle title="Performance summary" info={`${brand} · ${label} · ${sc.name}. Follows your scenarios and events; nothing here edits the forecast.`} />
-      </div>
+      </PageHeader>
 
       <Card>
         <div className="flex flex-wrap items-end gap-4">
-          <label className="block"><span className="mb-1 block text-[12.5px] font-medium text-text-2">Scenario</span>
+          <label className="block"><span className="mb-1 block text-[13px] font-medium text-text-2">Scenario</span>
             <select value={sc.id} onChange={e => setScId(e.target.value)} className={cx(field, 'w-44')}>{scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-          <div><span className="mb-1 block text-[12.5px] font-medium text-text-2">Period</span>
+          <div><span className="mb-1 block text-[13px] font-medium text-text-2">Period</span>
             <Seg label="Period" value={period} onChange={setPeriod} options={[{ id: 'ytd', label: 'YTD' }, { id: 'month', label: 'Month' }, { id: 'quarter', label: 'Quarter' }, { id: 'fy', label: 'Full year' }]} /></div>
-          <label className="block"><span className="mb-1 block text-[12.5px] font-medium text-text-2">Year</span>
-            <select value={year} onChange={e => setYear(+e.target.value)} className={cx(field, 'w-24')}>{[2026, 2027, 2028].map(y => <option key={y}>{y}</option>)}</select></label>
-          {period !== 'fy' && <label className="block"><span className="mb-1 block text-[12.5px] font-medium text-text-2">Through</span>
+          <FiscalYearSelect value={year} years={[2026, 2027, 2028]} onChange={setYear} />
+          {period !== 'fy' && <label className="block"><span className="mb-1 block text-[13px] font-medium text-text-2">Through</span>
             <select value={thru} onChange={e => setThru(+e.target.value)} className={cx(field, 'w-24')}>{MONTHS.map((m, k) => <option key={m} value={k}>{m}</option>)}</select></label>}
           <p className="ml-auto max-w-xs text-[12px] text-text-3">Budget is a placeholder until the FP&amp;A plane is connected. Last year is the same months a year earlier.</p>
         </div>
@@ -109,9 +109,9 @@ export function PerformanceView({ brand, scenarios, calc, selId, uePct }: { bran
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <Card title={`Trend · ${def.label} · ${year}`} info="Selected scenario against budget and last year. The shaded band is the selected window."
-          right={<div className="flex flex-wrap gap-3 text-[12px] text-text-2">{[['Scenario', COLOR.working, ''], ['Budget', '#b7791f', ''], ['Last year', '#8f9199', '4 3']].map(([n, c, dash]) => <span key={n} className="inline-flex items-center gap-1.5"><svg width="18" height="6" aria-hidden><line x1="0" x2="18" y1="3" y2="3" stroke={c} strokeWidth={2} strokeDasharray={dash} /></svg>{n}</span>)}</div>}>
-          <div className="h-[260px]">
+        <Card frame title={`Trend · ${def.label} · ${year}`} info="Selected scenario against budget and last year. The shaded band is the selected window."
+          right={<div className="flex flex-wrap items-center justify-end gap-3"><div className="flex flex-wrap gap-3 text-[13px] text-text-2">{[['Scenario', COLOR.working, ''], ['Budget', '#b7791f', ''], ['Last year', '#8f9199', '4 3']].map(([n, c, dash]) => <span key={n} className="inline-flex items-center gap-1.5"><svg width="18" height="6" aria-hidden><line x1="0" x2="18" y1="3" y2="3" stroke={c} strokeWidth={2} strokeDasharray={dash} /></svg>{n}</span>)}</div><ChartActions target="performance-trend-chart" title={`Trend · ${def.label}`} subtitle={`${sc.name} · ${label}`} /></div>}>
+          <div id="performance-trend-chart" className="h-[260px]">
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart data={trend} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <CartesianGrid stroke={COLOR.grid} vertical={false} />
@@ -198,9 +198,10 @@ function RevenueRiver({ k, label, scenario }: { k: K; label: string; scenario: s
   const pos: Record<string, { x: number; y: number; h: number; o: number; i: number }> = {}
   cols.forEach(c => { let y = TOP; c.forEach(n => { const h = Math.max(2, n.v * scale); pos[n.id] = { x: X[n.col]!, y, h, o: 0, i: 0 }; y += h + GAP }) })
   return (
-    <Card title={`The revenue river · ${label}`} info="Flows are window sums for the selected scenario." right={<Tag tone="neutral">{scenario}</Tag>}>
+    <Card frame title={`The revenue river · ${label}`} info="Flows are window sums for the selected scenario."
+      right={<div className="flex items-center gap-2"><Tag tone="neutral">{scenario}</Tag><ChartActions target="performance-revenue-river" title={`The revenue river · ${label}`} subtitle={scenario} /></div>}>
       <div className="overflow-x-auto">
-        <svg viewBox={`0 0 ${VW} ${H + TOP + 10}`} className="min-w-[900px]" role="img" aria-label={`Revenue river for ${label}: demand to net sales`}>
+        <svg id="performance-revenue-river" viewBox={`0 0 ${VW} ${H + TOP + 10}`} className="min-w-[900px]" role="img" aria-label={`Revenue river for ${label}: demand to net sales`}>
           {['Market demand', 'Capture', 'Patient metrics', 'Value', 'Ships', 'Survives'].map((t, i) => <text key={t} x={X[i]} y={14} className="fill-[#8f9199] text-[11px] font-medium">{t}</text>)}
           {links.map(([a, b, v]) => {
             const s = pos[a]!, t = pos[b]!, w = v * scale, x0 = s.x + NW, x1 = t.x, y0 = s.y + s.o, y1 = t.y + t.i, xm = (x0 + x1) / 2

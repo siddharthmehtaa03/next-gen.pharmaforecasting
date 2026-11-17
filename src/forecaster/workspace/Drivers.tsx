@@ -7,7 +7,7 @@ import {
   applyEdit, defaultEdit, fmtV, fyAvg, idxOf, mLong, netPrice, revenue, yearOf, fySum,
 } from './engine'
 import type { Curve, DriverId, Edit, Layer, Method, ModelCfg, OutputId } from './engine'
-import { Btn, Card, ForecastChart, Label, Legend, Toggle, cx, field, PageTitle, InfoTip } from './ui'
+import { Btn, Card, ForecastChart, Label, Legend, PageHeader, PageTitle, Toggle, cx, field, InfoTip } from './ui'
 import { AgentFrame } from '../../chat/Agent'
 import type { Grain } from './ui'
 import { TrendPanel } from './Trend'
@@ -171,11 +171,11 @@ function RevenueView({ workingLayer, scenarioLayer, scenarioName, model, metric,
   const s: ChartSeries = { actual: o.fn(FULL_ACTUALS), unbiased: o.fn(UNBIASED), working: o.fn(workingLayer), scenario: o.fn(scenarioLayer), scenarioName }
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <PageHeader>
         <PageTitle title={o.label} info="Combines every module in the forecast map. It is not edited directly. Change an assumption, or turn on events in a scenario, to move it. The reference baseline never moves." />
         <OutputSelect model={model} metric={metric} onChange={setMetric} />
-      </div>
-      <Card title={`Monthly ${o.label.toLowerCase()}`} sub={o.unit} right={<Legend s={s} />}><ForecastChart title={`${o.label} forecast`} s={s} fmt={v => o.fmt(v, 1)} dp={0} unit={o.unit} height={320} /></Card>
+      </PageHeader>
+      <Card frame title={`Monthly ${o.label.toLowerCase()}`} sub={o.unit} right={<Legend s={s} />}><ForecastChart title={`${o.label} forecast`} s={s} fmt={v => o.fmt(v, 1)} dp={0} unit={o.unit} height={320} /></Card>
     </div>
   )
 }
@@ -335,13 +335,13 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
     </div>
   ) : (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <PageHeader className="items-start">
         <div className="min-w-0"><PageTitle title={d.label} info={`${d.desc} Source: Data Science baseline · monthly · brand level.`} /></div>
         {mode === 'overview' && !locked && <Btn variant="secondary" onClick={onOpenAssumptions} icon={<PencilLine size={14} />}>Edit assumption</Btn>}
-      </div>
+      </PageHeader>
 
       <div className="space-y-3">
-        <div data-tour="chart" className="min-w-0"><Card title={`${d.label} · monthly`} sub={d.unit === '%' ? 'Percent' : d.unit} right={<Legend s={series} />}>
+        <div data-tour="chart" className="min-w-0"><Card frame title={`${d.label} · monthly`} sub={d.unit === '%' ? 'Percent' : d.unit} right={<Legend s={series} />}>
           <ForecastChart title={`${d.label} forecast`} s={series} fmt={v => fmtV(id, v)} dp={d.dp} unit={d.unit} height={mode === 'overview' ? 340 : 280} />
         </Card></div>
         {mode === 'overview' && <TrendPanel series={ACTUALS[id]} label={d.label} fmt={v => fmtV(id, v)} pct={d.pct} />}

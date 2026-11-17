@@ -46,7 +46,7 @@ export default function InsightsBoard({ insights, setInsights, brandId, embedded
     <>
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className={cx('font-semibold tracking-tight', embedded ? 'text-[20px]' : 'text-[28px]')}>{brandName ? `${brandName} insights` : 'Insights across all brands'}</h1>
+          <h1 className="text-[22px] font-semibold tracking-tight">{brandName ? `${brandName} insights` : 'Insights across all brands'}</h1>
           <p className="mt-1 max-w-2xl text-sm text-text-2">{brandName ? `Saved views and scenarios for ${brandName}. Comment and tag colleagues to discuss them.` : 'Every saved view and scenario from every brand in one place. Open a card to read the discussion and reply.'}</p>
         </div>
         <div className="flex gap-2">
@@ -84,7 +84,7 @@ export default function InsightsBoard({ insights, setInsights, brandId, embedded
       </div>
     </>
   )
-  return embedded ? <div>{body}</div> : <div className="min-h-full bg-bg"><main className="mx-auto px-10 py-8">{body}</main></div>
+  return embedded ? <div>{body}</div> : <div className="min-h-full bg-bg"><main className="workspace-page">{body}</main></div>
 }
 
 function InsightCard({ i, active, showBrand, onOpen }: { i: Insight; active: boolean; showBrand: boolean; onOpen: () => void }) {
@@ -144,7 +144,7 @@ function Detail({ i, onClose, patch, onDelete, onOpenBrand }: { i: Insight; onCl
         <header className="flex items-start gap-3 border-b border-border px-6 py-4">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5"><Tag tone="brand">{i.kind}</Tag><Tag>{i.brand}</Tag><Tag>{i.cycle}</Tag>{i.scenario && <Tag tone="ok">{i.scenario}</Tag>}</div>
-            <h2 className="mt-2 text-[18px] font-semibold leading-snug">{i.title}</h2>
+            <h2 className="mt-2 text-[16px] font-semibold leading-snug">{i.title}</h2>
             <p className="mt-1 text-[12px] text-text-3">{person(i.by).name} · {i.at}</p>
           </div>
           <button type="button" aria-label="Close" onClick={onClose} className="grid h-9 w-9 place-items-center rounded-md text-text-2 hover:bg-surface-2"><X size={18} /></button>
@@ -164,7 +164,7 @@ function Detail({ i, onClose, patch, onDelete, onOpenBrand }: { i: Insight; onCl
             </div>
           </div>
           <section aria-label="Discussion" className="border-t border-border px-6 py-4">
-            <h3 className="text-[13px] font-semibold">Discussion · {i.thread.length}</h3>
+            <h3 className="text-[15px] font-semibold">Discussion · {i.thread.length}</h3>
             <ul className="mt-4 space-y-5">
               {i.thread.length === 0 && <li className="text-[13px] text-text-3">No comments yet. Start the conversation and tag who should weigh in.</li>}
               {roots.map(c => {
@@ -193,7 +193,7 @@ function Detail({ i, onClose, patch, onDelete, onOpenBrand }: { i: Insight; onCl
         </div>
         <div className="relative border-t border-border bg-surface p-4">
           {options.length > 0 && (
-            <ul role="listbox" aria-label="Tag someone" className="absolute bottom-full left-4 right-4 mb-1 overflow-hidden rounded-md border border-border bg-surface shadow-lg">
+            <ul role="listbox" aria-label="Tag someone" className="dropdown-container rise absolute bottom-full left-4 right-4 mb-1">
               {options.map(p => <li key={p.id}><button type="button" role="option" aria-selected={false} onMouseDown={e => { e.preventDefault(); pick(p.name) }} className="flex w-full items-center gap-2.5 px-3 py-2 text-left text-[13px] hover:bg-surface-2"><Avatar id={p.id} size={22} /><span className="font-medium">{p.name}</span><span className="text-text-3">{p.role}</span></button></li>)}
             </ul>
           )}

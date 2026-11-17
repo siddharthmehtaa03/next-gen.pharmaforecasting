@@ -10,10 +10,10 @@ import { ACT, N, START_YEAR, mLabel, mLong } from './engine'
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
 export const COLOR = { actual: '#0b0f2e', unbiased: '#8a8fa8', ci: '#8a8fa8', working: '#2E29FF', scenario: '#0e7490', preview: '#7c3aed', grid: '#dfe2ec', alt: ['#0e7490', '#0a7d4f', '#c4122f', '#a35a00', '#7c3aed', '#2E29FF'] }
-export const field = 'h-9 w-full rounded-xl border border-border bg-surface px-2.5 text-[13px] shadow-[0_1px_1px_rgba(16,24,40,0.04)] outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-text-3'
+export const field = 'h-9 w-full rounded-xl border border-border bg-surface px-2.5 text-[14px] shadow-[0_1px_1px_rgba(16,24,40,0.04)] outline-none transition-colors focus:border-brand focus:ring-2 focus:ring-brand/15 disabled:cursor-not-allowed disabled:bg-surface-2 disabled:text-text-3'
 
 export function Btn({ children, variant = 'primary', onClick, icon, disabled, size = 'md', title, className }: { children?: ReactNode; variant?: 'primary' | 'secondary' | 'ghost' | 'danger'; onClick?: () => void; icon?: ReactNode; disabled?: boolean; size?: 'sm' | 'md'; title?: string; className?: string }) {
-  return <button type="button" title={title} onClick={onClick} disabled={disabled} className={cx('inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl font-medium transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45', size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-[13px]', variant === 'primary' && 'bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_1px_2px_rgba(0,0,0,0.25)] hover:bg-primary-hover disabled:opacity-35', variant === 'secondary' && 'border border-border-strong bg-surface shadow-[0_1px_1px_rgba(16,24,40,0.04)] hover:bg-surface-2', variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text', variant === 'danger' && 'text-err hover:bg-err-soft', className)}>{icon}{children}</button>
+  return <button type="button" title={title} onClick={onClick} disabled={disabled} className={cx('inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl font-medium transition-colors active:translate-y-px disabled:cursor-not-allowed disabled:opacity-45', size === 'sm' ? 'h-7 px-2.5 text-xs' : 'h-8 px-3 text-[14px]', variant === 'primary' && 'bg-primary text-primary-foreground shadow-[inset_0_1px_0_rgba(255,255,255,0.14),0_1px_2px_rgba(0,0,0,0.25)] hover:bg-primary-hover disabled:opacity-35', variant === 'secondary' && 'border border-border-strong bg-surface shadow-[0_1px_1px_rgba(16,24,40,0.04)] hover:bg-surface-2', variant === 'ghost' && 'text-text-2 hover:bg-surface-2 hover:text-text', variant === 'danger' && 'text-err hover:bg-err-soft', className)}>{icon}{children}</button>
 }
 export type MenuItem = { label: string; icon?: ReactNode; onClick: () => void; disabled?: boolean; danger?: boolean }
 /** Three-dot menu for row and card actions (edit, copy, delete…), same trigger as the chart actions menu. */
@@ -31,10 +31,10 @@ export function MoreMenu({ items, label = 'More actions', align = 'right' }: { i
       <button type="button" title={label} aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(v => !v)}
         className="grid h-8 w-8 place-items-center rounded-lg border border-border bg-surface text-text-2 transition-colors hover:border-border-strong hover:text-text"><EllipsisVertical size={15} /></button>
       {open && (
-        <div role="menu" className={cx('rise absolute top-full z-50 mt-1 min-w-44 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-xl', align === 'right' ? 'right-0' : 'left-0')}>
+        <div role="menu" className={cx('dropdown-container rise absolute top-full z-50 mt-1 min-w-44 py-1', align === 'right' ? 'right-0' : 'left-0')}>
           {items.map(it => (
             <button key={it.label} type="button" role="menuitem" disabled={it.disabled} onClick={() => { setOpen(false); it.onClick() }}
-              className={cx('flex w-full items-center gap-2 whitespace-nowrap px-3 py-1.5 text-left text-[13px] hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent', it.danger ? 'text-err hover:!bg-err-soft' : 'text-text')}>{it.icon}{it.label}</button>
+                  className={cx('flex w-full items-center gap-2 whitespace-nowrap px-3 py-1.5 text-left text-[14px] hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent', it.danger ? 'text-err hover:!bg-err-soft' : 'text-text')}>{it.icon}{it.label}</button>
           ))}
         </div>
       )}
@@ -46,8 +46,22 @@ export function InfoTip({ text, size = 13 }: { text: string; size?: number }) {
   return <button type="button" title={text} aria-label={text} className="inline-grid shrink-0 place-items-center align-middle normal-case tracking-normal text-text-3 hover:text-text-2"><Info size={size} /></button>
 }
 /** Page heading with its description tucked behind an info icon. */
-export function PageTitle({ title, info, size = 22 }: { title: ReactNode; info?: string; size?: 22 | 26 }) {
-  return <h2 className={cx('flex items-center gap-2 font-semibold tracking-tight', size === 26 ? 'text-[26px]' : 'text-[22px]')}>{title}{info && <InfoTip text={info} size={15} />}</h2>
+export function PageTitle({ title, info }: { title: ReactNode; info?: string }) {
+  return <h2 className="flex items-center gap-2 text-[22px] font-semibold tracking-tight">{title}{info && <InfoTip text={info} size={15} />}</h2>
+}
+export function PageHeader({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cx('flex flex-wrap items-end justify-between gap-3 border-b border-border pb-3', className)}>{children}</div>
+}
+export function FiscalYearSelect({ value, years, onChange, label = 'Fiscal year' }: { value: number; years: readonly number[]; onChange: (year: number) => void; label?: string }) {
+  return (
+    <label className="block shrink-0">
+      <span className="mb-1 block text-[11px] font-medium text-text-2">{label}</span>
+      <select aria-label={label} value={value} onChange={e => onChange(Number(e.target.value))}
+        className="h-8 min-w-[100px] rounded-md border border-border-strong bg-surface px-2.5 text-[14px] text-text outline-none focus:border-brand focus:ring-2 focus:ring-brand/15">
+        {years.map(y => <option key={y} value={y}>FY{y}</option>)}
+      </select>
+    </label>
+  )
 }
 /** `fill` stretches the card to its grid row and its body to the card, so paired cards line up. */
 export function Card({ title, sub, info, right, children, className, pad = true, fill, frame }: { title?: ReactNode; sub?: string
@@ -57,10 +71,10 @@ export function Card({ title, sub, info, right, children, className, pad = true,
   frame?: boolean }) {
   return (
     <section className={cx('min-w-0 border border-border', frame ? 'rounded-xl bg-surface-2' : 'rounded-[20px] bg-surface shadow-card', fill && 'flex h-full flex-col', className)}>
-      {title && <header className={cx('flex flex-wrap items-start justify-between gap-3 pb-0.5', frame ? 'px-3 pt-2.5' : 'px-4 pt-3.5')}>
+      {title && <header className={cx('flex flex-wrap items-center justify-between gap-3 pb-0.5', frame ? 'px-3 pt-2.5' : 'px-4 pt-3.5')}>
         <div className="min-w-0">
-          <h3 className="flex items-center gap-1.5 text-[13.5px] font-semibold">{title}{info && <InfoTip text={info} />}</h3>
-          {sub && <p className="mt-0.5 text-[12.5px] text-text-3">{sub}</p>}
+          <h3 className="flex items-center gap-1.5 text-[15px] font-semibold">{title}{info && <InfoTip text={info} />}</h3>
+          {sub && <p className="mt-0.5 text-[13px] text-text-3">{sub}</p>}
         </div>{right}</header>}
       <div className={cx(pad && (frame ? 'px-1.5 pb-2.5 pt-1.5' : title ? 'px-4 pb-4 pt-3' : 'p-4'), fill && 'flex min-h-0 flex-1 flex-col')}>
         {frame ? <div className={cx('rounded-lg bg-surface p-2.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]', fill && 'flex min-h-0 flex-1 flex-col')}>{children}</div> : children}
@@ -81,17 +95,17 @@ export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boo
 export function Seg<T extends string>({ value, options, onChange, label }: { value: T; options: { id: T; label: ReactNode }[]; onChange: (v: T) => void; label: string }) {
   return (
     <div role="radiogroup" aria-label={label} className="inline-flex flex-wrap rounded-[14px] bg-surface-2 p-0.5">
-      {options.map(o => <button key={o.id} type="button" role="radio" aria-checked={value === o.id} onClick={() => onChange(o.id)} className={cx('rounded-[11px] px-2.5 py-1 text-[13px] font-medium transition-colors', value === o.id ? 'bg-surface text-text shadow-[0_1px_2px_rgba(16,24,40,0.1)]' : 'text-text-2 hover:text-text')}>{o.label}</button>)}
+      {options.map(o => <button key={o.id} type="button" role="radio" aria-checked={value === o.id} onClick={() => onChange(o.id)} className={cx('rounded-[11px] px-2.5 py-1 text-[14px] font-medium transition-colors', value === o.id ? 'bg-surface text-text shadow-[0_1px_2px_rgba(16,24,40,0.1)]' : 'text-text-2 hover:text-text')}>{o.label}</button>)}
     </div>
   )
 }
 export function Label({ children, hint, className }: { children: ReactNode; hint?: string; className?: string }) {
-  return <span className={cx('block text-[12.5px] font-medium text-text-2', className)}>{children}{hint && <span className="ml-1 font-normal text-text-3">· {hint}</span>}</span>
+  return <span className={cx('block text-[13px] font-medium text-text-2', className)}>{children}{hint && <span className="ml-1 font-normal text-text-3">· {hint}</span>}</span>
 }
 export function Stat({ k, v, sub, tone }: { k: string; v: ReactNode; sub?: ReactNode; tone?: 'ok' | 'err' | 'brand' }) {
   return (
     <div className="rounded-xl border border-border bg-surface px-4 py-3.5">
-      <p className="text-[12.5px] font-medium text-text-2">{k}</p>
+      <p className="text-[13px] font-medium text-text-2">{k}</p>
       <p className={cx('mt-1 text-[22px] font-semibold tracking-tight tabular-nums', tone === 'ok' && 'text-ok', tone === 'err' && 'text-err', tone === 'brand' && 'text-brand')}>{v}</p>
       {sub && <p className="mt-0.5 text-[12px] text-text-2">{sub}</p>}
     </div>
@@ -105,7 +119,7 @@ export type ChartSeries = {
 type Row = Record<string, number | number[] | undefined> & { i: number }
 
 export function Legend({ s }: { s: ChartSeries }) {
-  const item = (label: string, node: ReactNode) => <span key={label} className="inline-flex items-center gap-1.5 text-[12px] text-text-2">{node}{label}</span>
+  const item = (label: string, node: ReactNode) => <span key={label} className="inline-flex items-center gap-1.5 text-[13px] text-text-2">{node}{label}</span>
   const line = (color: string, dash?: string, w = 2) => <svg width="22" height="8" aria-hidden><line x1="0" x2="22" y1="4" y2="4" stroke={color} strokeWidth={w} strokeDasharray={dash} /></svg>
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1">

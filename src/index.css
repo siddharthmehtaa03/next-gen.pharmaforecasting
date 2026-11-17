@@ -187,6 +187,18 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+@utility dropdown-container {
+  @apply rounded-xl border border-border bg-surface shadow-xl;
+}
+
+@utility workspace-page {
+  @apply mx-auto w-full px-6 py-8;
+}
+
+@utility workspace-gutter {
+  @apply mx-auto w-full px-6;
+}
+
 /* ---------- 5. Base typography ---------- */
 @layer base {
   * { @apply border-border outline-ring/50; }

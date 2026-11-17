@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ArrowRight, Lock, RotateCcw } from 'lucide-react'
 import { ACT, FY, GTN, MONTHS, START_YEAR, fmtRev, netPrice, revenue } from './engine'
 import type { Layer } from './engine'
-import { Btn, Card, Seg, Tag, cx, field, PageTitle } from './ui'
+import { Btn, Card, PageHeader, PageTitle, Seg, Tag, cx, field } from './ui'
 
 /* Default modules every model carries (Default Modules + Gross Price Workflow docs).
    shortcut: gross sales, Δ inventory and TUD are worked back from net revenue here with illustrative ratios
@@ -172,10 +172,10 @@ export function ModuleView({ id, net, gp, ue, setUe, editable, onEdit }: { id: M
   const stat = (k: string, v: string, sub: string) => <div className="rounded-md border border-border px-3.5 py-3"><p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">{k}</p><p className="mt-0.5 font-mono text-[19px] font-medium">{v}</p><p className="mt-0.5 text-[12px] text-text-2">{sub}</p></div>
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <PageHeader className="items-start">
         <div className="min-w-0"><PageTitle title={m.label} info={DESC[id]} /></div>
         {m.edit && !editable && <Btn onClick={onEdit}>Edit in Forecast workspace</Btn>}
-      </div>
+      </PageHeader>
       {id === 'gp' && <GrossPriceSkus readOnly={!editable} base={gp} />}
       {id === 'ue' && <UnexplainedPct ue={ue} setUe={setUe} readOnly={!editable} />}
       {id === 'tud' && <><RequiredFunnel net={net} ue={ue} /><div className="grid gap-3 sm:grid-cols-3">

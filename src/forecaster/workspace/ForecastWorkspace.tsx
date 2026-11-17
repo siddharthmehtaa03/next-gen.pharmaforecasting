@@ -1,11 +1,10 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
 import type { ComponentType } from 'react'
 import { scrollFrameTop } from '../../frame'
-import { ArrowLeft, ArrowRight, Check, ChevronDown, Eye, EyeOff, PanelRightOpen, Plus, Save } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown, Eye, EyeOff, PanelRightOpen, Plus, Save } from 'lucide-react'
 import { ACT, DEFAULT_MODEL, DRV, FY, N, SEED_EVENTS, SEED_SCENARIOS, UNBIASED, defaultEdit, fyAvg, fySum, revenue, scenarioLayer, workingLayer } from './engine'
 import type { DriverId, EventDef, ModelCfg, OutputId, Scenario } from './engine'
-import { Btn, Tag, cx, field } from './ui'
+import { Btn, PageHeader, PageTitle, cx, field } from './ui'
 import type { Grain } from './ui'
 import { DriverWorkspace, ForecastMap } from './Drivers'
 import { FunnelChart, funnelLevels } from './FunnelChart'
@@ -48,7 +47,7 @@ const GROUPS: { id: string; items: string[] }[] = [
 const LABEL: Record<View, string> = { Assumptions: 'Forecast workspace', Events: 'Events', Scenarios: 'Scenario', Sensitivity: 'Sensitivity', 'Goal seek': 'Goal seek', Summary: 'Scenario summary', Review: 'Review' }
 const NEXT: Partial<Record<View, View>> = Object.fromEntries(STEPS.slice(0, -1).map((v, i) => [v, STEPS[i + 1]!]))
 
-export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', brandId = 'nurtec', cycle = 'AOP 2027', stream = 'US net revenue', model = DEFAULT_MODEL, insights, setInsights, onAsk, Copilot, assistant = 'Charles', onPublished }: { notify: Notify; onHome?: () => void; brand?: string; brandId?: string; cycle?: string; stream?: string; model?: ModelCfg; insights: Insight[]; setInsights: (f: (x: Insight[]) => Insight[]) => void; onAsk?: (brandId?: string) => void; Copilot?: ComponentType<CopilotProps>; assistant?: string
+export default function ForecastWorkspace({ notify, brand = 'Nurtec', brandId = 'nurtec', cycle = 'AOP 2027', stream = 'US net revenue', model = DEFAULT_MODEL, insights, setInsights, onAsk, Copilot, assistant = 'Charles', onPublished }: { notify: Notify; brand?: string; brandId?: string; cycle?: string; stream?: string; model?: ModelCfg; insights: Insight[]; setInsights: (f: (x: Insight[]) => Insight[]) => void; onAsk?: (brandId?: string) => void; Copilot?: ComponentType<CopilotProps>; assistant?: string
   /** Called when a scenario is finalised: files it as the brand's submitted version for Forecast AI. */
   onPublished?: (brandId: string, scenario: string) => void }) {
   const [view, setView] = useState<View>('Assumptions')
@@ -115,7 +114,6 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
     })
     return null
   }
-  const finalised = scenarios.some(s => s.locked)
   const modified = Object.keys(edits).length
   const leaveOk = () => !driverDirty || window.confirm('You have unapplied changes to this assumption. Discard them?')
   const go = (v: View) => { if ((v === view && !an) || !leaveOk()) return; setAn(null); setView(v); scrollFrameTop() }
@@ -123,9 +121,6 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
   const group = an ? 'Analytics' : GROUPS.find(g => g.items.includes(view))!.id
   const subs = GROUPS.find(g => g.id === group)?.items ?? []
   const [anMenu, setAnMenu] = useState(false)
-  // Top-bar slot for brand and status; looked up after commit because the top bar unmounts in full view.
-  const [wsSlot, setWsSlot] = useState<HTMLElement | null>(null)
-  useEffect(() => { const el = document.getElementById('topbar-ws'); if (el !== wsSlot) setWsSlot(el) })
   const anRef = useRef<HTMLDivElement>(null)
   useEffect(() => {
     if (!anMenu) return
@@ -141,7 +136,6 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
     setInsights(xs => [{ id: `u${Date.now()}`, brandId, brand, cycle, kind: r.scenario ? 'Scenario' : 'View', title: r.title, note: `Saved from the ${view} view.`, snap: r.snap, scenario: r.scenario, by: 'me', at: 'Just now', tagged: [], thread: [] }, ...xs])
     notify({ tone: 'ok', text: `Saved to ${brand} Insights. Open it from the Knowledge bank to comment and tag people.` })
   }, [setInsights, brandId, brand, cycle, view, notify])
-  const home = () => { if ((dirty || driverDirty) && !window.confirm('You have unsaved changes. Leave without saving?')) return; onHome?.() }
   const show = (v: AgentView) => { setView(v); scrollFrameTop() }
   const agent = useForecastAgent({ name: assistant, brand, state: { edits, events, scenarios, selId }, show, blocked: () => driverDirty,
     editable: model.modules.filter(m => m.editable).map(m => m.id), set: { edits: setEdits, events: setEvents, scenarios: setScenarios, selId: setSelId, sel: selDriver } })
@@ -159,21 +153,11 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
     <InsightsCtx.Provider value={{ save: saveInsight }}>
     <AgentFocusCtx.Provider value={{ ...agent.focus, name: assistant }}>
     {Copilot && <Copilot {...agent.copilot(() => show('Review'))} />}
-    {wsSlot && createPortal(
-      <>
-        <span aria-hidden className="text-border-strong">/</span>
-        {onHome && <button type="button" onClick={home} aria-label="Back to your forecasts" title="Back to your forecasts" className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><ArrowLeft size={15} /></button>}
-        <span className="truncate text-[13.5px] font-semibold text-text">{brand} forecast</span>
-        <span className="hidden truncate text-[12px] text-text-3 md:inline">{cycle} · {stream}</span>
-        <Tag tone={finalised ? 'ok' : 'neutral'}>{finalised ? 'Finalised' : 'Draft'}</Tag>
-      </>,
-      wsSlot
-    )}
     <div className="min-h-full bg-bg">
       {!presenting && (
         <div className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur">
           {/* Two levels: a few global tabs, and one sub-tab row for the active group. */}
-          <nav data-tour="tabs" aria-label="Forecast sections" className="mx-auto px-6">
+          <nav data-tour="tabs" aria-label="Forecast sections" className="workspace-gutter">
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2">
               <div role="tablist" className="flex flex-wrap items-center gap-0.5">
                 {GROUPS.filter(g => g.id !== 'Scenario').map(g => (
@@ -187,7 +171,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
                     className={cx('inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-medium transition-colors', group === 'Analytics' ? 'bg-[#f1f1f3] text-text shadow-[inset_0_0_0_1px_rgba(16,24,40,0.04)]' : 'text-text-2 hover:bg-black/[0.04] hover:text-text')}>
                     {an ? `Analytics · ${an}` : 'Analytics'}<ChevronDown size={14} className={cx('transition-transform', anMenu && 'rotate-180')} /></button>
                   {anMenu && <>
-                    <div role="menu" className="rise absolute left-0 top-full z-50 mt-1 w-60 overflow-hidden rounded-xl border border-border bg-surface py-1 shadow-xl">
+                    <div role="menu" className="dropdown-container rise absolute left-0 top-full z-50 mt-1 w-60 overflow-hidden py-1">
                       <p className="px-3 pb-1 pt-1.5 text-[12px] text-text-3">Analytics views · read-only</p>
                       {ANALYTICS.map(a => !AN_BUILT.includes(a)
                         ? <span key={a} role="menuitem" aria-disabled="true" title="Coming soon" className="flex w-full cursor-not-allowed items-center justify-between px-3 py-1.5 text-[13px] text-text-3">{a}<span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-text-3">Coming soon</span></span>
@@ -198,9 +182,9 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
                 </div>
               </div>
               <label className="ml-auto flex shrink-0 items-center gap-2">
-                <span className="text-[9px] font-semibold uppercase tracking-wider text-brand">Revenue stream</span>
+                <span className="text-[11px] font-medium text-text-2">Revenue stream</span>
                 <select aria-label="Revenue stream" value={streamSelection} onChange={e => setStreamSelection(e.target.value)}
-                  className="h-7 min-w-[140px] rounded-md border border-border-strong bg-surface px-2.5 text-[11px] text-text outline-none focus:border-brand focus:ring-2 focus:ring-brand/15">
+                  className="h-8 min-w-[140px] rounded-md border border-border-strong bg-surface px-2.5 text-[14px] text-text outline-none focus:border-brand focus:ring-2 focus:ring-brand/15">
                   <option value="all">All streams (roll-up)</option>
                   {stream && stream !== 'All streams (roll-up)' && <option value="current">{stream}</option>}
                 </select>
@@ -209,7 +193,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
           </nav>
           {subs.length > 1 && (
             <div>
-              <div data-tour="subtabs" role="tablist" aria-label={`${group} views`} className="mx-auto flex gap-1 overflow-x-auto px-6 py-2">
+              <div data-tour="subtabs" role="tablist" aria-label={`${group} views`} className="workspace-gutter flex gap-1 overflow-x-auto py-2">
                 {subs.map((v, k) => {
                   const isAn = ANALYTICS.includes(v), on = isAn ? an === v : !an && view === v
                   const badge = v === 'Summary' ? scenarios.length : v === 'Events' ? events.length : 0
@@ -227,7 +211,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
             </div>
           )}
           {st && (
-            <div className="mx-auto px-10 pb-3 pt-3">
+            <div className="workspace-gutter py-3">
               <AgentBanner assistant={assistant} running={st.running} step={st.step} progress={st.progress} title={st.title} onStop={agent.stop} onDismiss={() => agent.setStatus(null)}
                 actions={<>{view !== 'Review' && st.after !== undefined && <AgentButton onClick={() => go('Review')}>Review the forecast</AgentButton>}{agent.undo && <AgentButton variant="outline" icon={<RotateCcw size={13} />} onClick={agent.undo}>Undo</AgentButton>}</>}>
                 {st.body}
@@ -238,11 +222,11 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
       )}
 
       {an === 'Financial Bridges' ? (
-        <div className="mx-auto px-10 py-8"><BridgesView scenarios={scenarios} calc={calc} events={events} selId={selId} /></div>
+        <div className="workspace-gutter pb-8 pt-4"><BridgesView scenarios={scenarios} calc={calc} events={events} selId={selId} /></div>
       ) : an === 'Performance Dashboard' ? (
-        <div className="mx-auto px-10 py-8"><PerformanceView brand={brand} scenarios={scenarios} calc={calc} selId={selId} uePct={ueFy(ue)} /></div>
+        <div className="workspace-gutter pb-8 pt-4"><PerformanceView brand={brand} scenarios={scenarios} calc={calc} selId={selId} uePct={ueFy(ue)} /></div>
       ) : an ? (
-        <div className="mx-auto px-10 py-8">
+        <div className="workspace-gutter pb-8 pt-4">
           <div className="grid place-items-center rounded-lg border border-dashed border-border-strong bg-surface-2/50 px-6 py-16 text-center">
             <div><p className="text-[15px] font-semibold">{an}</p><p className="mt-1 text-[13px] text-text-3">Tab content is defined in a follow-up change request.</p>
               <Btn variant="secondary" className="mt-4" onClick={() => go(view)}>Back to {LABEL[view].toLowerCase()}</Btn></div>
@@ -250,11 +234,11 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
         </div>
       ) : <>
       {mapView && !presenting && (
-        <div className="mx-auto px-6 pt-4">
-          <div className="flex items-center justify-between gap-3 border-b border-border pb-3">
-            <h2 className="text-[18px] font-semibold tracking-tight">Forecast Workspace</h2>
+        <div className="workspace-gutter pt-4">
+          <PageHeader>
+            <PageTitle title="Forecast Workspace" />
             <Btn onClick={() => setScenarioBuilderOpen(true)} icon={<Plus size={14} />} className="shrink-0">New scenario</Btn>
-          </div>
+          </PageHeader>
         </div>
       )}
       {scenarioBuilderOpen && (
@@ -275,7 +259,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
           onClose={() => setScenarioBuilderOpen(false)}
         />
       )}
-      <div className={cx('mx-auto px-6', mapView && !presenting && !mod && sel !== 'rev' ? 'pb-8 pt-4' : 'py-8', mapView && !presenting && 'grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)]')}>
+      <div className={cx('workspace-gutter pb-8 pt-4', mapView && !presenting && 'grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)]')}>
         {mapView && (
           <aside aria-label="Assumptions" className="flex min-w-0 flex-col gap-2 rounded-xl bg-surface-2 p-2 lg:sticky lg:top-[98px] lg:self-start lg:h-[calc(100dvh-220px)]">
             <h3 className="px-1 text-[13px] font-semibold">Assumptions</h3>
@@ -305,7 +289,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
         </main>
       </div>
       {mapView && view === 'Assumptions' && !presenting && (
-        <div className="mx-auto px-6 pb-8">
+        <div className="workspace-gutter pb-8">
           <div className="rounded-xl border border-border bg-surface-2 p-2">
             <div className="flex items-center gap-1 px-1 pb-2">
               <div role="tablist" aria-label="Model views" className="flex gap-1">
@@ -345,7 +329,7 @@ export default function ForecastWorkspace({ notify, onHome, brand = 'Nurtec', br
       </>}
       {!presenting && (
         <div data-tour="bottombar" className="sticky bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur">
-          <div className="mx-auto flex flex-wrap items-center gap-3 px-10 py-3">
+          <div className="workspace-page flex flex-wrap items-center gap-3 py-3">
             <span className={cx('text-[13px]', driverDirty ? 'font-medium text-warn' : 'text-text-3')} aria-live="polite">
               {driverDirty ? 'You have unapplied changes to this assumption.' : !an && STEPS.includes(view) ? `Step ${STEPS.indexOf(view) + 1} of ${STEPS.length} · ${LABEL[view]}` : (an ?? LABEL[view])}
             </span>

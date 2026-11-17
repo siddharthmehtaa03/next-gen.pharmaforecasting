@@ -146,7 +146,7 @@ function PromptCards({ cards, onPick }: { cards: PromptCard[]; onPick: (t: strin
       </div>
       {open && (
         <div className="absolute inset-x-0 top-full z-30 pt-2 text-left">
-          <div role="menu" aria-label={`${open.title} prompts`} className="rise rounded-2xl border border-border bg-surface p-1.5 shadow-xl">
+          <div role="menu" aria-label={`${open.title} prompts`} className="dropdown-container rise p-1.5">
             {open.prompts.map(t => <button key={t} type="button" role="menuitem" onClick={() => { setOn(null); onPick(t) }} className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-[14px] text-text-2 hover:bg-brand-soft hover:text-brand"><span className="flex-1">{t}</span><ArrowUpRight size={14} className="shrink-0 opacity-60" /></button>)}
           </div>
         </div>

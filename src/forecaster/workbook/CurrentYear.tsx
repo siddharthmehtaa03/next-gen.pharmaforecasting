@@ -67,28 +67,30 @@ export default function CurrentYear() {
       </div>
 
       <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_320px]">
-        <section className="rounded-xl border border-border bg-surface p-5 shadow-card">
-          <div className="flex items-baseline justify-between gap-3">
-            <h2 className="font-display text-[17px] font-semibold">Net sales by month</h2>
-            <p className="flex items-center gap-3 text-xs text-text-2"><span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm bg-text-3" />Actuals ({actCount} mo)</span><span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm bg-brand" />Forecast</span></p>
-          </div>
-          <div className="mt-3 h-[220px]">
-            <ResponsiveContainer>
-              <BarChart data={data.chart} margin={{ left: -8, right: 4 }}>
-                <CartesianGrid vertical={false} stroke="var(--color-border)" />
-                <XAxis dataKey="m" tickLine={false} axisLine={false} fontSize={11} />
-                <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={v => `$${v}M`} />
-                <Tooltip {...tipProps} cursor={{ fill: 'var(--color-brand-soft)', opacity: 0.7 }} content={({ active, payload }) => {
-                  if (!active || !payload?.length) return null
-                  const d = payload[0]!.payload as { m: string; v: number; act: boolean }
-                  return <ChartTip title={d.m} sections={[{ rows: [
-                    { label: 'Net sales', value: `$${Number(d.v).toFixed(1)}M` },
-                    { label: 'Basis', value: d.act ? 'Actual' : 'Forecast', tone: 'muted' },
-                  ] }]} />
-                }} />
-                <Bar dataKey="v" radius={[4, 4, 0, 0]}>{data.chart.map((d, i) => <Cell key={i} fill={d.act ? 'var(--color-text-3)' : 'var(--color-brand)'} />)}</Bar>
-              </BarChart>
-            </ResponsiveContainer>
+        <section className="rounded-xl border border-border bg-surface-2 p-1.5 shadow-card">
+          <div className="rounded-lg bg-surface p-5">
+            <div className="flex items-baseline justify-between gap-3">
+              <h2 className="font-display text-[17px] font-semibold">Net sales by month</h2>
+              <p className="flex items-center gap-3 text-xs text-text-2"><span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm bg-text-3" />Actuals ({actCount} mo)</span><span className="flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-sm bg-brand" />Forecast</span></p>
+            </div>
+            <div className="mt-3 h-[220px]">
+              <ResponsiveContainer>
+                <BarChart data={data.chart} margin={{ left: -8, right: 4 }}>
+                  <CartesianGrid vertical={false} stroke="var(--color-border)" />
+                  <XAxis dataKey="m" tickLine={false} axisLine={false} fontSize={11} />
+                  <YAxis tickLine={false} axisLine={false} fontSize={11} tickFormatter={v => `$${v}M`} />
+                  <Tooltip {...tipProps} cursor={{ fill: 'var(--color-brand-soft)', opacity: 0.7 }} content={({ active, payload }) => {
+                    if (!active || !payload?.length) return null
+                    const d = payload[0]!.payload as { m: string; v: number; act: boolean }
+                    return <ChartTip title={d.m} sections={[{ rows: [
+                      { label: 'Net sales', value: `$${Number(d.v).toFixed(1)}M` },
+                      { label: 'Basis', value: d.act ? 'Actual' : 'Forecast', tone: 'muted' },
+                    ] }]} />
+                  }} />
+                  <Bar dataKey="v" radius={[4, 4, 0, 0]}>{data.chart.map((d, i) => <Cell key={i} fill={d.act ? 'var(--color-text-3)' : 'var(--color-brand)'} />)}</Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
           </div>
         </section>
         <section className="flex flex-col justify-between gap-4 rounded-xl border border-border bg-surface p-5 shadow-card">

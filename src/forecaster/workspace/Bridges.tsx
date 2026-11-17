@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { GTN, MONTHS, POP, idxOf, netPrice, scenarioLayer } from './engine'
 import type { DriverId, EventDef, Layer, Scenario } from './engine'
 import type { Calc } from './Stages'
-import { Card, Seg, cx, field, PageTitle } from './ui'
+import { Card, PageHeader, PageTitle, Seg, cx, field } from './ui'
 import { BUDGET } from './Performance'
 import { ChartTip, useHoverTip } from '../../chart/ChartTip'
+import { ChartActions } from '../../chart/ChartActions'
 
 /* Financial bridges: one attribution engine, three views. Every view walks from the comparison to the scenario by
    substituting one driver (or event) at a time, so the bars always sum exactly to the change. */
@@ -78,26 +79,26 @@ export function BridgesView({ scenarios, calc, events, selId }: { scenarios: Sce
 
   return (
     <div className="space-y-5">
-      <PageTitle title="Financial bridges" info="What moved net revenue between two forecasts. Read-only; follows your scenarios and events." />
+      <PageHeader><PageTitle title="Financial bridges" info="What moved net revenue between two forecasts. Read-only; follows your scenarios and events." /></PageHeader>
 
       <Card>
         <div className="flex flex-wrap items-end gap-4">
-          <label className="block"><span className="mb-1 block text-[12.5px] font-medium text-text-2">Scenario</span>
+          <label className="block"><span className="mb-1 block text-[13px] font-medium text-text-2">Scenario</span>
             <select value={sc.id} onChange={e => setScId(e.target.value)} className={cx(field, 'w-44')}>{scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-          <label className="block"><span className="mb-1 block text-[12.5px] font-medium text-text-2">Compare against</span>
+          <label className="block"><span className="mb-1 block text-[13px] font-medium text-text-2">Compare against</span>
             <select value={mode === 'events' ? 'work' : cmp} disabled={mode === 'events'} onChange={e => setCmp(e.target.value)} className={cx(field, 'w-44')}>
               <option value="budget">Budget</option><option value="ly">Last year</option><option value="work">Active forecast</option>
               {scenarios.filter(s => s.id !== sc.id).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select></label>
-          <div><span className="mb-1 block text-[12.5px] font-medium text-text-2">Period</span>
-            <Seg label="Period" value={period} onChange={setPeriod} options={PERIODS.map(p => ({ id: p.id, label: p.label }))} /></div>
+          <label className="block"><span className="mb-1 block text-[13px] font-medium text-text-2">Period</span>
+            <select aria-label="Period" value={period} onChange={e => setPeriod(e.target.value as PeriodId)} className={cx(field, 'h-8 w-auto min-w-[150px] pr-7 text-[14px]')}>{PERIODS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}</select></label>
           <p className="ml-auto max-w-sm text-[12px] text-text-3">One attribution engine, three views. The commercial drivers add up exactly to Finance’s volume and channel bars, so both teams quote the same movement.</p>
         </div>
       </Card>
 
-      <Card title={`Net revenue bridge · ${from.name} → ${to.name} · ${pLabel}`}
-        right={<Seg label="Bridge view" value={mode} onChange={setMode} options={[{ id: 'finance', label: 'Finance · price–volume–GtN' }, { id: 'drivers', label: 'Commercial · model drivers' }, { id: 'events', label: 'Commercial · by event (vs forecast)' }]} />}>
-        <div ref={tip.wrap} className="relative">
+      <Card frame title={`Net revenue bridge · ${from.name} → ${to.name} · ${pLabel}`}
+        right={<div className="flex flex-wrap items-center justify-end gap-2"><Seg label="Bridge view" value={mode} onChange={setMode} options={[{ id: 'finance', label: 'Finance · price–volume–GtN' }, { id: 'drivers', label: 'Commercial · model drivers' }, { id: 'events', label: 'Commercial · by event (vs forecast)' }]} /><ChartActions target="financial-bridge-chart" title="Net revenue bridge" subtitle={`${from.name} → ${to.name} · ${pLabel}`} /></div>}>
+        <div id="financial-bridge-chart" ref={tip.wrap} className="relative">
         <svg viewBox={`0 0 ${VW} ${TOP + H + 52}`} className="w-full" role="img" aria-label={`Waterfall from ${from.name} ${$m(start)} to ${to.name} ${$m(end)}`}>
           {ticks.map(t => <g key={t}><line x1={L} x2={VW - 10} y1={y(t)} y2={y(t)} stroke="#ebebed" strokeDasharray="4 4" /><text x={L - 8} y={y(t) + 4} textAnchor="end" className="fill-[#8f9199] text-[11px]">{`$${Math.round(t).toLocaleString('en-US')}M`}</text></g>)}
           {bars.map((x, k) => {

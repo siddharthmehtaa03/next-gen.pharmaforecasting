@@ -1,11 +1,11 @@
-import { Fragment, useMemo, useState } from 'react'
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
 import { ArrowDown, ArrowUp, Check, ChevronDown, CircleCheck, CircleAlert, CircleMinus, GitBranch, Lock, Plus, Save, Target, Trash2, X, Zap } from 'lucide-react'
 import {
   ACT, BASELINE, CURVE_LABEL, DRV, FC_YEARS, FY, HORIZON_LABEL, MEASURE_LABEL, N, OUTPUTS, OVR_LABEL, UNBIASED,
   adjusted, applyEvents, applyOverrides, bridge, describeOverride, fmtDelta, fmtRev, fmtV, funnelOf, fyAvg, goalSeekOrdered, netPrice, idxOf, mLong, measure,
 } from './engine'
 import type { Curve, DriverId, EventDef, Goal, GoalStep, Horizon, Layer, ModelCfg, OutputId, OvrKind, Override, Scenario } from './engine'
-import { Btn, COLOR, Card, ForecastChart, Label, Legend, Seg, Tag, cx, field, PageTitle, InfoTip } from './ui'
+import { Btn, COLOR, Card, FiscalYearSelect, ForecastChart, Label, Legend, PageHeader, PageTitle, Seg, Tag, cx, field, InfoTip } from './ui'
 import type { ChartSeries } from './ui'
 import { NumField, Period } from './Drivers'
 import type { Notify } from './Drivers'
@@ -36,6 +36,20 @@ export function FunnelCompare({ scenarios, calc, selId, onSelect, model, default
     const base = scenarios.find(s => s.name === 'Base Case')?.id
     return Array.from(new Set([base, selId, ...scenarios.map(s => s.id)].filter((x): x is string => !!x))).slice(0, 4)
   })
+  const [scenarioMenu, setScenarioMenu] = useState(false)
+  const scenarioMenuRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!scenarioMenu) return
+    const off = (e: Event) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !scenarioMenuRef.current?.contains(e.target as Node)) setScenarioMenu(false)
+    }
+    document.addEventListener('mousedown', off)
+    document.addEventListener('keydown', off)
+    return () => {
+      document.removeEventListener('mousedown', off)
+      document.removeEventListener('keydown', off)
+    }
+  }, [scenarioMenu])
   const live = picks.filter(id => calc[id])
   const [anchor, setAnchor] = useState(live[0] ?? scenarios[0]!.id)
   const anc = calc[anchor] ? anchor : live[0]!
@@ -43,22 +57,44 @@ export function FunnelCompare({ scenarios, calc, selId, onSelect, model, default
   const shown = new Set<string>(['prev', 'trx', ...model.modules.map(m => m.id)])
   const rows = cols[0]?.f.filter(r => shown.has(r.id)) ?? []
   const locked = new Set(model.modules.filter(m => !m.editable).map(m => m.id))
-  const toggle = (id: string) => setPicks(p => p.includes(id) ? (p.length > 1 ? p.filter(x => x !== id) : p) : p.length >= 5 ? p : [...p, id])
+  const toggle = (id: string) => setPicks(p => {
+    const current = p.filter(pick => scenarios.some(s => s.id === pick))
+    if (current.includes(id)) return current.length > 1 ? current.filter(x => x !== id) : current
+    return current.length >= 5 ? current : [...current, id]
+  })
   const revOf = (c: (typeof cols)[number]) => c.f.find(r => r.id === 'price')!.vol
   const ancRev = revOf(cols.find(c => c.s.id === anc) ?? cols[0]!)
   const maxAbs = Math.max(1e-9, ...cols.flatMap(c => c.br?.map(b => Math.abs(b.d)) ?? []))
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        <Seg label="Year" value={String(year)} onChange={v => setYear(+v)} options={FC_YEARS.map(y => ({ id: String(y), label: `FY${y}` }))} />
+        <FiscalYearSelect value={year} years={FC_YEARS} onChange={setYear} />
         <InfoTip text={`Rates are FY${year} averages. Each driver’s dollar figure is its share of the net revenue gap, swapping drivers in funnel order, so the figures add up to the total.`} />
-        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="Scenarios to compare">
-          {scenarios.map((s, k) => (
-            <button key={s.id} type="button" aria-pressed={picks.includes(s.id)} onClick={() => toggle(s.id)}
-              className={cx('inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-medium transition-colors', picks.includes(s.id) ? 'border-brand bg-brand-soft text-brand' : 'border-border-strong text-text-2 hover:border-text')}>
-              <span className="h-2 w-2 rounded-full" style={{ background: COLOR.alt[k % COLOR.alt.length] }} />{s.name}{picks.includes(s.id) && <Check size={11} />}
-            </button>
-          ))}
+        <div ref={scenarioMenuRef} className="relative">
+          <button type="button" aria-haspopup="menu" aria-expanded={scenarioMenu} aria-label={`Scenarios to compare, ${live.length} selected`}
+            onClick={() => setScenarioMenu(open => !open)}
+            className={cx('inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-[14px] font-medium transition-colors', scenarioMenu ? 'border-border-strong bg-surface-2 text-text' : 'border-border-strong bg-surface text-text-2 hover:bg-surface-2 hover:text-text')}>
+            Scenarios ({live.length})<ChevronDown size={15} className={cx('transition-transform', scenarioMenu && 'rotate-180')} />
+          </button>
+          {scenarioMenu && (
+            <div role="menu" aria-label="Scenarios to compare" className="dropdown-container rise absolute left-0 top-full z-30 mt-1 w-64 p-1.5">
+              <p className="px-2 py-1.5 text-[12px] text-text-3">Choose up to 5 scenarios</p>
+              {scenarios.map((s, k) => {
+                const selected = live.includes(s.id)
+                const disabled = selected ? live.length <= 1 : live.length >= 5
+                return (
+                  <button key={s.id} type="button" role="menuitemcheckbox" aria-checked={selected} disabled={disabled} onClick={() => toggle(s.id)}
+                    className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-left text-[14px] text-text transition-colors hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-45">
+                    <span className={cx('grid h-4 w-4 shrink-0 place-items-center rounded border', selected ? 'border-brand bg-brand text-white' : 'border-border-strong bg-surface')}>
+                      {selected && <Check size={12} />}
+                    </span>
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: COLOR.alt[k % COLOR.alt.length] }} />
+                    <span className="min-w-0 flex-1 truncate">{s.name}</span>
+                  </button>
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
       <div id={exportId} className="overflow-x-auto rounded-md border border-border bg-surface">
@@ -313,14 +349,14 @@ export function SensitivityStage({ scenarios, setScenarios, calc, selId, setSelI
   }
   const dd = (x: number, o: OutputId = 'rev') => Math.abs(x) < 1e-6 ? <span className="text-text-3">no change</span> : <span className={tone(x)}>{fmtMDelta(o, x)}</span>
   const pct = (x: number) => bN ? ` · ${x >= 0 ? '+' : '−'}${Math.abs(x / bN * 100).toFixed(1)}%` : ''
-  const yearSeg = <Seg label="Year" value={String(year)} onChange={v => setYear(+v)} options={FC_YEARS.map(y => ({ id: String(y), label: `FY${y}` }))} />
+  const yearSelect = <FiscalYearSelect value={year} years={FC_YEARS} onChange={setYear} />
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <PageHeader>
         <PageTitle title="What if assumptions were different?" info="Test changes on a scenario. Nothing is saved until you keep it." />
-        {yearSeg}
-      </div>
+        {yearSelect}
+      </PageHeader>
 
       <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
         <Card title="Assumption changes" info="Each change applies over its own period." fill className="lg:order-last">
@@ -342,7 +378,7 @@ export function SensitivityStage({ scenarios, setScenarios, calc, selId, setSelI
                   <div className={cx('flex items-center gap-2.5 px-3 py-2.5', isOpen && 'bg-brand-soft/30')}>
                     <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : c.id)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
                       <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand text-[11.5px] font-semibold text-white">{k + 1}</span>
-                      <span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-semibold">{d.label} {stepTxt(c)}</span>
+                      <span className="min-w-0 flex-1"><span className="block truncate text-[15px] font-semibold">{d.label} {stepTxt(c)}</span>
                         <span className="block truncate text-[12px] text-text-3">{mLong(c.from)} – {mLong(c.to)} · <span className="font-mono">{fmtV(c.driver, before)} → <span className={tone(after - before)}>{fmtV(c.driver, after)}</span></span></span></span>
                       <ChevronDown size={16} className={cx('shrink-0 text-text-3 transition-transform', isOpen && 'rotate-180')} />
                     </button>
@@ -375,7 +411,7 @@ export function SensitivityStage({ scenarios, setScenarios, calc, selId, setSelI
           </div>
         </Card>
 
-        <Card title={view === 'chart' ? `Net revenue · ${sel.name}` : 'What moves net revenue most'} info={view === 'chart' ? 'As it is, with the changes, and reversed.' : `Swings around ${sel.name} as it is. Only the assumptions you change on the left move.`} fill
+        <Card frame title={view === 'chart' ? `Net revenue · ${sel.name}` : 'What moves net revenue most'} info={view === 'chart' ? 'As it is, with the changes, and reversed.' : `Swings around ${sel.name} as it is. Only the assumptions you change on the left move.`} fill
           right={<div className="flex items-center gap-2"><Seg label="View" value={view} onChange={setView} options={[{ id: 'chart', label: 'Net revenue' }, { id: 'tornado', label: 'Tornado' }]} />{view === 'tornado' && <ChartActions target="export-tornado" title="What moves net revenue most" subtitle={`${sel.name} · FY${year}`} />}</div>}>
           <div className="flex min-h-[480px] flex-1 flex-col">
           {view === 'chart' ? <>
@@ -503,7 +539,7 @@ export function GoalSeekPanel({ base, sel, setScenarios, model, notify }: { base
                   <div className={cx('flex items-center gap-2 px-3 py-2.5', isOpen && 'bg-brand-soft/30')}>
                     <button type="button" aria-expanded={isOpen} onClick={() => setOpenG(isOpen ? null : g.id)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
                       <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand text-[11.5px] font-semibold text-white">{k + 1}</span>
-                      <span className="min-w-0 flex-1"><span className="block truncate text-[13.5px] font-semibold">{MEASURE_LABEL[g.metric]} {HORIZON_LABEL(g.h)}</span>
+                      <span className="min-w-0 flex-1"><span className="block truncate text-[15px] font-semibold">{MEASURE_LABEL[g.metric]} {HORIZON_LABEL(g.h)}</span>
                         <span className="block truncate text-[12px] text-text-3">{fmtM(g.metric, g.min)} – {fmtM(g.metric, g.max)} · by {DRV[g.lever].label.toLowerCase()}</span></span>
                       <ChevronDown size={16} className={cx('shrink-0 text-text-3 transition-transform', isOpen && 'rotate-180')} />
                     </button>
@@ -533,7 +569,7 @@ export function GoalSeekPanel({ base, sel, setScenarios, model, notify }: { base
           <div className="mt-auto flex justify-end border-t border-border pt-4"><Btn onClick={run} disabled={!valid} icon={<Target size={15} />}>Run goal seek</Btn></div>
         </Card>
 
-        <Card title={`Net revenue · ${sel.name}`} info={res ? 'Current path against the path after goal seek.' : 'Run goal seek to see the new path.'} fill>
+        <Card frame title={`Net revenue · ${sel.name}`} info={res ? 'Current path against the path after goal seek.' : 'Run goal seek to see the new path.'} fill>
           <div className="mb-1"><Legend s={chart} /></div>
           <ForecastChart title="Goal seek" s={chart} fmt={v => fmtRev(v, 1)} dp={0} unit="$M" height={360} canSave={false} toolbar={false} />
           {res && <div className="mt-auto flex flex-wrap items-center justify-end gap-3 pt-4">

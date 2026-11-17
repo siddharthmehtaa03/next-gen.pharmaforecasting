@@ -240,7 +240,7 @@ function AccessChip({ blocked }: { blocked: string[] }) {
         className="inline-flex h-8 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-[12px] font-medium text-text-2 hover:border-brand hover:text-brand">
         <ShieldCheck size={13} className="text-ok" />Access · {allowed.length} forecasts</button>
       {open && (
-        <div role="dialog" aria-label="Your forecast access" className="rise absolute right-0 top-10 z-40 w-72 rounded-xl border border-border bg-surface p-3 text-left shadow-xl">
+        <div role="dialog" aria-label="Your forecast access" className="dropdown-container rise absolute right-0 top-10 z-40 w-72 p-3 text-left">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">You can ask about</p>
           <ul className="mt-1.5 space-y-1">{allowed.map(x => <li key={x.id} className="flex items-center gap-2 text-[13px]"><Check size={12} className="text-ok" /><span className="flex-1">{x.brand}</span><span className="text-[11px] text-text-3">{x.stream}</span></li>)}</ul>
           <p className="mt-3 text-[11px] font-semibold uppercase tracking-wide text-text-3">Not available to you</p>

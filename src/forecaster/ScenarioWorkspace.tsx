@@ -2,6 +2,7 @@ import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { DriverGroup } from './models'
 import { ArrowDown, ArrowLeft, ArrowUp, ChevronRight, Copy, FileText, Lock, Pin, Plus, Settings2, Sparkles, X } from 'lucide-react'
+import { FiscalYearSelect, PageHeader } from './workspace/ui'
 
 /*
  * Scenario workspace + cycle summary. Mirrors the Clairos reference screens' content and structure:
@@ -58,11 +59,13 @@ const totalWith = (c: Ctx, id: string, d: Driver, f: (y: number, v: number) => n
 function Pill({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'brand' | 'ok' | 'warn' | 'err' }) {
   return <span className={cx('inline-flex items-center whitespace-nowrap rounded px-1.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide', tone === 'neutral' && 'bg-surface-2 text-text-2', tone === 'brand' && 'bg-brand-soft text-brand', tone === 'ok' && 'bg-ok-soft text-ok', tone === 'warn' && 'bg-warn-soft text-warn', tone === 'err' && 'bg-err-soft text-err')}>{children}</span>
 }
-function Panel({ title, sub, right, children, className }: { title: string; sub?: string; right?: ReactNode; children: ReactNode; className?: string }) {
+function Panel({ title, sub, right, children, className, frame = false }: { title: string; sub?: string; right?: ReactNode; children: ReactNode; className?: string; frame?: boolean }) {
   return (
-    <section className={cx('min-w-0 rounded-lg border border-border bg-surface', className)}>
-      <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-5 py-3.5"><div className="min-w-0"><h3 className="text-[15px] font-semibold">{title}</h3>{sub && <p className="text-xs text-text-2">{sub}</p>}</div>{right && <div className="flex flex-wrap items-center gap-2">{right}</div>}</header>
-      <div className="p-5">{children}</div>
+    <section className={cx('min-w-0', frame ? 'rounded-xl border border-border bg-surface-2 p-1.5 shadow-card' : 'rounded-lg border border-border bg-surface', className)}>
+      <div className={cx(frame && 'rounded-lg bg-surface')}>
+        <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-5 py-3.5"><div className="min-w-0"><h3 className="text-[15px] font-semibold">{title}</h3>{sub && <p className="text-xs text-text-2">{sub}</p>}</div>{right && <div className="flex flex-wrap items-center gap-2">{right}</div>}</header>
+        <div className="p-5">{children}</div>
+      </div>
     </section>
   )
 }
@@ -208,7 +211,7 @@ export function CycleSummary({ ctx, scenario, brand, seasonal, pin }: { ctx: Ctx
       </div>
 
       <div className="space-y-5">
-        <Panel title="Summary chart" right={<div className="flex items-center gap-2">
+        <Panel frame title="Summary chart" right={<div className="flex items-center gap-2">
           <Select label="Metric" value={metric} options={['Net revenue', 'Gross revenue']} onChange={setMetric} />
           <Seg value={kind} options={['Line', 'Bar', 'Table'] as const} onChange={setKind} />
           <PinBtn onClick={() => pin(`${base} vs ${cmp}`, `${metric} ${money(revB)} vs ${money(revC)} (${signed((revB / revC - 1) * 100)}%) over ${period}.`, { kind: kind === 'Bar' ? 'bar' : 'line', labels: a.labels, series: [{ name: cmp, pts: b.pts, tone: 'muted' }, { name: base, pts: a.pts, tone: 'brand' }] })} /></div>}>
@@ -322,11 +325,11 @@ export function ScenarioWorkspace(p: WorkspaceProps) {
   }
 
   return (
-    <div className="rise mx-auto w-full px-10 py-7">
+    <div className="workspace-page rise py-7">
       <button type="button" onClick={p.onBack} className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-text-2 hover:text-brand"><ArrowLeft size={15} />{p.cycleName}</button>
-      <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Scenario workspace · {p.brand}</p>
-      <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
+      <PageHeader className="items-start">
         <div className="min-w-0">
+          <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Scenario workspace · {p.brand}</p>
           <div className="flex flex-wrap items-center gap-2"><h1 className="text-[28px] font-semibold tracking-tight">{id}</h1><Pill tone={p.submitted ? 'ok' : 'neutral'}>{readOnly ? 'Read-only' : p.submitted ? 'Submitted' : 'Draft'}</Pill><Pill>Model {p.version}</Pill></div>
           <p className="mt-1 text-sm text-text-2">{readOnly ? 'The locked statistical baseline. Copy it into a new scenario to make changes.' : overrideCount ? `${overrideCount} override${overrideCount > 1 ? 's' : ''} · ${signed(cur - trendTotal)}M vs baseline over FY26–30` : 'Generated from its own assumptions and inputs. Adjust them in the tabs below and the result updates.'}</p>
         </div>
@@ -337,13 +340,13 @@ export function ScenarioWorkspace(p: WorkspaceProps) {
           <button type="button" onClick={generate} className="inline-flex h-8 items-center gap-1.5 rounded-md border border-border-strong px-2.5 text-[13px] font-medium text-text-2 hover:border-brand hover:text-brand"><Sparkles size={14} />Generate insight</button>
           <button type="button" onClick={() => p.onNew(id)} className="inline-flex h-8 items-center gap-1.5 rounded-md bg-brand px-3 text-[13px] font-semibold text-white hover:bg-brand-hover"><Plus size={14} />New scenario</button>
           {logOpen && (
-            <div className="absolute right-0 top-10 z-40 w-[360px] max-w-[calc(100vw-24px)] rounded-lg border border-border bg-surface p-3 shadow-xl">
+            <div className="dropdown-container rise absolute right-0 top-10 z-40 w-[360px] max-w-[calc(100vw-24px)] p-3">
               <p className="mb-2 text-sm font-semibold">Change log</p>
               {log.length ? <ul className="max-h-64 space-y-1.5 overflow-auto text-xs text-text-2">{log.map((l, i) => <li key={i} className="border-b border-border pb-1.5 last:border-0">{l}</li>)}</ul> : <p className="text-xs text-text-3">No changes yet in this session.</p>}
             </div>
           )}
         </div>
-      </div>
+      </PageHeader>
 
       <Tabs className="mt-6" label="Scenario sections" value={tab} onChange={setTab}
         options={WS_TABS.map(t => ({ ...t, badge: t.id === 'Inputs' && overrideCount > 0 ? <span className="rounded-full bg-warn-soft px-1.5 font-mono text-[10px] text-warn">{overrideCount}</span> : undefined }))} />
@@ -386,7 +389,7 @@ function SummaryChart({ ctx, id, seasonal, startM, pin, extra, compact, title = 
   const hist = histCount(years, gran, startM)
   const series: Series[] = [{ name: 'Baseline (before your overrides)', pts: proj.pts, tone: 'muted', dash: true }, { name: 'Adjusted forecast', pts: fin.pts, tone: 'brand' }, ...(extra ?? [])]
   return (
-    <Panel title={title} sub="Net revenue · actuals shaded · updates as you edit" right={<>
+    <Panel frame title={title} sub="Net revenue · actuals shaded · updates as you edit" right={<>
       <Seg label="Granularity" value={gran} options={['Monthly', 'Quarterly', 'Yearly'] as const} onChange={setGran} />
       <Select label="Period" value={per} options={['2023 - 2030', '2025 - 2027', '2026 - 2026', '2026 - 2030']} onChange={setPer} />
       <Seg label="View" value={kind} options={['Line', 'Table'] as const} onChange={setKind} />
@@ -619,7 +622,7 @@ function NeedToMeet(p: WorkspaceProps & { applyMany: ApplyMany }) {
     <div className="space-y-5">
       <Panel title="What would it take?" sub="For each driver on its own: the value required to land the target revenue.">
         <div className="flex flex-wrap items-end gap-4">
-          <label className="text-xs text-text-2">Year<span className="mt-1 block"><Select label="Year" value={String(year)} options={FYS.map(String)} onChange={v => { setYear(Number(v)); setT(null) }} /></span></label>
+          <FiscalYearSelect value={year} years={FYS} onChange={v => { setYear(v); setT(null) }} />
           <div className="text-xs text-text-2">Current<span className="mt-1 block font-mono text-lg font-semibold text-text">{money(c)}</span></div>
           <label className="text-xs text-text-2">Target ($M)<span className="mt-1 block"><Num tone="ovr" step={1} w="w-28" value={target} onChange={v => setT(v)} /></span></label>
           <div className="text-xs text-text-2">Gap<span className={cx('mt-1 block font-mono text-lg font-semibold', r >= 1 ? 'text-warn' : 'text-ok')}>{signed(target - c)}M ({signed((r - 1) * 100)}%)</span></div>

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Sparkles, ArrowDown, ArrowLeft, ArrowUp, ArrowUpDown, Clock, Copy, History, Lock, MoreVertical, Pencil, Trash2, X } from 'lucide-react'
 import { DEFAULT_MODEL } from './engine'
 import type { ModelCfg } from './engine'
-import { Btn, Seg, Tag, cx } from './ui'
+import { Btn, PageHeader, Seg, Tag, cx } from './ui'
 import type { Notify } from './Drivers'
 
 export type BrandRow = {
@@ -83,7 +83,7 @@ function RowActionMenu({
         <div
           role="menu"
           aria-label={`${label} actions`}
-          className="rise absolute right-0 top-9 z-30 w-40 rounded-xl border border-border bg-surface p-1 shadow-xl"
+          className="dropdown-container rise absolute right-0 top-9 z-30 w-40 p-1"
         >
           <button
             type="button"
@@ -264,11 +264,13 @@ export default function ForecasterHome({ onOpen, notify }: { onOpen: (b: BrandRo
 
   return (
     <div className="min-h-full bg-bg">
-      <main className="mx-auto px-10 py-8">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <h1 className="text-[28px] font-semibold tracking-tight">Your forecasts</h1>
-        </div>
-        <p className="mt-1 max-w-2xl text-sm text-text-2">Open a forecast to review the reference baseline, adjust assumptions, add events, build scenarios and run simulations.</p>
+      <main className="workspace-page">
+        <PageHeader className="items-start">
+          <div>
+            <h1 className="text-[22px] font-semibold tracking-tight">Your forecasts</h1>
+            <p className="mt-1 max-w-2xl text-sm text-text-2">Open a forecast to review the reference baseline, adjust assumptions, add events, build scenarios and run simulations.</p>
+          </div>
+        </PageHeader>
 
         <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
           <h2 className="text-[15px] font-semibold">Forecasts · {rows.length}</h2>

@@ -1926,7 +1926,6 @@ function TopBar({ crumbs, back, onHome, onAdmin, onLogout, models, onResume, fix
       {back
         ? <button type="button" onClick={back.onClick} className="-ml-1.5 inline-flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-[13px] font-medium text-text-2 transition-colors hover:bg-surface-2 hover:text-text"><ArrowLeft size={15} />{back.label}</button>
         : <nav aria-label="Breadcrumb"><ol className="flex items-center gap-1.5 text-[13px]">{crumbs.filter(Boolean).map((c, k, a) => <li key={c} className="flex items-center gap-1.5">{k > 0 && <ChevronRight size={13} className="text-text-3" />}{k === a.length - 1 ? <span aria-current="page" className="font-semibold text-brand">{c}</span> : <button type="button" onClick={onHome} className="rounded text-text-2 hover:text-brand hover:underline">{c}</button>}</li>)}</ol></nav>}
-      <div id="topbar-ws" className="flex min-w-0 items-center gap-2.5" />
       <div className="ml-auto flex items-center gap-1.5">
         {onFull && <button type="button" onClick={onFull} aria-label="Enter full view" title="Full view" className="grid h-9 w-9 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><Maximize2 size={16} /></button>}
         <Notifications models={models} onResume={onResume} fixtures={fixtures} />
@@ -1973,7 +1972,7 @@ function Notifications({ models, onResume, fixtures }: { models: ModelRow[]; onR
         {unread > 0 && <span className="absolute right-1 top-1 grid h-4 min-w-4 place-items-center rounded-full bg-err px-1 text-[10px] font-bold text-white ring-2 ring-surface">{unread}</span>}
       </button>
       {open && (
-        <div className="rise absolute right-0 top-11 z-40 w-[400px] max-w-[calc(100vw-24px)] overflow-hidden rounded-xl border border-border bg-surface shadow-2xl">
+        <div className="dropdown-container rise absolute right-0 top-11 z-40 w-[400px] max-w-[calc(100vw-24px)]">
           <div className="flex items-center justify-between border-b border-border px-4 pt-2">
             <div role="tablist" aria-label="Notifications and activity" className="flex gap-1">
               <button type="button" role="tab" aria-selected={tab === 'notes'} onClick={() => setTab('notes')}
@@ -2329,7 +2328,7 @@ function RowActionMenu({
         <div
           role="menu"
           aria-label={`${label} actions`}
-          className="rise absolute right-0 top-9 z-30 w-40 rounded-xl border border-border bg-surface p-1 shadow-xl"
+          className="dropdown-container rise absolute right-0 top-9 z-30 w-40 p-1"
         >
           {onHistory && (
             <button
@@ -2530,7 +2529,7 @@ function ModelsHome({ fixtures, models, setModels, onOpen, onResume, notify, ai,
   }
 
   return (
-    <main className={cx('mx-auto w-full flex-1 px-10 py-8 transition-[padding]', ai && 'xl:pr-[420px]')}>
+    <main className={cx('workspace-page flex-1 transition-[padding]', ai && 'xl:pr-[420px]')}>
       <header className="mb-8 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-[28px] font-semibold tracking-tight">Model workspace<InfoTip text="Models you created or have been given access to. Open one to continue configuring it. Only models within your authorised brands and geographies are listed; others can be requested." /></h1>
@@ -3278,7 +3277,7 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
               </div>
             </div>
           )}
-          <div key={stage} className={cx("rise @container relative mx-auto w-full flex-1 px-10 py-7", stage === 4 ? "max-w-none" : "")}>
+          <div key={stage} className={cx("workspace-page rise @container relative flex-1 py-7", stage === 4 ? "max-w-none" : "")}>
             <p className="font-mono text-xs uppercase tracking-widest text-brand">Step {stage} of {LAST}</p>
             <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
               <h1 className="flex items-center gap-2 text-[28px] font-semibold tracking-tight">{S.title}<InfoTip text={S.desc} /></h1>
@@ -3390,7 +3389,7 @@ function Configurator({ seed, onExit, notify, onPublished, onFinalised, ai, clos
           step state and actions grouped on the right. */}
       {stage < LAST && (
         <footer className="sticky bottom-0 z-30 border-t border-border bg-surface/95 backdrop-blur">
-          <div className="mx-auto flex flex-wrap items-center gap-3 px-10 py-3">
+          <div className="workspace-page flex flex-wrap items-center gap-3 py-3">
             <span className="text-[13px] text-text-3" aria-live="polite">Step {stage} of {LAST} · {S.title}</span>
             <div className="ml-auto flex flex-wrap items-center gap-2.5">
               <span className="text-[12px] font-medium text-text-3">
@@ -4490,7 +4489,7 @@ function StagePreview({ c, ind, go, issues, warns, fix }: Ctx & { issues: Issue[
   const editMap = <MoreMenu label="Edit a section" items={[{ label: 'Edit the module map', icon: <Pencil size={13} />, onClick: () => go(4) }]} />
   return (
     <>
-      <Card title="Configuration flow" info="Select any step to change it." right={<ChartActions target="export-config-flow" title="Configuration flow" subtitle={c.brand} />}>
+      <Card frame title="Configuration flow" info="Select any step to change it." right={<ChartActions target="export-config-flow" title="Configuration flow" subtitle={c.brand} />}>
         <div id="export-config-flow" className="bg-surface"><ModelFlow {...cfgFlow(c)} go={go} /></div>
       </Card>
 
@@ -4510,11 +4509,11 @@ function StagePreview({ c, ind, go, issues, warns, fix }: Ctx & { issues: Issue[
         </Card>
       )}
 
-      <Card title="Model flow" info="Every revenue stream as a tree, with the flow each one runs on. Each stream has its own branch, even when streams run the same flow." right={editMap}>
+      <Card frame title="Model flow" info="Every revenue stream as a tree, with the flow each one runs on. Each stream has its own branch, even when streams run the same flow." right={editMap}>
         <ModelFlowTree model={c.brand} streams={streamRefs(c)} />
       </Card>
 
-      <Card title={`Patient flow · ${ind.name || 'Stream'}`} info="Built in the Module map: the inputs you placed, in model order, with their group class and source." right={editMap}>
+      <Card frame title={`Patient flow · ${ind.name || 'Stream'}`} info="Built in the Module map: the inputs you placed, in model order, with their group class and source." right={editMap}>
         <PatientFlowList map={ind.inputMap} onEdit={() => go(4)} />
       </Card>
 
@@ -4674,7 +4673,7 @@ function ProfileMenu({ onAdmin, onLogout, placement }: { onAdmin: () => void; on
       <button data-tour="profile" type="button" aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(v => !v)} title={`${ME} · Super Admin`}
         className={cx('grid h-10 w-10 shrink-0 place-items-center rounded-full text-xs font-semibold text-white outline-none', placement === 'rail' ? 'bg-brand-dark ring-1 ring-black/5 focus-visible:ring-2 focus-visible:ring-brand' : 'bg-brand-dark ring-offset-2 focus-visible:ring-2 focus-visible:ring-brand')}>JA</button>
       {open && (
-        <div role="menu" className={cx('rise absolute z-[60] w-64 overflow-hidden rounded-lg border border-border bg-surface shadow-xl', placement === 'rail' ? 'bottom-0 left-12' : 'right-0 top-11')}>
+        <div role="menu" className={cx('dropdown-container rise absolute z-[60] w-64 overflow-hidden', placement === 'rail' ? 'bottom-0 left-12' : 'right-0 top-11')}>
           <div className="border-b border-border px-4 py-3">
             <p className="text-sm font-semibold">{ME}</p>
             <p className="text-xs text-text-2">j.andersen@pfizer.com</p>

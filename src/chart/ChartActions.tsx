@@ -150,7 +150,7 @@ export function ChartActions({ target, title, subtitle, onPptx, className }: {
     } catch { setErr('Download failed. Try again.') }
     setBusy(null)
   }
-  const item = 'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[13px] text-text hover:bg-surface-2 disabled:opacity-50'
+  const item = 'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[14px] text-text hover:bg-surface-2 disabled:opacity-50'
   return (
     <div ref={box} className={cx('relative', className)} data-export-ignore>
       <button type="button" aria-haspopup="menu" aria-expanded={open} aria-label={`Actions for ${title}`} title="Actions" onClick={() => setOpen(v => !v)}
@@ -158,8 +158,8 @@ export function ChartActions({ target, title, subtitle, onPptx, className }: {
         <EllipsisVertical size={15} />
       </button>
       {open && (
-        <div role="menu" aria-label="Actions" className="rise absolute right-0 top-10 z-40 w-60 rounded-xl border border-border bg-surface p-1.5 shadow-[0_12px_32px_-8px_rgba(16,24,40,0.22)]">
-          <p className="border-b border-border px-2.5 pb-2 pt-1 text-[13px] font-semibold text-text">Actions</p>
+        <div role="menu" aria-label="Actions" className="dropdown-container rise absolute right-0 top-10 z-40 w-60 p-1.5">
+          <p className="border-b border-border px-2.5 pb-2 pt-1 text-[14px] font-semibold text-text">Actions</p>
           <div className="pt-1">
             <button type="button" role="menuitem" disabled={!!busy} onClick={() => run('pptx')} className={item}>{busy === 'pptx' ? <Loader2 size={15} className="animate-spin text-text-2" /> : <Presentation size={15} className="text-text-2" />}Download as PPTX</button>
             <button type="button" role="menuitem" disabled={!!busy} onClick={() => run('pdf')} className={item}>{busy === 'pdf' ? <Loader2 size={15} className="animate-spin text-text-2" /> : <FileText size={15} className="text-text-2" />}Download as PDF</button>

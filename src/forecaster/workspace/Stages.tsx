@@ -5,7 +5,7 @@ import {
   adjusted, applyEvents, describeOverride, fmtDelta, fmtRev, fmtV, fySum, fyAvg, mLong, revenue,
 } from './engine'
 import type { DriverId, Edit, EventCurve, EventDef, EventType, Impact, Layer, ModelCfg, OutputId, Scenario } from './engine'
-import { Btn, COLOR, Card, ForecastChart, Label, Legend, Seg, Tag, Toggle, cx, field, PageTitle, MoreMenu, InfoTip } from './ui'
+import { Btn, COLOR, Card, ForecastChart, Label, Legend, PageHeader, PageTitle, Seg, Tag, Toggle, cx, field, MoreMenu, InfoTip } from './ui'
 import type { ChartSeries } from './ui'
 import { NumField, OutputSelect, Period } from './Drivers'
 import type { Edits, Notify } from './Drivers'
@@ -55,16 +55,16 @@ export function EventsStage({ events, setEvents, scenarios, setScenarios, calc, 
   }
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <PageHeader>
         <PageTitle title="Scenario events" info={`Create an event once and choose the scenarios it applies to. New events apply to ${sel.name}.`} />
         <div className="flex flex-wrap items-center gap-3">
           <label className="flex items-center gap-2 text-sm font-semibold">Scenario
             <select value={sel.id} onChange={e => setSelId(e.target.value)} aria-label="Selected scenario for events" className={cx(field, 'w-44 font-medium text-text')}>{scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
           <span data-tour="add-event" className="inline-flex"><Btn onClick={() => setForm(blankEvent())} icon={<Plus size={15} />} disabled={!!form && !form.id}>Add event</Btn></span>
         </div>
-      </div>
+      </PageHeader>
 
-      <Card title="Event impact" info={`${sel.name}: forecast with events applied`}
+      <Card frame title="Event impact" info={`${sel.name}: forecast with events applied`}
         right={<OutputSelect model={model} metric={metric} onChange={setMetric} />}>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><Legend s={{ ...series, lo: undefined }} />
           <span className="text-[13px] text-text-2">{c.events.length} event{c.events.length === 1 ? '' : 's'} applied · FY{FY} impact <b className={cx('font-mono', evDelta >= 0 ? 'text-ok' : 'text-err')}>{o.delta(evDelta)}</b></span></div>
@@ -124,7 +124,7 @@ function EventForm({ initial, onSave, onCancel, model, work, metric }: { initial
       <div className="absolute inset-0 bg-text/30 backdrop-blur-[1px]" onClick={onCancel} aria-hidden />
       <aside role="dialog" aria-modal="true" aria-label={initial.id ? 'Edit event' : 'New event'} className="relative flex h-full w-full max-w-[560px] flex-col bg-surface shadow-2xl">
         <header className="flex items-start justify-between gap-3 border-b border-border px-6 py-4">
-          <h3 className="flex items-center gap-1.5 text-[17px] font-semibold">{initial.id ? 'Edit event' : 'New event'}<InfoTip text="Saved events are reusable across scenarios and stay off until you turn them on." /></h3>
+          <h3 className="flex items-center gap-1.5 text-[16px] font-semibold">{initial.id ? 'Edit event' : 'New event'}<InfoTip text="Saved events are reusable across scenarios and stay off until you turn them on." /></h3>
           <Btn variant="ghost" onClick={onCancel} icon={<X size={16} />} title="Close" />
         </header>
         <div className="min-h-0 flex-1 overflow-y-auto px-6 py-5">
@@ -271,13 +271,13 @@ export function ScenariosStage({ events, scenarios, setScenarios, selId, setSelI
   return (
     <div className="space-y-5">
       {part === 'editor' && (
-        <div className="flex flex-wrap items-end justify-between gap-3">
+        <PageHeader>
           <PageTitle title="Scenario configuration" info="Configure scenarios and understand their posture. Build new scenarios or adjust assumptions below." />
           <div className="flex flex-wrap items-center gap-2">
             <OutputSelect model={model} metric={metric} onChange={setMetric} />
             <Btn onClick={() => setBuilding(true)} icon={<Plus size={15} />}>Build a scenario</Btn>
           </div>
-        </div>
+        </PageHeader>
       )}
 
       {part === 'editor' && <AgentFrame on={agent.section === 'scenarios'} label={`${agent.name} is updating ${sel.name}`}>
@@ -311,7 +311,7 @@ export function ScenariosStage({ events, scenarios, setScenarios, selId, setSelI
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="text-[17px] font-bold text-text">{sel.name}</h3>
+                    <h3 className="text-[16px] font-bold text-text">{sel.name}</h3>
                     <Tag tone={p.tone}>{p.label}</Tag>
                     {sel.locked && <Tag tone="ok"><Lock size={11} />Final · Locked</Tag>}
                   </div>
@@ -406,7 +406,7 @@ export function ScenariosStage({ events, scenarios, setScenarios, selId, setSelI
       {part !== 'outcome' && <ScenarioOverrides sel={sel} setScenarios={setScenarios} work={work.layer} events={events} model={model} notify={notify} />}
 
       {part === 'outcome' && <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
-        <Card title={`${sel.name} outcome`} sub={`Monthly ${o.label.toLowerCase()}, ${o.unit}`} right={<div className="flex items-center gap-2"><OutputSelect model={model} metric={metric} onChange={setMetric} /><Btn variant={compare ? 'primary' : 'secondary'} onClick={() => setCompare(v => !v)} icon={<GitCompare size={14} />}>Compare</Btn></div>}>
+        <Card frame title={`${sel.name} outcome`} sub={`Monthly ${o.label.toLowerCase()}, ${o.unit}`} right={<div className="flex items-center gap-2"><OutputSelect model={model} metric={metric} onChange={setMetric} /><Btn variant={compare ? 'primary' : 'secondary'} onClick={() => setCompare(v => !v)} icon={<GitCompare size={14} />}>Compare</Btn></div>}>
           <div className="mb-2"><Legend s={series} /></div>
           <ForecastChart title={`${sel.name} outcome`} s={series} fmt={v => o.fmt(v, 1)} dp={0} unit={o.unit} height={300} />
         </Card>
@@ -451,11 +451,11 @@ export function GoalSeekStage({ scenarios, setScenarios, calc, selId, setSelId, 
   const [nonce, setNonce] = useState(0)
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <PageHeader>
         <PageTitle title="Set the outcome, see what it takes" info="Set target ranges in order. Nothing is saved until you apply." />
         <div className="flex items-center gap-2"><Label>Scenario</Label><select aria-label="Scenario" value={sel.id} onChange={e => setSelId(e.target.value)} className={cx(field, 'w-40')}>{scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
           <Btn variant="ghost" onClick={() => setNonce(n => n + 1)} icon={<RotateCcw size={15} />}>Reset</Btn></div>
-      </div>
+      </PageHeader>
       <GoalSeekPanel key={`${sel.id}-${nonce}`} base={calc[sel.id]!.layer} sel={sel} setScenarios={setScenarios} model={model} notify={notify} />
     </div>
   )
@@ -493,15 +493,23 @@ export function ReviewStage({ scenarios, selId, setSelId, calc, events, edits, w
   ]
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <PageHeader className="items-center">
         <PageTitle title="Why the forecast differs from the baseline" info={`FY${FY} net revenue, traced from the reference baseline to the selected scenario.`} />
-        <div className="flex flex-wrap items-center gap-2">
-          <Seg label="Scenario" value={sel.id} onChange={setSelId} options={scenarios.map(s => ({ id: s.id, label: s.name }))} />
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+          <label className="block">
+            <span className="sr-only">Scenario</span>
+            <select aria-label="Scenario" value={sel.id} onChange={e => setSelId(e.target.value)} className={cx(field, 'w-44 font-medium text-text')}>
+              {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
+            </select>
+          </label>
           {sel.locked ? <Tag tone="ok"><Lock size={11} />Final · locked</Tag> : <Tag tone="neutral">Draft</Tag>}
+          <Btn variant={presenting ? 'primary' : 'secondary'} onClick={() => setPresenting(!presenting)} title={presenting ? 'Exit presentation' : 'Present outcome'}
+            className="h-9 w-9 px-0" icon={presenting ? <X size={15} /> : <Presentation size={15} />}>
+            <span className="sr-only">{presenting ? 'Exit presentation' : 'Present outcome'}</span>
+          </Btn>
           <Btn variant={sel.locked ? 'secondary' : 'primary'} onClick={() => toggleFinal(sel.id)} icon={sel.locked ? <LockOpen size={15} /> : <Lock size={15} />}>{sel.locked ? 'Reopen' : 'Finalise version'}</Btn>
-          <Btn variant={presenting ? 'primary' : 'secondary'} onClick={() => setPresenting(!presenting)} icon={<Presentation size={15} />}>{presenting ? 'Exit presentation' : 'Present outcome'}</Btn>
         </div>
-      </div>
+      </PageHeader>
 
       <ol className="grid gap-2 md:grid-cols-[1fr_auto_1fr_auto_1fr_auto_1fr] md:items-stretch">
         {steps.flatMap((s, k) => [
@@ -514,7 +522,7 @@ export function ReviewStage({ scenarios, selId, setSelId, calc, events, edits, w
         ])}
       </ol>
 
-      <Card title="Net revenue path" sub="Monthly, $M" right={<Legend s={series} />}><ForecastChart title="Net revenue path" s={series} fmt={v => fmtRev(v, 1)} dp={0} unit="$M" height={320} /></Card>
+      <Card frame title="Net revenue path" sub="Monthly, $M" right={<Legend s={series} />}><ForecastChart title="Net revenue path" s={series} fmt={v => fmtRev(v, 1)} dp={0} unit="$M" height={320} /></Card>
 
       <Card title="Scenarios side by side" info="Each scenario from funnel to net revenue." right={<ChartActions target="export-review-funnel" title="Scenarios side by side" subtitle={`FY${FY}`} />}>
         <FunnelCompare key={sel.id} scenarios={scenarios} calc={calc} selId={sel.id} onSelect={setSelId} model={model} exportId="export-review-funnel" />

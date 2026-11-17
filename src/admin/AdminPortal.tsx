@@ -87,7 +87,7 @@ function DataTable<T extends { id: string }>({ name, title, cols, rows, onRow, n
         <div className="relative w-full max-w-xs"><Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-2" /><input value={search} onChange={e => { setSearch(e.target.value); setPage(0) }} placeholder="Search" aria-label={`Search ${title}`} className={cx(field, 'pl-9')} /></div>
         <div className="relative">
           <Btn variant="secondary" icon={<Download size={15} />} onClick={() => setMenu(v => !v)}>Export</Btn>
-          {menu && <div className="rise absolute right-0 top-11 z-20 w-28 rounded-md border border-border bg-surface p-1 shadow-xl">{(['CSV', 'Excel'] as const).map(f => <button key={f} type="button" onClick={() => { setMenu(false); exportRows(name, cols, sorted, f, notify) }} className="block w-full rounded px-2 py-1.5 text-left text-[13px] hover:bg-surface-2">{f}</button>)}</div>}
+          {menu && <div className="dropdown-container rise absolute right-0 top-11 z-20 w-28 p-1">{(['CSV', 'Excel'] as const).map(f => <button key={f} type="button" onClick={() => { setMenu(false); exportRows(name, cols, sorted, f, notify) }} className="block w-full rounded px-2 py-1.5 text-left text-[13px] hover:bg-surface-2">{f}</button>)}</div>}
         </div>
         {extra}
       </div>
@@ -229,7 +229,7 @@ export default function AdminPortal({ notify, onBack }: { notify: Notify; onBack
 
   const tabs: [Tab, string][] = [['requests', 'Access Requests'], ['users', 'User Access']]
   return (
-    <div className="mx-auto flex w-full flex-1 flex-col px-10 py-8">
+    <div className="workspace-page flex flex-1 flex-col">
       <button type="button" onClick={onBack} className="mb-3 flex items-center gap-1 self-start text-sm text-text-2 hover:text-text"><ArrowLeft size={14} />Model library</button>
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div><h1 className="flex items-center gap-2 text-[28px] font-semibold tracking-tight">Admin Portal<span tabIndex={0} role="img" title="Approve access requests and manage who can use the forecaster." aria-label="Approve access requests and manage who can use the forecaster." className="inline-flex cursor-help text-text-3 hover:text-text-2"><Info size={14} /></span></h1></div>

@@ -60,10 +60,10 @@ function Btn({ children, variant = 'primary', size = 'md', onClick, icon, disabl
   )
 }
 
-function Card({ children, className }: { children: ReactNode; className?: string }) {
+function Card({ children, className, frame = false }: { children: ReactNode; className?: string; frame?: boolean }) {
   return (
-    <div className={cx('rounded-2xl border border-border bg-surface shadow-[0_1px_1px_rgb(20_20_30/.03),0_10px_28px_-16px_rgb(20_20_30/.16)]', className)}>
-      {children}
+    <div className={cx('border border-border', frame ? 'rounded-xl bg-surface-2 p-1.5' : 'rounded-2xl bg-surface shadow-[0_1px_1px_rgb(20_20_30/.03),0_10px_28px_-16px_rgb(20_20_30/.16)]', className)}>
+      {frame ? <div className="rounded-lg bg-surface p-2.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">{children}</div> : children}
     </div>
   )
 }
@@ -137,7 +137,7 @@ function BdAssetList({ onOpenAsset, onBack }: { onOpenAsset: (id: string) => voi
         <span className="text-[13px] font-semibold text-brand">BD asset sizing</span>
       </header>
 
-      <main className="mx-auto w-full max-w-[1440px] flex-1 px-6 py-8">
+      <main className="workspace-page flex-1">
         <div className="mb-8 flex items-start justify-between gap-6">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-3">Business development</p>
@@ -325,7 +325,7 @@ function AssumptionsGrid({ asset, country }: { asset: Asset; country: string }) 
   }, [asset])
 
   return (
-    <Card>
+    <Card frame>
       <SectionHeader title={`Assumptions · ${country}`} sub="Side-by-side scenario columns. Switch country in the top bar to see other markets." />
       <div className="overflow-x-auto">
         <table className="w-full text-[13px]">
@@ -393,7 +393,7 @@ function MarketShareTab({ asset, scenario }: { asset: Asset; scenario: ScenarioI
   )
 
   return (
-    <Card>
+    <Card frame>
       <SectionHeader title={asset.id === 'pcv-peds' ? 'Franchise share of market' : 'mRNA class share × Pfizer share within mRNA'}
         sub="Illustrative. The engine tab shows the exact calculation."
         right={<ScenarioLegend />} />
@@ -518,7 +518,7 @@ function OutputChart({ asset, scenario }: { asset: Asset; scenario: ScenarioId }
   }
 
   return (
-    <Card>
+    <Card frame>
       <SectionHeader title="Annual output by year" sub="Pfizer net revenue, illustrative" right={<Pill tone="brand">{SCENARIOS.find(s => s.id === scenario)!.label}</Pill>} />
       <div className="p-5">
         <div ref={tip.wrap} className="relative">
@@ -795,7 +795,7 @@ function BdWorkspace({ asset, onBack, onHome }: { asset: Asset; onBack: () => vo
         </div>
       </div>
 
-      <div className="mx-auto grid w-full max-w-[1680px] flex-1 grid-cols-[280px_minmax(0,1fr)] gap-5 px-6 py-5">
+      <div className="workspace-page grid flex-1 grid-cols-[280px_minmax(0,1fr)] gap-5 py-5">
         <aside className="sticky top-5 self-start">
           <Card>
             <div className="px-5 py-4">
