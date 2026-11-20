@@ -264,7 +264,7 @@ export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
     const showArt = m.card !== undefined
     const art = m.id === (selId ?? lastArt)
     if (brief) return (
-      <div key={m.id} className="rise flex gap-3"><Mark size={28} /><div className="min-w-0 flex-1 rounded-2xl rounded-tl-sm border border-border bg-surface px-5 py-4 shadow-sm">
+      <div key={m.id} className="rise flex gap-3"><Mark size={28} /><div className="min-w-0 flex-1 pt-0.5">
         {m.trace !== undefined && <StepList steps={m.trace} sources={m.sources} onCite={n => setSrc({ list: m.sources ?? [], n })} />}
         <div id={`ai-answer-${m.id}`}>
           {m.sources ? <AskAnswer m={m} Md={Md} onOpenSource={n => setSrc({ list: m.sources ?? [], n })} /> : m.text && <Paras text={m.text} Md={Md} />}
