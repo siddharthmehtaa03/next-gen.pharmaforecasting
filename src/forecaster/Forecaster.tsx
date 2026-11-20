@@ -10,6 +10,7 @@ import Workbook from './Workbook'
 import FunnelFlow from './funnel/FunnelFlow'
 import ForecastWorkspace from './workspace/ForecastWorkspace'
 import ForecasterHome, { BRANDS } from './workspace/Home'
+import InsightsBoard from './workspace/InsightsBoard'
 import ForecasterChat from './ForecasterChat'
 import type { Insight as BoardInsight } from './workspace/insights'
 import type { BrandRow as HomeBrand } from './workspace/Home'
@@ -1671,7 +1672,7 @@ export function LegacyForecaster({ onHome, notify }: { onHome: () => void; notif
   )
 }
 
-export type FcSection = 'forecasts' | 'chat'
+export type FcSection = 'forecasts' | 'chat' | 'insights'
 export type ForecasterProps = {
   section: FcSection; setSection: (s: FcSection) => void; notify: (t: { tone: 'ok' | 'info' | 'err'; text: string }) => void
   insights: BoardInsight[]; setInsights: (f: (x: BoardInsight[]) => BoardInsight[]) => void
@@ -1694,6 +1695,8 @@ export default function Forecaster({ section, setSection, notify, insights, setI
   useEffect(() => { onWorkspace?.(inWs) }, [inWs, onWorkspace])
   const ask = (id?: string) => { if (id) setChatBrand(id); setSection('chat') }
   if (section === 'chat') return <ForecasterChat {...chat} insights={insights} setInsights={setInsights} notify={notify} />
+  if (section === 'insights') return <InsightsBoard insights={insights} setInsights={setInsights} notify={notify} onAsk={ask}
+    onOpenBrand={id => { const b = BRANDS.find(x => x.id === id); if (b) { setBrand(b); setSection('forecasts') } }} />
   if (!brand) return <ForecasterHome onOpen={setBrand} notify={notify} />
   return <ForecastWorkspace key={brand.id} model={brand.model} brand={brand.brand} brandId={brand.id} cycle={brand.cycle} stream={brand.stream} notify={notify}
     insights={insights} setInsights={setInsights} onAsk={ask} Copilot={Copilot} assistant={chat.assistant.name} onPublished={onPublished} onBack={() => setBrand(null)} topRight={topRight} />

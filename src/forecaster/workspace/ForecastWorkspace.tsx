@@ -1,11 +1,10 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ComponentType, ReactNode } from 'react'
 import { scrollFrameTop } from '../../frame'
-import { ArrowRight, Check, ChevronDown, Eye, EyeOff, House, PanelRightClose, PanelRightOpen, Save } from 'lucide-react'
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, PanelRightClose, PanelRightOpen, Save } from 'lucide-react'
 import { ACT, DEFAULT_MODEL, DRV, FY, N, SEED_EVENTS, SEED_SCENARIOS, UNBIASED, defaultEdit, fyAvg, fySum, revenue, scenarioLayer, workingLayer } from './engine'
 import type { DriverId, EventDef, ModelCfg, OutputId, Scenario } from './engine'
 import { Btn, Card, PageHeader, PageTitle, cx, field } from './ui'
-import { Overlay } from '../../components/Overlay'
 import type { Grain } from './ui'
 import { DriverWorkspace, ForecastMap } from './Drivers'
 import { FunnelChart, funnelLevels } from './FunnelChart'
@@ -42,8 +41,11 @@ const GROUPS: { id: string; items: string[] }[] = [
   { id: 'Events', items: ['Events'] }, { id: 'Scenario', items: ['Scenarios'] },
   { id: 'Scenario summary', items: ['Summary'] },
   { id: 'Sensitivity', items: ['Sensitivity'] }, { id: 'Goal seek', items: ['Goal seek'] }, { id: 'Review', items: ['Review'] },
+  { id: 'Financial Bridge', items: [] },
 ]
 const LABEL: Record<View, string> = { Assumptions: 'Forecast workspace', Events: 'Events', Scenarios: 'Scenario', Sensitivity: 'Sensitivity', 'Goal seek': 'Goal seek', Summary: 'Scenario summary', Review: 'Review' }
+// Display text for the top-level tabs; kept separate from the stable GROUPS ids.
+const GROUP_LABEL: Record<string, string> = { 'Forecast workspace': 'Forecast Workspace', Events: 'Events', Scenario: 'Scenarios', 'Scenario summary': 'Summary', Sensitivity: 'Sensitivity', 'Goal seek': 'Goal Seek', Review: 'Review', 'Financial Bridge': 'Financial Bridge' }
 const NEXT: Partial<Record<View, View>> = Object.fromEntries(STEPS.slice(0, -1).map((v, i) => [v, STEPS[i + 1]!]))
 
 export default function ForecastWorkspace({ notify, brand = 'Nurtec', brandId = 'nurtec', cycle = 'AOP 2027', stream = 'US net revenue', model = DEFAULT_MODEL, insights, setInsights, onAsk, Copilot, assistant = 'Charles', onPublished, onBack, topRight }: { notify: Notify; brand?: string; brandId?: string; cycle?: string; stream?: string; model?: ModelCfg; insights: Insight[]; setInsights: (f: (x: Insight[]) => Insight[]) => void; onAsk?: (brandId?: string) => void; Copilot?: ComponentType<CopilotProps>; assistant?: string
@@ -123,11 +125,8 @@ export default function ForecastWorkspace({ notify, brand = 'Nurtec', brandId = 
   const leaveOk = () => !driverDirty || window.confirm('You have unapplied changes to this assumption. Discard them?')
   const go = (v: View) => { if ((v === view && !an) || !leaveOk()) return; setAn(null); setView(v); scrollFrameTop() }
   const openAn = (a: string) => { if (an !== a && leaveOk()) { setAn(a); scrollFrameTop() } }
-  const group = an ? 'Analytics' : GROUPS.find(g => g.items.includes(view))!.id
+  const group = an === 'Financial Bridges' ? 'Financial Bridge' : an ? 'Analytics' : GROUPS.find(g => g.items.includes(view))!.id
   const subs = GROUPS.find(g => g.id === group)?.items ?? []
-  const [anMenu, setAnMenu] = useState(false)
-  const anRef = useRef<HTMLButtonElement>(null)
-  const closeAnMenu = useCallback(() => setAnMenu(false), [])
   const pick = (s: Sel) => { if ((s !== sel || mod) && leaveOk()) selDriver(s) }
   const onDirty = useCallback((v: boolean) => setDriverDirty(v), [])
   const mapView = view === 'Assumptions'
@@ -159,24 +158,14 @@ export default function ForecastWorkspace({ notify, brand = 'Nurtec', brandId = 
           {/* Two levels: a few global tabs, and one sub-tab row for the active group. */}
           <nav data-tour="tabs" aria-label="Forecast sections" className="px-6">
             <div className="flex min-h-14 flex-wrap items-center gap-x-4 gap-y-2 py-2">
-              {onBack && <button type="button" onClick={onBack} aria-label="Back to my forecasts" title="Back to my forecasts" className="-ml-2 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-text hover:bg-surface-2"><House size={20} /></button>}
+              {onBack && <button type="button" onClick={onBack} aria-label="Back to my forecasts" title="Back to my forecasts" className="-ml-2 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-text hover:bg-surface-2"><ArrowLeft size={20} /></button>}
               <div role="tablist" className="flex flex-1 flex-wrap items-center justify-center gap-x-1">
                 {GROUPS.map(g => (
-                  <button key={g.id} type="button" role="tab" aria-selected={g.id === group} onClick={() => g.id !== group && go(g.items[0] as View)}
+                  <button key={g.id} type="button" role="tab" aria-selected={g.id === group}
+                    onClick={() => { if (g.id === group) return; if (g.id === 'Financial Bridge') openAn('Financial Bridges'); else go(g.items[0] as View) }}
                     className={cx('relative inline-flex h-9 items-center whitespace-nowrap px-3 text-[14px] font-medium transition-colors', g.id === group ? 'text-text after:absolute after:inset-x-3 after:-bottom-2 after:h-0.5 after:rounded-full after:bg-brand' : 'text-text-2 hover:text-text')}>
-                    {g.id}</button>
+                    {GROUP_LABEL[g.id] ?? g.id}</button>
                 ))}
-                {/* Analytics views live in one dropdown so they don't crowd the workflow tabs. */}
-                <button ref={anRef} data-tour="analytics" type="button" role="tab" aria-selected={group === 'Analytics'} aria-haspopup="menu" aria-expanded={anMenu} onClick={() => setAnMenu(v => !v)}
-                  className={cx('relative inline-flex h-9 items-center gap-1 whitespace-nowrap px-3 text-[14px] font-medium transition-colors', group === 'Analytics' ? 'text-text after:absolute after:inset-x-3 after:-bottom-2 after:h-0.5 after:rounded-full after:bg-brand' : 'text-text-2 hover:text-text')}>
-                  {an ? `Analytics · ${an}` : 'Analytics'}<ChevronDown size={14} className={cx('transition-transform', anMenu && 'rotate-180')} /></button>
-                <Overlay anchor={anRef} open={anMenu} onClose={closeAnMenu} align="left" width={240}>
-                  <p className="px-3 pb-1 pt-1.5 text-[12px] text-text-3">Analytics views · read-only</p>
-                  {ANALYTICS.map(a => !AN_BUILT.includes(a)
-                    ? <span key={a} role="menuitem" aria-disabled="true" title="Coming soon" className="flex w-full cursor-not-allowed items-center justify-between px-3 py-1.5 text-[13px] text-text-3">{a}<span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-text-3">Coming soon</span></span>
-                    : <button key={a} type="button" role="menuitem" onClick={() => { setAnMenu(false); openAn(a) }}
-                    className={cx('flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px] hover:bg-surface-2', an === a ? 'font-medium text-text' : 'text-text-2')}>{a}{an === a && <Check size={14} className="text-brand" />}</button>)}
-                </Overlay>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <select aria-label="Revenue stream" title="Revenue stream" value={streamSelection} onChange={e => setStreamSelection(e.target.value)}

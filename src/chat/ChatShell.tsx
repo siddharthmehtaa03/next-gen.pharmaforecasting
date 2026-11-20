@@ -86,58 +86,25 @@ function Actions({ m, last, onRegen, exportId, module: mod }: { m: ShellMsg; las
   )
 }
 
-function AskAnswer({ m, Md, onOpenSource }: { m: ShellMsg; Md: Assistant['Md']; onOpenSource?: (n: number) => void }) {
-  const [tab, setTab] = useState<'answer' | 'sources'>('answer')
-  const src = m.sources ?? []
+function AskAnswer({ m, Md }: { m: ShellMsg; Md: Assistant['Md']; onOpenSource?: (n: number) => void }) {
   return (
     <div>
-      <div role="tablist" aria-label="Answer or sources" className="mb-2.5 flex items-center gap-1 border-b border-border">
-        {([['answer', 'Answer'], ['sources', `Citations · ${src.length}`]] as const).map(([id, l]) => (
-          <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
-            className={cx('-mb-px border-b-2 px-3 py-2 text-[13px] font-medium transition-colors', tab === id ? 'border-brand text-brand' : 'border-transparent text-text-2 hover:text-text')}>{l}</button>))}
-        {m.via && <span className="ml-auto pb-1 text-[11px] text-text-3">via {m.via}</span>}
-      </div>
-      {tab === 'answer'
-        ? <>
-          <Paras text={m.text ?? ''} Md={Md} />
-          {src.length > 0 && (
-            <div className="mt-3 flex flex-wrap items-center gap-1.5" aria-label="Citations">
-              <span className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Cited</span>
-              {src.map((s, k) => <button key={s.name} type="button" onClick={() => onOpenSource?.(k + 1)} title={s.detail}
-                className="inline-flex max-w-[240px] items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] text-text-2 hover:border-brand hover:text-brand"><span className="font-mono text-text-3">[{k + 1}]</span><span className="truncate">{s.name}</span></button>)}
-            </div>
-          )}
-        </>
-        : (
-          <div>
-            <ol className="divide-y divide-border overflow-hidden rounded-xl border border-border bg-surface">
-              {src.map((s, k) => { const I = KIND_ICON[s.kind]; return (
-                <li key={s.name} className="flex items-start gap-3 px-3.5 py-3">
-                  <span className="mt-0.5 w-5 shrink-0 font-mono text-[11px] text-text-3">[{k + 1}]</span>
-                  <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface-2 text-text-2"><I size={15} /></span>
-                  <span className="min-w-0 flex-1">
-                    <button type="button" onClick={() => onOpenSource?.(k + 1)} className="block max-w-full truncate text-left text-[13px] font-medium hover:text-brand hover:underline">{s.name}</button>
-                    <span className="block text-[12px] text-text-2">{s.detail}</span></span>
-                  <span className="shrink-0 text-right"><span className="block text-[11px] font-semibold uppercase tracking-wide text-text-3">{s.kind}</span>{s.meta && <span className="block text-[11px] text-text-3">{s.meta}</span>}</span>
-                </li>) })}
-            </ol>
-            <p className="mt-2 flex items-center gap-1.5 text-[12px] text-text-3"><ShieldCheck size={13} className="shrink-0 text-ok" />Sources limited to your access. No web.</p>
-          </div>
-        )}
+      {m.via && <p className="mb-1.5 text-[11px] text-text-3">via {m.via}</p>}
+      <Paras text={m.text ?? ''} Md={Md} />
     </div>
   )
 }
 
 function Examples({ cards, onPick }: { cards: PromptCard[]; onPick: (t: string) => void }) {
-  // stable sort on index interleaves categories, so the four shown span more than one card
-  const rows = cards.flatMap(c => c.prompts.map((t, i) => ({ t, i }))).sort((x, y) => x.i - y.i).slice(0, 4)
+  const rows = cards.flatMap(c => c.prompts.map(t => ({ t, icon: c.icon })))
+  if (!rows.length) return null
   return (
     <div className="text-left">
       <p className="mb-3 text-[13px] font-medium text-text">Examples of queries:</p>
-      <ul className="flex flex-col items-start gap-2">
-        {rows.map(({ t }) => (
-          <li key={t}><button type="button" onClick={() => onPick(t)} className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border-strong bg-surface/60 px-3.5 py-1.5 text-left text-[13.5px] text-text-2 transition-colors hover:border-brand hover:text-text">
-            {t}<ChevronRight size={14} className="shrink-0 text-text-3" /></button></li>
+      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {rows.map(({ t, icon: I }) => (
+          <li key={t}><button type="button" onClick={() => onPick(t)} className="inline-flex w-full items-center gap-2 rounded-full border border-dashed border-border-strong bg-surface/60 px-3.5 py-1.5 text-left text-[13.5px] text-text-2 transition-colors hover:border-brand hover:text-text">
+            <I size={14} className="shrink-0 text-text-3" /><span className="min-w-0 flex-1 truncate">{t}</span><ChevronRight size={14} className="shrink-0 text-text-3" /></button></li>
         ))}
       </ul>
     </div>
@@ -266,7 +233,7 @@ export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
   }
 
   const composer = (big: boolean, up: boolean) => (
-    <form onSubmit={e => { e.preventDefault(); send(q) }} className={cx('relative bg-surface p-3 transition-shadow', big ? 'rounded-xl border border-border shadow-[0_6px_20px_rgb(26_26_26/0.06)] focus-within:border-border-strong' : 'rounded-2xl border border-[#2f9e73]/30 shadow-[0_0_0_4px_rgb(47_158_115/0.07)] focus-within:border-[#2f9e73]/60 focus-within:shadow-[0_0_0_4px_rgb(47_158_115/0.14)]')}>
+    <form onSubmit={e => { e.preventDefault(); send(q) }} className={cx('relative bg-surface p-3 transition-shadow', big ? 'rounded-xl shadow-[0_8px_30px_rgba(26,26,26,0.09)] focus-within:shadow-[0_10px_36px_rgba(26,26,26,0.13)]' : 'rounded-2xl border border-[#2f9e73]/30 shadow-[0_0_0_4px_rgb(47_158_115/0.07)] focus-within:border-[#2f9e73]/60 focus-within:shadow-[0_0_0_4px_rgb(47_158_115/0.14)]')}>
       {voice === 'idle' ? (
         <textarea rows={big ? 3 : 1} value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(q) } }}
           placeholder={p.placeholder} aria-label={`Message ${AI}`}
@@ -333,15 +300,17 @@ export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
       {band}
       {groundBar}
       <div ref={wrap} className={cx('relative flex min-h-0 flex-1', drag && 'select-none')}>
-      <div className={cx('relative flex min-h-0 min-w-0 flex-col', !split && 'flex-1', brief && 'bg-surface-2/50')} style={split ? { width: `${ratio * 100}%`, flex: 'none' } : undefined}>
+      <div className={cx('relative flex min-h-0 min-w-0 flex-col bg-surface-2', !split && 'flex-1')} style={split ? { width: `${ratio * 100}%`, flex: 'none' } : undefined}>
         {!msgs ? (
-          <div className="relative flex min-h-0 flex-1 overflow-y-auto bg-surface px-5">
-            <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
-              <div className="absolute left-1/2 top-1/2 h-[560px] w-[900px] max-w-[140%] -translate-x-1/2 -translate-y-1/2 blur-3xl" style={{ background: 'radial-gradient(closest-side at 50% 42%, rgb(252 226 100 / 0.8), transparent 70%), radial-gradient(closest-side at 28% 62%, rgb(248 190 218 / 0.5), transparent 75%), radial-gradient(closest-side at 72% 60%, rgb(248 190 218 / 0.45), transparent 75%)' }} />
-            </div>
+          <div className="relative flex min-h-0 flex-1 overflow-y-auto px-5">
             <div className="relative m-auto w-full max-w-[656px] py-12 text-center">
               <h1 className="text-[24px] font-semibold tracking-tight text-text">{P ? P.greeting.charAt(0).toUpperCase() + P.greeting.slice(1) : 'What can I help with?'}</h1>
-              <div className="mt-8 text-left">{composer(true, false)}</div>
+              <div className="relative mt-8 text-left">
+                <div aria-hidden className="pointer-events-none absolute -inset-7 overflow-hidden rounded-[32px] blur-2xl">
+                  <div className="absolute inset-0" style={{ background: 'radial-gradient(closest-side at 50% 40%, rgb(252 226 100 / 0.9), transparent 70%), radial-gradient(closest-side at 18% 70%, rgb(248 190 218 / 0.55), transparent 75%), radial-gradient(closest-side at 82% 65%, rgb(248 190 218 / 0.5), transparent 75%)' }} />
+                </div>
+                {composer(true, false)}
+              </div>
               <div className="mt-9"><Examples cards={p.cards} onPick={send} /></div>
               <p className="mt-10 text-[12px] text-text-3">{p.note}</p>
             </div>
@@ -359,7 +328,7 @@ export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
                 <div ref={end} />
               </div>
             </div>
-            <div className={cx('shrink-0 px-5 pb-4 pt-2', brief ? 'border-t border-border bg-surface pt-3' : 'border-t border-transparent bg-surface')}>
+            <div className={cx('shrink-0 bg-surface-2 px-5 pb-4 pt-2', brief && 'border-t border-border pt-3')}>
               <div className="mx-auto max-w-3xl">{chips && <NextPrompts chips={chips} onSend={send} onEdit={setQ} />}
                 {composer(false, true)}</div>
               <p className="mx-auto mt-2 max-w-3xl text-center text-[11px] text-text-3">{p.note}</p>

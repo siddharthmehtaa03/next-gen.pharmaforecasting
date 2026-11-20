@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import ChatShell from './chat/ChatShell'
 import { forecastAnswer } from './forecaster/ForecasterChat'
 import type { Mode, Persona, PromptCard, Source } from './chat/ChatShell'
+import type { StepInput } from './chat/aiFeatures'
 import { BRANDS as FC_BRANDS } from './forecaster/workspace/Home'
 import Forecaster from './forecaster/Forecaster'
 import type { FcSection } from './forecaster/Forecaster'
@@ -23,14 +24,15 @@ import { InputCanvas, ModelFlowTree, PatientFlowList, SnowflakeSources } from '.
 import type { StreamRef } from './ConfigInputs'
 import { flowRows as inputFlow, withPatientFlow, onCanvas, FLOW_INPUTS } from './configCatalog'
 import type { InputMap } from './configCatalog'
-import pfizerMark from './assets/pfizer-mark-color.png'
-import pfizerLogo from './assets/pfizer-logo-color.png'
+import pfizerMark from './assets/pfizer-mark.png'
+import pfizerLogo from './assets/pfizer-logo-official.svg'
+import { Overlay } from './components/Overlay'
 import {
   AlertCircle, AlertTriangle, ArrowLeft, ArrowUpDown, ArrowUp, ArrowDown, ArrowRight, Bell, Boxes, Check, CheckCircle2, ChevronDown, ChevronRight,
   Clock, Copy, Database, FileText, GitBranch, History, Info, Layers, Loader2, Lock, Plus, PanelRightClose, PanelRightOpen, Maximize2, Minimize2,
   RefreshCw, RotateCcw, Search, Send, Settings2, ShieldAlert, ShieldCheck, SlidersHorizontal, Sparkles, TrendingUp, Upload, Download, Users, Workflow, X, Eye, Zap, ArrowUpRight, LogOut, Mail, ChevronUp,
   House, MessagesSquare, SquarePen, MessageSquare, ArrowUpRight as SendArrow, Wand2,
-  Bookmark, Trash2, Pencil, HelpCircle, ListChecks, MoreVertical, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+  Bookmark, Trash2, Pencil, HelpCircle, ListChecks, MoreVertical, PanelLeftClose, PanelLeftOpen, Pin, LayoutGrid } from 'lucide-react'
 
 /* ───────────────────────── Domain data (model taxonomy, working draft v2) ───────────────────────── */
 
@@ -940,6 +942,7 @@ export default function App() {
   const [fcKey, setFcKey] = useState(0)
   const [threads, setThreads] = useState<Thread[]>([])
   const [curThread, setCurThread] = useState<number | null>(null)
+  const [pins, setPins] = useState<number[]>([])
   const [fcSection, setFcSection] = useState<FcSection>('forecasts')
   const [fcWs, setFcWs] = useState(false)
   // The collaboration panel starts collapsed in every flow; only the top-bar control opens it.
@@ -947,6 +950,13 @@ export default function App() {
   const [fcInsights, setFcInsights] = useState<BoardInsight[]>(SEED_INSIGHTS)
   const [fcThreads, setFcThreads] = useState<FThread[]>([])
   const [fcCur, setFcCur] = useState<number | null>(null)
+  const [fcPins, setFcPins] = useState<number[]>([])
+  const PIN_MAX = 10
+  const togglePin = (list: number[], set: (f: (p: number[]) => number[]) => void, id: number, title: string) => {
+    if (list.includes(id)) return set(p => p.filter(x => x !== id))
+    if (list.length >= PIN_MAX) return setToast({ tone: 'info', text: `You can pin ${PIN_MAX} chats. Unpin one to pin "${title}".` })
+    set(p => [id, ...p])
+  }
   const [fcChatBrand, setFcChatBrand] = useState('nurtec')
   // Forecast AI grounding: latest submitted/approved version per brand. Finalising a scenario files a new one; drafts never do.
   const [fcPublished, setFcPublished] = useState<PublishedReg>(SEED_PUBLISHED)
@@ -969,10 +979,6 @@ export default function App() {
 
   const open = (s: Seed) => { setSeed(s); setRun(r => r + 1); setView('config'); toTop() }
   // Full view: browser full screen where allowed, and the top bar hidden either way (the preview iframe may block full screen).
-  const [full, setFull] = useState(false)
-  const enterFull = () => { setFull(true); document.documentElement.requestFullscreen?.().catch(() => {}) }
-  const exitFull = () => { setFull(false); if (document.fullscreenElement) document.exitFullscreen().catch(() => {}) }
-  useEffect(() => { const h = () => { if (!document.fullscreenElement) setFull(false) }; document.addEventListener('fullscreenchange', h); return () => document.removeEventListener('fullscreenchange', h) }, [])
   const resume = (m: ModelRow) => open({ from: m })
 
   /** A finalised model gets a workspace row straight away; making it available only flips its status. */
@@ -992,22 +998,26 @@ export default function App() {
       items={view === 'forecast'
         ? [{ id: 'forecasts', label: 'My forecasts', icon: House, go: () => { setFcSection('forecasts'); setFcKey(k => k + 1); toTop() } },
            { id: 'fchat', label: 'Ask & Understand', icon: MessagesSquare, go: () => { setFcSection('chat'); toTop() },
-             sub: { onNew: () => { setFcCur(null); setFcSection('chat') }, items: fcThreads.map(t => ({ id: t.id, label: t.title, active: fcSection === 'chat' && fcCur === t.id, go: () => { setFcCur(t.id); setFcSection('chat'); toTop() },
-               dup: () => { const id = Date.now(); setFcThreads(ts => { const i = ts.findIndex(x => x.id === t.id); const c = { ...t, id, title: t.title + ' (copy)' }; return [...ts.slice(0, i + 1), c, ...ts.slice(i + 1)] }); setFcCur(id); setFcSection('chat') },
-               del: () => { setFcThreads(ts => ts.filter(x => x.id !== t.id)); if (fcCur === t.id) setFcCur(null) } })) } }]
+             sub: { onNew: () => { setFcCur(null); setFcSection('chat') }, items: fcThreads.map(t => ({ id: t.id, label: t.title, active: fcSection === 'chat' && fcCur === t.id, pinned: fcPins.includes(t.id), go: () => { setFcCur(t.id); setFcSection('chat'); toTop() },
+               pin: () => togglePin(fcPins, setFcPins, t.id, t.title),
+               rename: (name: string) => setFcThreads(ts => ts.map(x => x.id === t.id ? { ...x, title: name } : x)),
+               del: () => { setFcThreads(ts => ts.filter(x => x.id !== t.id)); setFcPins(p => p.filter(x => x !== t.id)); if (fcCur === t.id) setFcCur(null) } })) } },
+           { id: 'insights', label: 'Insights board', icon: LayoutGrid, go: () => { setFcSection('insights'); toTop() } }]
         : [{ id: 'models', label: 'Model workspace', icon: House, go: () => { setView('models'); toTop() } },
            { id: 'chat', label: 'Build & Configure', icon: Workflow, go: () => { setView('chat'); toTop() },
-             sub: { onNew: () => { setCurThread(null); setView('chat') }, items: threads.map(t => ({ id: t.id, label: t.title, active: view === 'chat' && curThread === t.id, go: () => { setCurThread(t.id); setView('chat'); toTop() },
-               dup: () => { const id = Date.now(); setThreads(ts => { const i = ts.findIndex(x => x.id === t.id); const c = { ...t, id, title: t.title + ' (copy)' }; return [...ts.slice(0, i + 1), c, ...ts.slice(i + 1)] }); setCurThread(id); setView('chat') },
-               del: () => { setThreads(ts => ts.filter(x => x.id !== t.id)); if (curThread === t.id) setCurThread(null) } })) } }]}
-      active={view === 'config' ? 'models' : view === 'forecast' ? ({ forecasts: 'forecasts', chat: 'fchat' } as const)[fcSection] : view}
+             sub: { onNew: () => { setCurThread(null); setView('chat') }, items: threads.map(t => ({ id: t.id, label: t.title, active: view === 'chat' && curThread === t.id, pinned: pins.includes(t.id), go: () => { setCurThread(t.id); setView('chat'); toTop() },
+               pin: () => togglePin(pins, setPins, t.id, t.title),
+               rename: (name: string) => setThreads(ts => ts.map(x => x.id === t.id ? { ...x, title: name } : x)),
+               del: () => { setThreads(ts => ts.filter(x => x.id !== t.id)); setPins(p => p.filter(x => x !== t.id)); if (curThread === t.id) setCurThread(null) } })) } }]}
+      active={view === 'config' ? 'models' : view === 'forecast' ? ({ forecasts: 'forecasts', chat: 'fchat', insights: 'insights' } as const)[fcSection] : view}
       flow={view === 'forecast' ? 'Forecaster' : 'Forecasting CoE'}
-      header={full ? <button type="button" onClick={exitFull} aria-label="Exit full view" title="Exit full view" className="fixed right-4 top-4 z-[55] inline-flex h-8 items-center gap-1.5 rounded-lg border border-border bg-surface/95 px-2.5 text-[12.5px] font-medium text-text-2 shadow-sm backdrop-blur hover:text-text"><Minimize2 size={14} />Exit full view</button> : <TopBar onFull={enterFull} back={view === 'forecast' && fcSection === 'forecasts' && fcWs ? { label: 'Back to my forecasts', onClick: () => { setFcWs(false); setFcKey(k => k + 1); toTop() } } : undefined} collab={view === 'config' || (view === 'forecast' && fcSection === 'forecasts' && fcWs) ? { on: collab, toggle: () => setCollab(v => !v), label: view === 'forecast' ? 'Forecast AI' : 'COE AI' } : undefined} crumbs={view === 'chat' || (view === 'forecast' && fcSection === 'chat') ? [] : [view === 'forecast' ? 'Forecaster' : 'Forecasting CoE', ({ models: 'Model workspace', config: 'Configure model', admin: 'Admin portal', forecast: ({ forecasts: 'My forecasts', chat: AI_EXP.ask.label } as const)[fcSection], chat: AI_EXP.build.label, landing: '' } as const)[view]]} onHome={() => setView('landing')} onAdmin={() => { setView('admin'); toTop() }} onLogout={() => { setView('landing'); setToast({ tone: 'info', text: 'You’ve been logged out.' }) }} models={models} onResume={resume} ai={ai} onAI={() => setAi(v => !v)} notify={setToast} fixtures={fixtures} onFixtures={toggleFixtures} />}>
+      header={(view === 'forecast' && fcSection === 'forecasts' && fcWs) ? null : <TopBar collab={view === 'config' ? { on: collab, toggle: () => setCollab(v => !v), label: 'COE AI' } : undefined} crumbs={view === 'chat' || (view === 'forecast' && fcSection === 'chat') ? [] : [view === 'forecast' ? 'Forecaster' : 'Forecasting CoE', ({ models: 'Model workspace', config: 'Configure model', admin: 'Admin portal', forecast: ({ forecasts: 'My forecasts', chat: AI_EXP.ask.label, insights: 'Insights board' } as const)[fcSection], chat: AI_EXP.build.label, landing: '' } as const)[view]]} onHome={() => setView('landing')} onAdmin={() => { setView('admin'); toTop() }} onLogout={() => { setView('landing'); setToast({ tone: 'info', text: 'You’ve been logged out.' }) }} models={models} onResume={resume} ai={ai} onAI={() => setAi(v => !v)} notify={setToast} fixtures={fixtures} onFixtures={toggleFixtures} />}>
       {view === 'forecast' && fcSection === 'forecasts' && !fcWs && <Charles persona="ask" busy={false} greeting={`Hi ${ME.split(' ')[0]}, ask about any submitted forecast. I show sources and don’t change anything.`} context={['Forecaster', 'My forecasts']}
         chips={['What are the key risks?', 'Explain what moved Nurtec', 'Compare Optimistic and Pessimistic']}
         respond={q => { const named = FC_BRANDS.find(x => q.toLowerCase().includes(x.brand.toLowerCase())); const r = forecastAnswer(q, named?.id ?? fcChatBrand, fcInsights, { blocked: fcBlocked, published: fcPublished }); const o = r.out.map(x => x.text ?? '').filter(Boolean).join('\n\n').replace(/^## (.*)$/gm, '**$1**'); return { kind: 'text', title: r.title ?? 'Forecast AI', cites: r.out.flatMap(x => x.sources ?? []).map(s => s.name), body: <div className="space-y-2 whitespace-pre-line">{o.split('\n\n').map((p, i) => <p key={i}><Md text={p} /></p>)}</div> } }} />}
       {view === 'forecast' ? <Forecaster key={fcKey} section={fcSection} setSection={setFcSection} onWorkspace={setFcWs} Copilot={ForecastCopilot} notify={setToast} insights={fcInsights} setInsights={setFcInsights} setChatBrand={setFcChatBrand}
-          chat={{ threads: fcThreads, setThreads: setFcThreads, cur: fcCur, setCur: setFcCur, brandId: fcChatBrand, setBrandId: setFcChatBrand, assistant: { name: ASSISTANT, Mark: AssistantMark, Md }, userName: ME.split(' ')[0]!, blocked: fcBlocked, published: fcPublished }} onPublished={onPublished} />
+          chat={{ threads: fcThreads, setThreads: setFcThreads, cur: fcCur, setCur: setFcCur, brandId: fcChatBrand, setBrandId: setFcChatBrand, assistant: { name: ASSISTANT, Mark: AssistantMark, Md }, userName: ME.split(' ')[0]!, blocked: fcBlocked, published: fcPublished }} onPublished={onPublished}
+          topRight={<Notifications models={models} onResume={resume} fixtures={fixtures} />} />
         : view === 'chat' ? <CoeChat threads={threads} setThreads={setThreads} cur={curThread} setCur={setCurThread} models={models} setModels={setModels} />
         : view === 'bd' ? <BdFlow onBack={() => setView('landing')} /> : view === 'admin' ? <AdminPortal notify={setToast} onBack={() => setView('models')} /> : view === 'models'
         ? <ModelsHome fixtures={fixtures} models={models} setModels={setModels} onOpen={open} onResume={resume} notify={setToast} ai={ai} closeAI={() => setAi(false)} />
@@ -1030,12 +1040,19 @@ const CollabCtx = createContext<CollabState>({ open: false, slot: null, close: (
 
 /* ───────────────────────── App frame: side rail + rounded content panel ───────────────────────── */
 
-type NavItem = { id: string; label: string; icon: typeof House; go: () => void; sub?: { onNew: () => void; items: { id: number; label: string; active: boolean; go: () => void; dup: () => void; del: () => void }[] } }
+type NavThread = { id: number; label: string; active: boolean; pinned: boolean; go: () => void; rename: (name: string) => void; del: () => void; pin: () => void }
+type NavItem = { id: string; label: string; icon: typeof House; go: () => void; sub?: { onNew: () => void; items: NavThread[] } }
 /** Shared shell for every flow: a light gray rail that keeps the page breathable. Collapsed shows the Pfizer motif and icons; expanded shows the full logo and labels. */
 function AppFrame({ onHome, items, active, flow, header, collab, onCollab, footer, children, dock = 'float' }: { header: ReactNode; collab: boolean; onCollab: (v: boolean) => void; footer: ReactNode; onHome: () => void; items: NavItem[]; active: string; flow: string; children: ReactNode; dock?: 'float' | 'split' }) {
   // Collapsed by default; opens only from the expand control.
   const [open, setOpen] = useState(false)
   const [slot, setSlot] = useState<HTMLElement | null>(null)
+  const [menuFor, setMenuFor] = useState<number | null>(null)
+  const menuAnchor = useRef<HTMLButtonElement | null>(null)
+  const [renameId, setRenameId] = useState<number | null>(null)
+  const [renameVal, setRenameVal] = useState('')
+  const startRename = (t: NavThread) => { setMenuFor(null); setRenameId(t.id); setRenameVal(t.label) }
+  const commitRename = (t: NavThread) => { const v = renameVal.trim(); if (v && v !== t.label) t.rename(v); setRenameId(null) }
   const [size, setSize] = useState<ChatSize>('md')
   // Split-screen panel width, adjustable by dragging the divider or with arrow keys.
   const [panelW, setPanelW] = useState(440)
@@ -1054,10 +1071,10 @@ function AppFrame({ onHome, items, active, flow, header, collab, onCollab, foote
     <div className="h-dvh overflow-hidden bg-frame">
       {/* The rail sits on the canvas; the workspace is a separate rounded, raised panel beside it. */}
       <nav aria-label={`${flow} navigation`}
-        className="fixed inset-y-0 left-0 z-50 flex flex-col py-4 transition-[width] duration-200" style={{ width: w }}>
-        <button type="button" onClick={onHome} aria-label="Pfizer · Go to home" className={cx('mb-6 flex shrink-0 items-center gap-2 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-brand', open ? 'mx-4 px-1.5' : 'mx-auto h-10 justify-center')}>
+        className="fixed inset-y-0 left-0 z-50 flex flex-col bg-brand-dark py-4 transition-[width] duration-200" style={{ width: w }}>
+        <button type="button" onClick={onHome} aria-label="Pfizer · Go to home" className={cx('mb-6 flex shrink-0 items-center gap-2 rounded-xl outline-none focus-visible:ring-2 focus-visible:ring-white/60', open ? 'mx-4 px-1.5' : 'mx-auto h-10 justify-center')}>
           <img src={pfizerMark} alt="" className="h-8 w-8 shrink-0 select-none" draggable={false} />
-          {open && <span className="min-w-0 text-left leading-tight"><span className="block truncate text-[13px] font-semibold tracking-tight text-text">NextGen Forecasting</span><span className="block truncate text-[11px] text-text-2">{flow}</span></span>}
+          {open && <span className="min-w-0 text-left leading-tight"><span className="block truncate text-[13px] font-semibold tracking-tight text-white">NextGen Forecasting</span><span className="block truncate text-[11px] text-white/60">{flow}</span></span>}
         </button>
         <ul className={cx('flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto', open ? 'px-3' : 'items-center px-0')}>
           {items.map((it, k) => {
@@ -1066,21 +1083,44 @@ function AppFrame({ onHome, items, active, flow, header, collab, onCollab, foote
               <Fragment key={it.id}>
                 <li className={open ? '' : 'w-full flex justify-center'}>
                   <button type="button" onClick={it.go} aria-current={on ? 'page' : undefined} title={open ? undefined : it.label}
-                    className={cx('flex items-center gap-3 rounded-xl text-[13.5px] font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-brand', open ? 'h-10 w-full px-3' : 'h-11 w-11 justify-center', on ? 'bg-surface text-brand shadow-[0_1px_3px_rgba(16,24,40,0.08)] ring-1 ring-black/[0.05]' : 'text-text-2 hover:bg-black/[0.05] hover:text-text')}>
+                    className={cx('flex items-center gap-3 rounded-xl text-[13.5px] font-medium outline-none transition-all focus-visible:ring-2 focus-visible:ring-white/60', open ? 'h-10 w-full px-3' : 'h-11 w-11 justify-center', on ? 'bg-[var(--pfizer-blue-70)] text-white shadow-[0_1px_3px_rgba(16,24,40,0.08)]' : 'text-white/70 hover:bg-[color-mix(in_oklab,var(--pfizer-blue-90)_100%,white_15%)] hover:text-white')}>
                     <it.icon size={18} className="shrink-0" />{open && <span className="truncate">{it.label}</span>}
                   </button>
-                  {open && it.sub && (
-                    <div className="ml-[22px] mt-1 border-l border-border-strong/70 pl-2.5">
-                      <button type="button" onClick={it.sub.onNew} className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-[12.5px] font-medium text-text hover:bg-black/[0.05]"><SquarePen size={13} />New chat</button>
-                      {it.sub.items.length > 0 && <ul className="max-h-[40dvh] space-y-0.5 overflow-y-auto">{it.sub.items.map(t => (
-                        <li key={t.id} className={cx('group/t relative flex h-8 items-center rounded-lg', t.active ? 'bg-surface' : 'hover:bg-frame-hover')}>
-                          <button type="button" onClick={t.go} aria-current={t.active ? 'page' : undefined} title={t.label} className={cx('flex h-8 min-w-0 flex-1 items-center rounded-lg px-2 text-left text-[12.5px]', t.active ? 'font-medium text-brand' : 'text-text-2 hover:text-text')}><span className="truncate">{t.label}</span></button>
-                          <span className={cx('absolute inset-y-0 right-0 hidden items-center gap-0.5 rounded-r-lg bg-gradient-to-l to-transparent pl-4 pr-1 group-focus-within/t:flex group-hover/t:flex', t.active ? 'from-surface via-surface' : 'from-frame-hover via-frame-hover')}>
-                            <button type="button" onClick={t.dup} aria-label={`Duplicate ${t.label}`} title="Duplicate" className="grid h-6 w-6 place-items-center rounded-md text-text-3 hover:bg-black/[0.06] hover:text-text"><Copy size={12} /></button>
-                            <button type="button" onClick={t.del} aria-label={`Delete ${t.label}`} title="Delete" className="grid h-6 w-6 place-items-center rounded-md text-text-3 hover:bg-err-soft hover:text-err"><Trash2 size={12} /></button>
-                          </span></li>))}</ul>}
+                  {open && it.sub && (() => {
+                    const pinned = it.sub.items.filter(t => t.pinned)
+                    const rest = it.sub.items.filter(t => !t.pinned)
+                    const row = (t: NavThread) => (
+                      <li key={t.id} className={cx('group/t relative flex h-8 items-center rounded-lg', t.active ? 'bg-white/15' : 'hover:bg-white/10')}>
+                        {renameId === t.id ? (
+                          <input autoFocus value={renameVal} onChange={e => setRenameVal(e.target.value)}
+                            onBlur={() => commitRename(t)} onKeyDown={e => { if (e.key === 'Enter') commitRename(t); if (e.key === 'Escape') setRenameId(null) }}
+                            className="h-8 min-w-0 flex-1 rounded-lg bg-white/10 px-2 text-[12.5px] text-white outline-none ring-1 ring-white/30" />
+                        ) : (
+                          <button type="button" onClick={t.go} aria-current={t.active ? 'page' : undefined} title={t.label} className={cx('flex h-8 min-w-0 flex-1 items-center rounded-lg px-2 text-left text-[12.5px]', t.active ? 'font-medium text-white' : 'text-white/60 hover:text-white')}><span className="truncate">{t.label}</span></button>
+                        )}
+                        {renameId !== t.id && (
+                          <button type="button" onClick={e => { menuAnchor.current = e.currentTarget; setMenuFor(t.id) }} aria-label={`Options for ${t.label}`} aria-haspopup="menu"
+                            className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-white/50 hover:bg-white/15 hover:text-white">
+                            <MoreVertical size={13} /></button>
+                        )}
+                      </li>
+                    )
+                    const activeT = it.sub.items.find(t => t.id === menuFor)
+                    return (
+                    <div className="mt-1">
+                      <button type="button" onClick={it.sub.onNew} className="flex h-8 w-full items-center gap-2 rounded-lg px-2 text-[12.5px] font-medium text-white hover:bg-white/10"><SquarePen size={13} />New chat</button>
+                      {pinned.length > 0 && <p className="mb-1 mt-2 px-2 text-[10.5px] font-semibold uppercase tracking-wider text-white/40">Pinned</p>}
+                      {pinned.length > 0 && <ul className="space-y-0.5">{pinned.map(row)}</ul>}
+                      {rest.length > 0 && pinned.length > 0 && <p className="mb-1 mt-2 px-2 text-[10.5px] font-semibold uppercase tracking-wider text-white/40">Recents</p>}
+                      {rest.length > 0 && <ul className="max-h-[40dvh] space-y-0.5 overflow-y-auto">{rest.map(row)}</ul>}
+                      {activeT && <Overlay anchor={menuAnchor} open onClose={() => setMenuFor(null)} align="left" width={170}>
+                        <button type="button" role="menuitem" onClick={() => { activeT.pin(); setMenuFor(null) }} className={cx('flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] hover:bg-surface-2', activeT.pinned ? 'font-medium text-text' : 'text-text-2')}><Pin size={14} />{activeT.pinned ? 'Unpin' : 'Pin'}</button>
+                        <button type="button" role="menuitem" onClick={() => startRename(activeT)} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] text-text-2 hover:bg-surface-2"><Pencil size={14} />Rename</button>
+                        <button type="button" role="menuitem" onClick={() => { activeT.del(); setMenuFor(null) }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-[13px] text-err hover:bg-err-soft"><Trash2 size={14} />Delete</button>
+                      </Overlay>}
                     </div>
-                  )}
+                    )
+                  })()}
                 </li>
               </Fragment>
             )
@@ -1088,12 +1128,12 @@ function AppFrame({ onHome, items, active, flow, header, collab, onCollab, foote
         </ul>
         <div className={cx('mt-2 flex shrink-0', open ? 'px-3' : 'justify-center')}>
           <button data-tour="rail-toggle" type="button" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-label={open ? 'Collapse navigation' : 'Expand navigation'} title={open ? 'Collapse' : 'Expand'}
-            className="grid h-10 w-10 place-items-center rounded-xl text-text-2 outline-none hover:bg-black/[0.05] hover:text-text focus-visible:ring-2 focus-visible:ring-brand">{open ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}</button>
+            className="grid h-10 w-10 place-items-center rounded-xl text-white/70 outline-none hover:bg-white/10 hover:text-white focus-visible:ring-2 focus-visible:ring-white/60">{open ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}</button>
         </div>
-        <div className={cx('mt-3 flex shrink-0 items-center gap-3', open ? 'px-5' : 'justify-center')}>{footer}{open && <span className="min-w-0 leading-tight"><span className="block truncate text-[12.5px] font-medium text-text">{ME}</span><span className="block text-[11px] text-text-2">Super Admin</span></span>}</div>
+        <div className={cx('mt-3 flex shrink-0 items-center gap-3', open ? 'px-5' : 'justify-center')}>{footer}{open && <span className="min-w-0 leading-tight"><span className="block truncate text-[12.5px] font-medium text-white">{ME}</span><span className="block text-[11px] text-white/60">Super Admin</span></span>}</div>
       </nav>
-      <div className="flex h-full gap-2 py-2 pr-2 transition-[padding] duration-200" style={{ paddingLeft: w }}>
-        <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-black/[0.05] bg-surface shadow-[0_1px_3px_rgba(16,24,40,0.06),0_8px_24px_-12px_rgba(16,24,40,0.10)]">
+      <div className="flex h-full gap-2 transition-[padding] duration-200" style={{ paddingLeft: w }}>
+        <div className="flex h-full min-w-0 flex-1 flex-col overflow-hidden border border-black/[0.05] bg-surface shadow-[0_1px_3px_rgba(16,24,40,0.06),0_8px_24px_-12px_rgba(16,24,40,0.10)]">
           {header}
           <div id={FRAME_ID} className="relative flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
             <CollabCtx.Provider value={{ open: collab, slot, close: () => onCollab(false), size, setSize, dock }}>{children}</CollabCtx.Provider>
@@ -1131,11 +1171,11 @@ type Card =
   | { t: 'draft' } | { t: 'arch'; ind: string; rec: ArchId; why: string } | { t: 'modes' } | { t: 'modules' } | { t: 'review' }
   | { t: 'saved'; id: string } | { t: 'drafts'; ids: string[] } | { t: 'issues'; id: string; items: ChatIssue[] } | { t: 'diff'; lines: { kind: '+' | '~'; text: string }[] }
   | { t: 'build' } | { t: 'model'; id: string } | { t: 'compare'; ids: string[] } | { t: 'archs'; ids: ArchId[] } | { t: 'catalog'; ids: string[] }
-type ChatMsg = { id: number; role: 'user' | 'ai'; text?: string; card?: Card; chips?: string[]; trace?: string[]; mode?: Mode; sources?: Source[]; via?: string }
+type ChatMsg = { id: number; role: 'user' | 'ai'; text?: string; card?: Card; chips?: string[]; trace?: StepInput[]; mode?: Mode; sources?: Source[]; via?: string }
 type Build = { brand: string; market: string; cycle: string; inds: { name: string; rec: ArchId; why: string; arch: ArchId }[]; mods: string[]; step: number; phase: 'choose' | 'running' | 'await' | 'done'; pace?: 'step' | 'auto'; dataOk: boolean; savedId?: string; saved?: 'draft' | 'final'; draftId?: string }
 type Intake = { kind: 'new' | 'reuse' | 'modify' | 'part' | 'draft'; step: 'ind' | 'arch' | 'basis' | 'model' | 'area' | 'change' | 'confirm'; ind?: string; arch?: ArchId; raw?: string; model?: string; area?: string; change?: string }
 type Thread = { id: number; title: string; msgs: ChatMsg[]; flow?: Flow; ctx?: string; build?: Build; intake?: Intake }
-type Out = { text?: string; card?: Card; chips?: string[]; trace?: string[]; sources?: Source[]; via?: string }
+type Out = { text?: string; card?: Card; chips?: string[]; trace?: StepInput[]; sources?: Source[]; via?: string }
 type Res = { out: Out[]; build?: Build; flow?: Flow; ctx?: string; title?: string; add?: ModelRow; patch?: { id: string; p: Partial<ModelRow> } }
 
 const ARCH = (id: ArchId) => ARCHETYPES.find(a => a.id === id)!
@@ -1473,7 +1513,12 @@ const pickSrc = (...k: (keyof typeof askSrc)[]): Source[] => k.map(x => askSrc[x
 function askCoe(text: string, models: ModelRow[], via: string): Res {
   const s = text.toLowerCase()
   const drafts = models.filter(m => m.status === 'Draft'), pub = models.filter(m => m.status === 'Published')
-  const ans = (t: string[], src: Source[], chips?: string[]): Res => ({ out: [{ text: t.join('\n\n'), sources: src, via, chips, trace: ['Understood your question', 'Searched approved sources', 'Cross-checked the figures against the catalog', 'Wrote the answer and listed sources'] }] })
+  const ans = (t: string[], src: Source[], chips?: string[]): Res => ({ out: [{ text: t.join('\n\n'), sources: src, via, chips, trace: [
+    { label: 'Understood your question', kind: 'thought' as const },
+    { label: 'Searched approved sources', kind: 'read' as const, cites: src.length ? [1] : undefined },
+    { label: 'Cross-checked the figures against the catalog', kind: 'check' as const },
+    { label: 'Wrote the answer and listed sources', kind: 'write' as const },
+  ] }] })
   const mk = models.find(m => s.includes(m.brand.toLowerCase().split(' ')[0]!))
   const ids = ARCHETYPES.filter(a => s.includes(a.name.toLowerCase()) || s.includes(a.id.toLowerCase()))
   const overview = () => ans([`There are **seven governed engines**, and each one fixes *what is being counted*: ${ARCHETYPES.map(a => `**${a.name}** (${a.state.toLowerCase()})`).join(', ')}.`, 'Modes and modules then tune the engine, but the engine choice itself is the decision that is hardest to undo later. If you tell me the indication, I can suggest the closest precedent and explain why it fits.', '**A good next step:** name a disease area and I will recommend an engine, or ask me to compare two of them.'], pickSrc('taxonomy', 'fixtures'), ['Which engine suits RSV?', 'Which engine fits atopic dermatitis?'])
@@ -1686,7 +1731,7 @@ const paceMsg = (pace: 'step' | 'auto', b: Build, models: ModelRow[]) => {
   return `I’ll take it from here. ${ref ? `I’m using your earlier **${ref.brand}** model as the starting point, since it uses the same engine.` : 'I’m using the closest precedent in the library, since none of your earlier models match.'} I’ll only stop to **finalise**${b.brand === 'New brand' ? ', and to ask you for a brand name first' : ''}. You can follow along in the sandbox.`
 }
 const buildRes = (bl: Build, extra = ''): Res => ({ build: bl, title: `New model · ${bl.brand}`, out: [{ text: `Got it. I’ve started with **${bl.inds.map(i => i.name).join('** and **')}** for **${bl.market}**, cycle **${bl.cycle}**.${extra}\n\nI’ll follow the same seven steps as the configurator. **How would you like to do this?**\n\n- **Go step by step:** I stop for your approval at each key checkpoint.\n- **Do it for me:** I build it from your earlier models and stop at Review.\n\nEither way I never finalise; that stays with you.`, chips: ['Go step by step', 'Do it for me'], card: { t: 'build' }, trace: [] }] })
-const say = (text: string, chips?: string[], trace?: string[]): Res => ({ out: [{ text, chips, trace: trace ?? [] }] })
+const say = (text: string, chips?: string[], trace?: StepInput[]): Res => ({ out: [{ text, chips, trace: trace ?? [] }] })
 
 function guided(t: string, intake: Intake | undefined, models: ModelRow[]): { res: Res; intake?: Intake } | null {
   const s = t.toLowerCase().trim(), vis = models.filter(m => !m.restricted), found = vis.find(m => s.includes(m.brand.toLowerCase()))
@@ -1815,7 +1860,7 @@ function CoeChat({ threads, setThreads, cur, setCur, models, setModels }: { thre
     else res = think(withQ, t, models)
     if (mode === 'agent') res.out.forEach(o => { const k = o.card && COE_TAKE[o.card.t]; if (k && o.text) o.text += '\n\n' + k; if (o.text) { o.sources = o.card ? pickSrc(...COE_SRC[o.card.t]) : pickSrc('catalog', 'taxonomy'); o.trace ??= ['Read your request', 'Checked the catalog and your drafts', 'Prepared the next step'] } })
     if (!scoped && !live && !g && !wantsBuild) res.out.forEach(o => { if (o.text && !o.text.includes("?")) { const p = coePartner(t); o.text += '\n\n' + p.q; o.chips = [...(o.chips ?? []).slice(0, 1), ...p.chips] } })
-    setThinking(res.out[0]?.trace?.[0] ?? `${ASSISTANT} is thinking…`)
+    { const t0 = res.out[0]?.trace?.[0]; setThinking((typeof t0 === 'string' ? t0 : t0?.label) ?? `${ASSISTANT} is thinking…`) }
     setTimeout(() => {
       if (res.add) setModels(ms => [res.add!, ...ms])
       if (res.patch) setModels(ms => ms.map(m => m.id === res.patch!.id ? { ...m, ...res.patch!.p } : m))
@@ -1866,33 +1911,26 @@ function Landing({ onCoE, onForecast, onBd }: { onCoE: () => void; onForecast: (
       <ForecastBackdrop />
       <header className="relative z-10 flex h-16 items-center justify-between px-8">
         <Logo />
-        <span className="hidden text-xs text-text-3 md:inline">Signed in as <strong className="font-semibold text-text">{ME}</strong></span>
       </header>
 
-      <main className="relative z-10 mx-auto flex w-full max-w-5xl flex-1 flex-col items-center justify-center px-6 pb-16">
-        <div className="flex items-center gap-2">
-          <p className="font-mono text-xs uppercase tracking-[0.22em] text-text-3">Integrated Forecasting</p>
-          <Badge tone="warn">MVP prototype</Badge>
-        </div>
-        <h1 className="mt-3 text-center text-3xl font-bold tracking-tight text-text sm:text-4xl">
+      <main className="relative z-10 mx-auto flex w-full max-w-6xl flex-1 flex-col items-center justify-center px-6 pb-16">
+        <h1 className="text-center text-3xl font-bold tracking-tight text-text sm:text-4xl">
           Build the model once. <span className="text-brand">Forecast inside it.</span>
         </h1>
         <p className="mt-3 max-w-xl text-center text-sm text-text-2">Pick where you want to start.</p>
 
-
-        <div className="mt-10 grid w-full gap-5 md:grid-cols-3">
+        <div className="mt-10 grid w-full gap-6 md:grid-cols-3">
           {ROLE_ENTRIES.map(r => (
-            <div key={r.id} className={cx('flex flex-col rounded-2xl border bg-surface/95 p-6 backdrop-blur', r.live ? 'border-brand/30 shadow-lg shadow-brand/5' : 'border-dashed border-border-strong')}>
-              <div className="flex items-center justify-between gap-2">
-                <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-text-3">{r.who}</p>
-                <Badge tone={r.live ? 'ok' : 'neutral'}>{r.live ? 'Available' : 'Concept'}</Badge>
-              </div>
+            <button key={r.id} type="button"
+              onClick={r.live ? (r.id === 'forecast' ? onForecast : r.id === 'bd' ? onBd : onCoE) : () => setNote(`${r.title} is a concept in this prototype and is not built yet. Its scope is awaiting forecasting SME validation.`)}
+              className={cx('group flex flex-col rounded-2xl border bg-surface/95 p-8 text-left backdrop-blur transition-all duration-200 hover:-translate-y-1',
+                r.live ? 'border-brand/30 shadow-lg shadow-brand/5 hover:border-brand/60 hover:shadow-xl hover:shadow-brand/15' : 'border-dashed border-border-strong hover:border-brand/40')}>
+              <p className="font-mono text-[11px] font-semibold uppercase tracking-wider text-text-3">{r.who}</p>
               <h2 className="mt-3 text-xl font-bold tracking-tight">{r.title}</h2>
               <p className="mt-2 flex-1 text-sm text-text-2">{r.desc}</p>
-              {r.live
-                ? <button type="button" onClick={r.id === 'forecast' ? onForecast : r.id === 'bd' ? onBd : onCoE} className="mt-6 inline-flex items-center gap-2 border-t border-border pt-4 text-sm font-bold text-brand hover:underline">Get started <ArrowRight size={16} /></button>
-                : <button type="button" onClick={() => setNote(`${r.title} is a concept in this prototype and is not built yet. Its scope is awaiting forecasting SME validation.`)} className="mt-6 inline-flex items-center gap-2 border-t border-border pt-4 text-sm font-semibold text-text-2 hover:text-brand">Coming soon <ArrowRight size={16} /></button>}
-            </div>
+              <span className={cx('mt-6 inline-flex items-center gap-2 text-sm font-bold transition-all', r.live ? 'text-brand group-hover:gap-3' : 'text-text-2 group-hover:text-brand group-hover:gap-3')}>
+                {r.live ? 'Get started' : 'Coming soon'} <ArrowRight size={16} /></span>
+            </button>
           ))}
         </div>
         {note && <p role="status" className="mt-4 max-w-2xl text-center text-sm text-text-2">{note}</p>}
@@ -1918,16 +1956,12 @@ function useDismiss(open: boolean, close: () => void) {
 
 
 
-function TopBar({ crumbs, back, onHome, onAdmin, onLogout, models, onResume, fixtures, onFull }: { onFull?: () => void; collab?: { on: boolean; toggle: () => void; label: string }; crumbs: string[];
-  /** Replaces the breadcrumb trail with a single back action. Used by the forecast workspace, where the trail repeated the page title. */
-  back?: { label: string; onClick: () => void }; onHome: () => void; onAdmin: () => void; onLogout: () => void; models: ModelRow[]; onResume: (m: ModelRow) => void; ai: boolean; onAI: () => void; notify: (t: Toast) => void; fixtures: boolean; onFixtures: () => void }) {
+function TopBar({ crumbs, onHome, onAdmin, onLogout, models, onResume, fixtures }: { collab?: { on: boolean; toggle: () => void; label: string }; crumbs: string[];
+  onHome: () => void; onAdmin: () => void; onLogout: () => void; models: ModelRow[]; onResume: (m: ModelRow) => void; ai: boolean; onAI: () => void; notify: (t: Toast) => void; fixtures: boolean; onFixtures: () => void }) {
   return (
     <header className="z-40 flex h-12 shrink-0 items-center gap-4 border-b border-border bg-surface px-5">
-      {back
-        ? <button type="button" onClick={back.onClick} className="-ml-1.5 inline-flex items-center gap-1.5 rounded-lg px-1.5 py-1 text-[13px] font-medium text-text-2 transition-colors hover:bg-surface-2 hover:text-text"><ArrowLeft size={15} />{back.label}</button>
-        : <nav aria-label="Breadcrumb"><ol className="flex items-center gap-1.5 text-[13px]">{crumbs.filter(Boolean).map((c, k, a) => <li key={c} className="flex items-center gap-1.5">{k > 0 && <ChevronRight size={13} className="text-text-3" />}{k === a.length - 1 ? <span aria-current="page" className="font-semibold text-brand">{c}</span> : <button type="button" onClick={onHome} className="rounded text-text-2 hover:text-brand hover:underline">{c}</button>}</li>)}</ol></nav>}
+      <nav aria-label="Breadcrumb"><ol className="flex items-center gap-1.5 text-[13px]">{crumbs.filter(Boolean).map((c, k, a) => <li key={c} className="flex items-center gap-1.5">{k > 0 && <ChevronRight size={13} className="text-text-3" />}{k === a.length - 1 ? <span aria-current="page" className="font-semibold text-brand">{c}</span> : <button type="button" onClick={onHome} className="rounded text-text-2 hover:text-brand hover:underline">{c}</button>}</li>)}</ol></nav>
       <div className="ml-auto flex items-center gap-1.5">
-        {onFull && <button type="button" onClick={onFull} aria-label="Enter full view" title="Full view" className="grid h-9 w-9 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><Maximize2 size={16} /></button>}
         <Notifications models={models} onResume={onResume} fixtures={fixtures} />
       </div>
     </header>

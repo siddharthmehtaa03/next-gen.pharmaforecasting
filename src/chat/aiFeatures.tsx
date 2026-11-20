@@ -1,8 +1,8 @@
 import { createContext, useContext, useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import {
-  AlertCircle, ArrowUpRight, BadgeCheck, Boxes, Check, CheckCircle2, ChevronDown, CircleDashed, CircleMinus, Download, FileText,
-  Image as ImageIcon, Loader2, Pencil, RotateCw, ShieldCheck, Sparkles, SquareArrowOutUpRight, Target, TriangleAlert, User, X,
+  AlertCircle, ArrowUpRight, BadgeCheck, Boxes, Check, CheckCircle2, ChevronDown, CircleDashed, CircleMinus, Download, Eye, FileText,
+  Image as ImageIcon, Lightbulb, Loader2, Pencil, RotateCw, ShieldCheck, Sparkles, SquareArrowOutUpRight, Target, TriangleAlert, User, X,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { downloadImage, downloadPdf } from '../chart/ChartActions'
@@ -18,8 +18,11 @@ export const useOpenSource = () => useContext(OpenSrc)
 /* ───────────────────────── CF-1 · AI thinking status ───────────────────────── */
 
 export type StepState = 'pending' | 'running' | 'done' | 'failed' | 'stopped'
+/** What kind of work a step represents, for its icon once done — separate from its progress state. */
+export type StepKind = 'thought' | 'read' | 'write' | 'check'
+const KIND_ICON: Record<StepKind, LucideIcon> = { thought: Lightbulb, read: Eye, write: Pencil, check: ShieldCheck }
 /** One line of the assistant's working. `cites` are 1-based indexes into the message's sources. */
-export type Step = { label: string; state?: StepState; cites?: number[]; reason?: string }
+export type Step = { label: string; state?: StepState; cites?: number[]; reason?: string; kind?: StepKind }
 export type StepInput = string | Step
 
 const asStep = (s: StepInput): Step => typeof s === 'string' ? { label: s, state: 'done' } : { state: 'done', ...s }
@@ -66,7 +69,7 @@ export function StepList({ steps, sources = [], live, onCite, onRetry, onRephras
             return (
               <li key={`${s.label}-${k}`} className="relative flex gap-3 pb-3.5 last:pb-0">
                 {k < rows.length - 1 && <span aria-hidden className="absolute left-[9px] top-5 h-[calc(100%-12px)] w-px bg-border-strong" />}
-                <span className={cx('relative z-10 grid h-[19px] w-[19px] shrink-0 place-items-center rounded-full', STEP_TINT[st])}>{STEP_ICON[st].node}</span>
+                <span className={cx('relative z-10 grid h-[19px] w-[19px] shrink-0 place-items-center rounded-full', STEP_TINT[st])}>{st === 'done' && s.kind ? (() => { const KindIcon = KIND_ICON[s.kind!]; return <KindIcon size={11} /> })() : STEP_ICON[st].node}</span>
                 <span className="min-w-0 flex-1">
                   <span className={cx('block text-[12.5px] leading-5', st === 'failed' ? 'text-err' : st === 'pending' ? 'text-text-3' : 'text-text-2')}>
                     {s.label}<span className="sr-only"> — {STEP_ICON[st].label}</span>
@@ -77,7 +80,7 @@ export function StepList({ steps, sources = [], live, onCite, onRetry, onRephras
                       {s.cites.map(n => sources[n - 1] && (
                         <button key={n} type="button" onClick={() => onCite?.(n)} title={sources[n - 1]!.detail}
                           className="inline-flex max-w-[200px] items-center gap-1 rounded-full border border-border px-1.5 py-px text-[10.5px] text-text-2 hover:border-brand hover:text-brand">
-                          <span className="font-mono text-text-3">[{n}]</span><span className="truncate">{sources[n - 1]!.name}</span></button>))}
+                          <span className="truncate">{sources[n - 1]!.name}</span></button>))}
                     </span>
                   )}
                   {st === 'failed' && (onRetry || onRephrase) && (

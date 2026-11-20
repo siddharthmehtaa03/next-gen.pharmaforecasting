@@ -77,7 +77,11 @@ export async function downloadPptx(el: HTMLElement, title: string, subtitle?: st
   await p.writeFile({ fileName: `${fileName(title)}.pptx` })
 }
 
-export function downloadPdf(el: HTMLElement, title: string, subtitle?: string) {
+const esc = (t: string) => t.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`)
+
+export function downloadPdf(el: HTMLElement, rawTitle: string, rawSubtitle?: string) {
+  // Titles can be user-typed; the print window shares this origin, so never write them as markup.
+  const title = esc(rawTitle), subtitle = rawSubtitle && esc(rawSubtitle)
   const w = window.open('', '_blank')
   if (!w) throw new Error('Pop-up blocked')
   const clone = el.cloneNode(true) as HTMLElement

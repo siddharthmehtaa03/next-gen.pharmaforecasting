@@ -233,7 +233,12 @@ function askFc(text: string, brandId: string, insights: Insight[], via: string, 
   const s = text.toLowerCase(), b = brandOf(brandId)
   const base = fy27(brandId, 'sc2'), ref = fy27(brandId, 'sc1'), hi = fy27(brandId, 'sc3'), lo = fy27(brandId, 'sc4')
   const src = fcSrc(brandId, insights, reg)
-  const ans = (t: string[], sources: Source[], chips?: string[]) => ({ out: [{ text: t.join('\n\n'), sources, via, chips, trace: ['Read the question', 'Searched the submitted forecast', 'Checked the figures', 'Cited sources'] }] })
+  const ans = (t: string[], sources: Source[], chips?: string[]) => ({ out: [{ text: t.join('\n\n'), sources, via, chips, trace: [
+    { label: 'Read the question', kind: 'thought' as const },
+    { label: 'Searched the submitted forecast', kind: 'read' as const, cites: sources.length ? [1] : undefined },
+    { label: 'Checked the figures', kind: 'check' as const },
+    { label: 'Cited sources', kind: 'write' as const },
+  ] }] })
   const up = base >= ref
   if (/range|optimistic|pessimistic|upside|downside|scenario/.test(s)) return ans([`**FY27 range: ${M(lo)} to ${M(hi)}**, centred on ${M(base)}.`, `**Worth knowing:** the pediatric label decision is the main swing. If it slips, expect closer to ${M(base)}.`], [src.fc, src.record], ['What are the key risks?', 'Why is Base Case above the baseline?'])
   if (/why|moved|changed|driving|above|baseline|bridge/.test(s)) return ans([`**Base Case is ${M(base)}**, ${fmtDelta(base - ref, 0)} ${up ? 'above' : 'below'} the baseline.`, 'Two events add to it: the **Part D formulary win** (70%) and the **January WAC increase** (85%). The formulary win is bigger and less certain, so defend it first.'], [src.fc, src.events, src.model], ['What is the range across scenarios?', 'How fresh is the data?'])
