@@ -1,13 +1,13 @@
 import type { ReactNode } from 'react'
 import type { MutableRefObject } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowRight, Check, ChevronDown, ClipboardPaste, Lock, PanelRightClose, PencilLine, Upload, Users } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown, FileSpreadsheet, Lock, Pause, Play, PanelRightClose, PencilLine, Upload, Users, X } from 'lucide-react'
 import {
   ACT, ACTUALS, BASELINE, CURVE_LABEL, DRIVERS, DRV, FY, GTN, METHOD_LABEL, MONTHS, N, OUTPUTS, UNBIASED, YEARS,
   applyEdit, defaultEdit, fmtV, fyAvg, idxOf, mLong, netPrice, revenue, yearOf, fySum,
 } from './engine'
 import type { Curve, DriverId, Edit, Layer, Method, ModelCfg, OutputId } from './engine'
-import { Btn, Card, ForecastChart, Label, Legend, PageHeader, PageTitle, Toggle, cx, field, InfoTip } from './ui'
+import { AssumptionCard, Btn, Card, ForecastChart, GroupHead, Label, Legend, PageHeader, PageTitle, Toggle, cx, field, InfoTip } from './ui'
 import { AgentFrame } from '../../chat/Agent'
 import type { Grain } from './ui'
 import { TrendPanel } from './Trend'
@@ -29,67 +29,65 @@ export function OutputSelect({ model, metric, onChange }: { model: ModelCfg; met
   )
 }
 
-export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, onMod, uePct, onCollapse, funnelHandled }: { sel: Sel; onSel: (s: Sel) => void; edits: Edits; working: Layer; model: ModelCfg; metric: OutputId; mod: ModId | null; onMod: (m: ModId) => void; uePct: number; onCollapse?: () => void
+export function ForecastMap({ sel, onSel, edits, working, model, metric, mod, onMod, uePct, onCollapse, funnelHandled, embedded }: { sel: Sel; onSel: (s: Sel) => void; edits: Edits; working: Layer; model: ModelCfg; metric: OutputId; mod: ModId | null; onMod: (m: ModId) => void; uePct: number; onCollapse?: () => void
   /** The percentage stages are drawn by FunnelChart above, so this map only shows what the funnel cannot: non-percentage inputs and the revenue bridge. */
-  funnelHandled?: boolean }) {
+  funnelHandled?: boolean
+  /** Drops this component's own card border/background so it can sit inside a shared card with other sections. */
+  embedded?: boolean }) {
   const agent = useAgentFocus()
   const node = (id: DriverId, editable: boolean) => {
     const d = DRV[id], on = !mod && sel === id
     return (
-      <button key={id} type="button" onClick={() => onSel(id)} aria-current={on ? 'true' : undefined}
-        className={cx('group mx-auto flex w-full min-w-0 items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-2.5 text-left transition-all', on ? 'border-brand ring-2 ring-brand/15 shadow-[0_1px_2px_rgba(16,24,40,0.06)]' : 'border-border hover:border-border-strong hover:shadow-[0_1px_2px_rgba(16,24,40,0.04)]', on && agent.section === 'assume' && 'agent-ring')}>
-        <span className="min-w-0">
-          <span className="block truncate text-[11px] text-text-3">{d.step}</span>
-          <span className="block truncate text-[13px] font-medium text-text">{d.label}</span>
-        </span>
-        <span className="flex shrink-0 flex-col items-end">
-          <span className="font-mono text-[13px] text-text" title={id === 'rx' ? `${fmtV(id, fyAvg(working[id]))} Rx per patient` : undefined}>{id === 'rx' ? OUTPUTS.trx.fmt(fySum(OUTPUTS.trx.fn(working))) : fmtV(id, fyAvg(working[id]))}</span>
-          {!editable ? <span className="inline-flex items-center gap-1 text-[10.5px] text-text-3"><Lock size={9} />System-fed</span>
-            : <span className="text-[10.5px] text-text-3">{id === 'rx' ? `TRx FY${FY}` : `FY${FY} avg`}</span>}
-        </span>
-      </button>
+      <AssumptionCard key={id} step={d.step} label={d.label}
+        value={id === 'rx' ? OUTPUTS.trx.fmt(fySum(OUTPUTS.trx.fn(working))) : fmtV(id, fyAvg(working[id]))}
+        sub={id === 'rx' ? `${fmtV(id, fyAvg(working[id]))} per patient` : undefined}
+        locked={!editable} changed={!!edits[id]} on={on} onClick={() => onSel(id)}
+        title={editable ? 'Editable input' : 'Locked by the model'}
+        className={cx(on && agent.section === 'assume' && 'agent-ring')} />
     )
   }
-  const link = (k: string) => <div key={k} className="mx-auto h-3 w-px bg-border-strong" />
   const funnel = funnelHandled ? [] : model.modules.filter(m => DRV[m.id].pct), side = model.modules.filter(m => !DRV[m.id].pct)
   const out = OUTPUTS[metric]
   return (
-    <nav aria-label="Forecast map" className="rounded-xl border border-border bg-surface p-4">
-      <div className="mb-3 flex items-center justify-between gap-2"><Label>{funnelHandled ? 'Other inputs' : 'Forecast map'}</Label>
-        <span className="ml-auto flex items-center gap-1.5 text-[11px] text-text-3">{model.modules.length} modules · from model<InfoTip text="Modules, order and editable inputs come from the model published by the CoE. Formulas are locked." /></span>
-        {onCollapse && <button type="button" onClick={onCollapse} aria-label="Collapse forecast map" title="Collapse" className="-mr-1 grid h-7 w-7 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><PanelRightClose size={15} /></button>}</div>
-      {!funnelHandled && <div className="mx-auto flex w-full items-center justify-between gap-2 rounded-md border border-dashed border-border-strong bg-surface-2 px-3 py-2.5">
-        <span className="min-w-0"><span className="block text-[10px] font-semibold uppercase tracking-wider text-text-3">Starting point</span><span className="block truncate text-[13px] font-semibold">{model.start.label}</span></span>
-        <span className="flex items-center gap-1 font-mono text-[13px] text-text-2"><Lock size={11} />{model.start.value}</span>
-      </div>}
-      {funnel.flatMap(m => [link(`l${m.id}`), node(m.id, m.editable)])}
-      {side.length > 0 && !funnelHandled && <div className="relative mx-auto my-2 flex items-center gap-2 pl-2 text-[11px] text-text-3"><span className="h-px flex-1 bg-border" />combined with<span className="h-px flex-1 bg-border" /></div>}
-      {side.map(m => node(m.id, m.editable))}
-      {side.some(m => m.id === 'price') && <div className="mt-1 flex w-full items-center justify-between gap-2 rounded-xl border border-dashed border-border bg-surface-2 px-3 py-2">
-        <span className="min-w-0"><span className="block truncate text-[11px] text-text-3">Calculated</span><span className="block truncate text-[13px] font-medium text-text-2">Net sales price</span></span>
-        <span className="flex shrink-0 flex-col items-end"><span className="font-mono text-[13px] text-text-2">{fmtV('price', netPrice(fyAvg(working.price)))}</span><span className="inline-flex items-center gap-1 text-[10.5px] text-text-3"><Lock size={9} />× (1 − {Math.round(GTN * 100)}% GTN)</span></span>
-      </div>}
-      {link('bridge')}
-      <div data-tour="bridge" className="rounded-md border border-border bg-surface-2/60 p-2">
-        <p className="mb-1.5 px-1 text-[10px] font-semibold uppercase tracking-wider text-text-3">Revenue bridge · required in every model</p>
-        <div className="space-y-1">{MODS.map(m => {
-          const on = mod === m.id, b = bridgeOf(fySum(revenue(working)), uePct)
-          const v = m.id === 'tud' ? fmtB(b.tud) : m.id === 'inv' ? `+${fmtB(b.inv)}` : m.id === 'ue' ? `${uePct.toFixed(1)}%` : m.id === 'fx' ? '1.00' : ''
-          return (
-            <button key={m.id} type="button" onClick={() => onMod(m.id)} aria-current={on ? 'true' : undefined}
-              className={cx('flex w-full items-center justify-between gap-2 rounded-lg border bg-surface px-2.5 py-1.5 text-left transition-all', on ? 'border-brand ring-2 ring-brand/15 shadow-[0_1px_2px_rgba(16,24,40,0.06)]' : 'border-border hover:border-border-strong hover:shadow-[0_1px_2px_rgba(16,24,40,0.04)]')}>
-              <span className="min-w-0"><span className="block truncate text-[12.5px] font-medium text-text">{m.label}</span>
-                <span className={cx('inline-flex items-center gap-1 text-[10.5px]', m.edit ? 'text-warn' : 'text-text-3')}>{!m.edit && <Lock size={9} />}{m.kind}</span></span>
-              {v && <span className="shrink-0 font-mono text-[12px] text-text">{v}</span>}
-            </button>)
+    <nav aria-label="Forecast map" className={cx(!embedded && 'rounded-xl border border-border bg-surface p-4')}>
+      {(!embedded || onCollapse) && (
+        <div className={cx('mb-3 flex items-center justify-between gap-2')}>
+          {!embedded && <>
+            <Label>{funnelHandled ? 'Other inputs' : 'Forecast map'}</Label>
+            <span className="ml-auto flex items-center gap-1.5 text-[11px] text-text-3">{model.modules.length} modules · from model<InfoTip text="Modules, order and editable inputs come from the model published by the CoE. Formulas are locked." /></span>
+          </>}
+          {onCollapse && <button type="button" onClick={onCollapse} aria-label="Collapse forecast map" title="Collapse" className="-mr-1 grid h-7 w-7 place-items-center rounded-md text-text-2 hover:bg-surface-2 hover:text-text"><PanelRightClose size={15} /></button>}
+        </div>
+      )}
+      {!funnelHandled && (
+        <>
+          <GroupHead title="Patient pool" sub="How many people can be treated?" />
+          <div className="flex flex-col gap-1.5">
+            <AssumptionCard step="Core archetype" label={model.start.label} value={model.start.value} locked title="Set by the published model" />
+            {funnel.map(m => node(m.id, m.editable))}
+          </div>
+        </>
+      )}
+      <GroupHead title="Volume and price" sub="How much is used, and at what price?" />
+      <div className="flex flex-col gap-1.5">
+        {side.map(m => node(m.id, m.editable))}
+        {side.some(m => m.id === 'price') && (
+          <AssumptionCard label="Net sales price" step="Calculated" value={fmtV('price', netPrice(fyAvg(working.price)))}
+            locked title={`× (1 − ${Math.round(GTN * 100)}% GTN)`} />
+        )}
+      </div>
+      <div data-tour="bridge">
+        <GroupHead title="Revenue bridge" sub="Required in every model" />
+        <div className="flex flex-col gap-1.5">{MODS.map(m => {
+          const b = bridgeOf(fySum(revenue(working)), uePct)
+          const v = m.id === 'tud' ? fmtB(b.tud) : m.id === 'inv' ? `+${fmtB(b.inv)}` : m.id === 'ue' ? `${uePct.toFixed(1)}%` : m.id === 'fx' ? '1.00' : undefined
+          return <AssumptionCard key={m.id} label={m.label} value={v} sub={m.kind} locked={!m.edit} on={mod === m.id} onClick={() => onMod(m.id)}
+            title={m.edit ? 'Editable input' : 'Calculated by the model'} />
         })}</div>
       </div>
-      {link('out')}
-      <button type="button" onClick={() => onSel('rev')} aria-current={!mod && sel === 'rev' ? 'true' : undefined}
-        className={cx('flex w-full items-center justify-between gap-2 rounded-xl border bg-surface px-3 py-3 text-left transition-all', !mod && sel === 'rev' ? 'border-brand ring-2 ring-brand/15 shadow-[0_1px_2px_rgba(16,24,40,0.06)]' : 'border-border hover:border-border-strong hover:shadow-[0_1px_2px_rgba(16,24,40,0.04)]')}>
-        <span className="min-w-0"><span className="block text-[11px] text-text-3">Outcome</span><span className="block truncate text-[13px] font-medium text-text">{out.label}</span></span>
-        <span className="font-mono text-[13px] font-medium text-text">{out.fmt(fySum(out.fn(working)))}</span>
-      </button>
+      <GroupHead title="Outcome" sub="What this model produces" />
+      <AssumptionCard step="Calculated" label={out.label} value={out.fmt(fySum(out.fn(working)))}
+        on={!mod && sel === 'rev'} onClick={() => onSel('rev')} title="Open the outcome view" />
     </nav>
   )
 }
@@ -135,6 +133,7 @@ export function GridCell({ value, dp, state, onCommit, onCancel }: { value: numb
 }
 
 const parseNums = (t: string) => t.split(/[\s,;]+/).map(s => s.replace(/[%$]/g, '')).filter(s => s !== '' && Number.isFinite(+s)).map(Number)
+const fmtBytes = (n: number) => n >= 1e6 ? `${(n / 1e6).toFixed(1)} MB` : `${(n / 1e3).toFixed(0)} KB`
 
 export function AssumptionAccordion({ title, children, defaultOpen = false }: { title: string; children: ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -153,17 +152,19 @@ export function AssumptionAccordion({ title, children, defaultOpen = false }: { 
 export type DriverMode = 'overview' | 'assumptions'
 
 export type DriverActions = { apply: () => void; discard: () => void }
-export function DriverWorkspace({ mode, sel, edits, setEdits, scenarioLayer, scenarioName, workingLayer, model, metric, setMetric, onOpenAssumptions, onGo, onDirty, actions, notify, bar, grain, setGrain }: {
+export function DriverWorkspace({ mode, sel, edits, setEdits, scenarioLayer, scenarioName, workingLayer, model, metric, setMetric, onOpenAssumptions, onGo, onDirty, actions, notify, bar, grain, setGrain, panelOpen }: {
   mode: DriverMode; sel: Sel; edits: Edits; setEdits: (f: (e: Edits) => Edits) => void; scenarioLayer: Layer; scenarioName: string; workingLayer: Layer
   model: ModelCfg; metric: OutputId; setMetric: (m: OutputId) => void; onOpenAssumptions: () => void
   onGo: (s: 'assumptions' | 'events') => void; onDirty: (v: boolean) => void; actions?: MutableRefObject<DriverActions | null>; notify: Notify
   grain: Grain; setGrain: (grain: Grain) => void
   /** Sits in the chart column, directly above the chart (the scenario "Working on" bar). */
   bar?: ReactNode
+  /** Whether the "Adjust Assumptions" side panel is shown; defaults to open. */
+  panelOpen?: boolean
 }) {
   if (sel === 'rev') return <RevenueView {...{ workingLayer, scenarioLayer, scenarioName, model, metric, setMetric }} />
   const cfg = model.modules.find(m => m.id === sel)
-  return <DriverEditorView key={sel} id={sel} locked={!!cfg && !cfg.editable} {...{ mode, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify, bar, grain, setGrain }} />
+  return <DriverEditorView key={sel} id={sel} locked={!!cfg && !cfg.editable} {...{ mode, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify, bar, grain, setGrain, panelOpen }} />
 }
 
 function RevenueView({ workingLayer, scenarioLayer, scenarioName, model, metric, setMetric }: { workingLayer: Layer; scenarioLayer: Layer; scenarioName: string; model: ModelCfg; metric: OutputId; setMetric: (m: OutputId) => void }) {
@@ -180,11 +181,12 @@ function RevenueView({ workingLayer, scenarioLayer, scenarioName, model, metric,
   )
 }
 
-function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify, bar, grain, setGrain }: {
+function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, scenarioName, workingLayer, onOpenAssumptions, onGo, onDirty, actions, notify, bar, grain, setGrain, panelOpen = true }: {
   id: DriverId; mode: DriverMode; locked: boolean; edits: Edits; setEdits: (f: (e: Edits) => Edits) => void; scenarioLayer: Layer; scenarioName: string; workingLayer: Layer
   onOpenAssumptions: () => void; onGo: (s: 'assumptions' | 'events') => void; onDirty: (v: boolean) => void; actions?: MutableRefObject<DriverActions | null>; notify: Notify
   grain: Grain; setGrain: (grain: Grain) => void
   bar?: ReactNode
+  panelOpen?: boolean
 }) {
   const d = DRV[id], applied = edits[id]
   // The draft follows the applied value (including changes Charles makes) until the user starts their own edit.
@@ -197,6 +199,9 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
   const [cascade, setCascade] = useState(true)
   const [gridErr, setGridErr] = useState<string | null>(null)
   const fileRef = useRef<HTMLInputElement>(null)
+  const [upload, setUpload] = useState<{ file: File; progress: number; paused: boolean; done: boolean } | null>(null)
+  const uploadTimer = useRef<ReturnType<typeof setInterval> | null>(null)
+  useEffect(() => () => { if (uploadTimer.current) clearInterval(uploadTimer.current) }, [])
   const eff = draft
   const editing = mode === 'assumptions' && !locked
   const dirty = editing && JSON.stringify(eff) !== JSON.stringify(applied ?? defaultEdit(id))
@@ -233,6 +238,28 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
     }
     if (fileRef.current) fileRef.current.value = ''
   }
+  const startUpload = (f: File | undefined) => {
+    if (!f) return
+    setUpload({ file: f, progress: 0, paused: false, done: false })
+    if (uploadTimer.current) clearInterval(uploadTimer.current)
+    uploadTimer.current = setInterval(() => {
+      setUpload(u => {
+        if (!u || u.paused) return u
+        const next = Math.min(100, u.progress + 8 + Math.random() * 10)
+        if (next >= 100) {
+          if (uploadTimer.current) clearInterval(uploadTimer.current)
+          onFile(u.file)
+          return { ...u, progress: 100, done: true }
+        }
+        return { ...u, progress: next }
+      })
+    }, 200)
+  }
+  const cancelUpload = () => {
+    if (uploadTimer.current) clearInterval(uploadTimer.current)
+    setUpload(null)
+    if (fileRef.current) fileRef.current.value = ''
+  }
   const setCell = (i: number, v: number): string | null => {
     if (!Number.isFinite(v)) { setGridErr('Enter a number. Your other entries are kept.'); return 'nan' }
     if (v < 0 || (d.pct && v > 100)) { const m = `${mLong(i)}: ${d.label} must be between 0 and ${d.pct ? '100%' : 'a positive value'}. Your other entries are kept.`; setGridErr(m); return m }
@@ -251,7 +278,7 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
   }
   const cellState = (i: number): CellState => eff.method === 'direct' && eff.pinned.includes(i) ? 'override' : Math.abs(preview[i]! - unb[i]!) > 1e-9 ? 'recalc' : 'system'
 
-  const adjustPanel = editing && (
+  const adjustPanel = editing && panelOpen && (
     <AgentFrame on={agent.section === 'assume'} label={`${agent.name} is adjusting ${d.label.toLowerCase()}`}>
     <Card title="Adjust Assumptions"
       frame fill className="lg:h-[calc(100dvh-220px)]"
@@ -282,25 +309,8 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
 
         </AssumptionAccordion>}
 
-        <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.txt" className="hidden" onChange={e => onFile(e.target.files?.[0])} />
-        <AssumptionAccordion title="Values and notes">
-          <div>
-            <Label className="mb-1.5">Bring in values</Label>
-            <div className="flex flex-wrap gap-2">
-              <Btn variant="secondary" icon={<Upload size={14} />} onClick={() => fileRef.current?.click()}>Upload Excel</Btn>
-              <Btn variant="secondary" icon={<ClipboardPaste size={14} />} onClick={() => setPaste(p => p === null ? '' : null)}>{paste !== null ? 'Close paste box' : 'Paste from Excel'}</Btn>
-            </div>
-            {eff.method === 'direct' && eff.source !== 'manual' && <p className="mt-2 text-[12px] text-text-3">Values from {eff.source === 'excel' ? 'file' : 'paste'}</p>}
-          </div>
-          {paste !== null && (
-            <div className="rounded-md border border-border bg-surface-2 p-3">
-              <textarea autoFocus value={paste} onChange={e => setPaste(e.target.value)} rows={3} placeholder={`Paste a row or column of monthly values, starting ${mLong(eff.start)}`} className="w-full resize-y rounded-md border border-border-strong bg-surface p-2.5 font-mono text-[12px] outline-none focus:border-brand" />
-              <div className="mt-2 flex items-center justify-between gap-2"><span className="text-[12px] text-text-2">{parseNums(paste).length} values detected</span>
-                <div className="flex gap-2"><Btn variant="ghost" onClick={() => setPaste(null)}>Cancel</Btn>
-                  <Btn disabled={!parseNums(paste).length} onClick={() => { const n = loadValues(parseNums(paste), 'paste', eff.start); setPaste(null); notify({ tone: 'ok', text: `Pasted ${n} monthly values. Review the chart, then Apply.` }) }}>Use values</Btn></div></div>
-            </div>
-          )}
-
+        <input ref={fileRef} type="file" accept=".xlsx,.xls,.csv,.txt" className="hidden" onChange={e => startUpload(e.target.files?.[0])} />
+        <AssumptionAccordion title="Notes">
           <label className="block"><Label className="mb-1" hint="optional">Notes on change</Label>
             <textarea value={draft.notes} onChange={e => patch({ notes: e.target.value })} rows={2} placeholder="What changed, and why? Shown on the Review screen." className="w-full resize-y rounded-md border border-border-strong bg-surface p-2.5 text-sm outline-none focus:border-brand" /></label>
         </AssumptionAccordion>
@@ -312,6 +322,46 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
           <span className="font-medium">Recalculate later period</span><Toggle on={cascade} onChange={setCascade} label="Recalculate later period" />
         </label>
 
+        <div>
+          {!upload ? (
+            <div
+              onDragOver={e => e.preventDefault()}
+              onDrop={e => { e.preventDefault(); startUpload(e.dataTransfer.files?.[0]) }}
+              className="flex flex-col items-center gap-2 rounded-xl border-2 border-dashed border-border-strong bg-surface-2 px-4 py-6 text-center transition-colors hover:border-brand"
+            >
+              <Upload size={18} className="text-text-2" />
+              <span className="text-sm font-semibold">Drag &amp; drop your file</span>
+              <span className="text-[12px] text-text-3">Supported formats: XLSX, XLS, CSV, TXT</span>
+              <Btn variant="secondary" size="sm" className="mt-1" onClick={() => fileRef.current?.click()}>Select file</Btn>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3 rounded-lg border border-border bg-surface p-3">
+              <span className="grid shrink-0 place-items-center rounded-md bg-ok-soft p-2"><FileSpreadsheet size={16} className="text-ok" /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[13px] font-medium">{upload.file.name}</span>
+                <span className="mt-1 flex items-center gap-2 text-[12px] text-text-3">
+                  <span>{fmtBytes(upload.file.size)}</span>
+                  {!upload.done && <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-surface-2"><span className="block h-full rounded-full bg-brand transition-[width]" style={{ width: `${upload.progress}%` }} /></span>}
+                  <span className="shrink-0">{upload.done ? 'Uploaded' : `${Math.round(upload.progress)}%`}</span>
+                </span>
+              </span>
+              {!upload.done && (
+                <Btn variant="ghost" size="sm" title={upload.paused ? 'Resume' : 'Pause'} onClick={() => setUpload(u => u && { ...u, paused: !u.paused })} icon={upload.paused ? <Play size={14} /> : <Pause size={14} />} />
+              )}
+              <Btn variant="ghost" size="sm" title="Remove" onClick={cancelUpload} icon={<X size={14} />} />
+            </div>
+          )}
+          {eff.method === 'direct' && eff.source !== 'manual' && <p className="mt-2 text-[12px] text-text-3">Values from {eff.source === 'excel' ? 'file' : 'paste'}</p>}
+          {paste !== null && (
+            <div className="mt-2 rounded-md border border-border bg-surface-2 p-3">
+              <textarea autoFocus value={paste} onChange={e => setPaste(e.target.value)} rows={3} placeholder={`Paste a row or column of monthly values, starting ${mLong(eff.start)}`} className="w-full resize-y rounded-md border border-border-strong bg-surface p-2.5 font-mono text-[12px] outline-none focus:border-brand" />
+              <div className="mt-2 flex items-center justify-between gap-2"><span className="text-[12px] text-text-2">{parseNums(paste).length} values detected</span>
+                <div className="flex gap-2"><Btn variant="ghost" onClick={() => setPaste(null)}>Cancel</Btn>
+                  <Btn disabled={!parseNums(paste).length} onClick={() => { const n = loadValues(parseNums(paste), 'paste', eff.start); setPaste(null); notify({ tone: 'ok', text: `Pasted ${n} monthly values. Review the chart, then Apply.` }) }}>Use values</Btn></div></div>
+            </div>
+          )}
+        </div>
+
       </div>
     </Card>
     </AgentFrame>
@@ -319,7 +369,7 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
 
   return editing ? (
     <div>
-      <div className="grid min-w-0 gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <div className={cx('grid min-w-0 gap-6', panelOpen && 'lg:grid-cols-[minmax(0,1fr)_300px]')}>
         <Card title={d.label} sub={d.unit === '%' ? 'Percent' : d.unit} frame fill className="lg:h-[calc(100dvh-220px)]" right={bar}>
           <div className="min-h-0 flex-1 space-y-3 overflow-y-auto">
             <div data-tour="chart" className="min-w-0">
@@ -330,7 +380,7 @@ function DriverEditorView({ id, mode, locked, edits, setEdits, scenarioLayer, sc
             {gridErr && <p role="alert" className="rounded-md border border-err/30 bg-err-soft px-3 py-2 text-[13px] text-err">{gridErr}</p>}
           </div>
         </Card>
-        <div className="min-w-0 lg:sticky lg:top-[98px] lg:self-start">{adjustPanel}</div>
+        {panelOpen && <div className="min-w-0 lg:sticky lg:top-[98px] lg:self-start">{adjustPanel}</div>}
       </div>
     </div>
   ) : (

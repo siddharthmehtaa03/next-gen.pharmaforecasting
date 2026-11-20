@@ -1,8 +1,9 @@
 import { useState } from 'react'
 import { ArrowRight, Lock, RotateCcw } from 'lucide-react'
-import { ACT, FY, GTN, MONTHS, START_YEAR, fmtRev, netPrice, revenue } from './engine'
+import { ACT, FY, GTN, MONTHS, START_YEAR, UNBIASED, fmtRev, netPrice, revenue } from './engine'
 import type { Layer } from './engine'
-import { Btn, Card, PageHeader, PageTitle, Seg, Tag, cx, field } from './ui'
+import { Btn, Card, ForecastChart, Legend, PageHeader, PageTitle, Seg, Tag, cx, field } from './ui'
+import type { ChartSeries } from './ui'
 
 /* Default modules every model carries (Default Modules + Gross Price Workflow docs).
    shortcut: gross sales, Δ inventory and TUD are worked back from net revenue here with illustrative ratios
@@ -159,8 +160,20 @@ export function GrossPriceSkus({ readOnly, base }: { readOnly?: boolean; base: n
   )
 }
 
+/** Monthly Δ inventory trend, read from the full layer so the chart matches the grid. Same series shape (and
+    legend: Actuals, Reference baseline, Active forecast) as every other driver chart in the workspace. */
+function InventoryTrend({ layer, ue, woh }: { layer: Layer; ue: number[]; woh: number }) {
+  const inv = stdSeries(layer, ue, woh).inv, ref = stdSeries(UNBIASED, ue, woh).inv
+  const s: ChartSeries = { actual: inv, unbiased: ref, working: inv }
+  return (
+    <Card frame title="Change in inventory · monthly trend" sub="$M" right={<Legend s={s} />}>
+      <ForecastChart title="Change in inventory" s={s} fmt={v => `${v >= 0 ? '+' : '−'}${fmtB(Math.abs(v))}`} unit="$M" height={240} />
+    </Card>
+  )
+}
+
 /** Right-pane view for a default module selected in the forecast map. Edits only in the Forecast workspace. */
-export function ModuleView({ id, net, gp, ue, setUe, editable, onEdit }: { id: ModId; net: number; gp: number; ue: number[]; setUe: (v: number[]) => void; editable: boolean; onEdit: () => void }) {
+export function ModuleView({ id, net, gp, ue, setUe, woh, setWoh, layer, editable, onEdit }: { id: ModId; net: number; gp: number; ue: number[]; setUe: (v: number[]) => void; woh: number; setWoh: (v: number) => void; layer: Layer; editable: boolean; onEdit: () => void }) {
   const m = MODS.find(x => x.id === id)!, b = bridgeOf(net, ueFy(ue))
   const DESC: Record<ModId, string> = {
     gp: 'Pack-volume-weighted average of each revenue SKU’s list price. Free packs (samples, vouchers, starter) are excluded. Drives gross; net sales price is calculated.',
@@ -182,10 +195,27 @@ export function ModuleView({ id, net, gp, ue, setUe, editable, onEdit }: { id: M
         {stat(`TUD · FY${FY}`, fmtB(b.tud), 'Gross − Δ inventory − unexplained')}
         {stat('Construction', 'Patient flow', 'On-brand patients × fills × price')}
         {stat('Triangulation', 'Flow = cohort', 'Same demand basis across methods')}</div></>}
-      {id === 'inv' && <div className="grid gap-3 sm:grid-cols-3">
-        {stat(`Δ Inventory · FY${FY}`, `${b.inv >= 0 ? '+' : '−'}${fmtB(Math.abs(b.inv))}`, 'Bridge from demand to gross')}
-        {stat('Target weeks on hand', '2.26 wks', 'Scales with demand')}
-        {stat('Source', '852 / 867 feed', 'Wholesaler on-hand · Trade & Distribution')}</div>}
+      {id === 'inv' && <>
+        <InventoryTrend layer={layer} ue={ue} woh={woh} />
+        <div className="grid gap-3 sm:grid-cols-3">
+          {stat(`Δ Inventory · FY${FY}`, `${b.inv >= 0 ? '+' : '−'}${fmtB(Math.abs(b.inv))}`, 'Bridge from demand to gross')}
+          <div className="rounded-md border border-border px-3.5 py-3">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Target weeks on hand</p>
+            {editable
+              ? <input type="number" step={0.01} min={0} value={woh} onChange={e => setWoh(e.target.value === '' ? 0 : +e.target.value)} aria-label="Target weeks on hand"
+                  className="mt-0.5 block w-24 rounded border border-[#F0D98A] bg-[#FFF9E0] px-2 py-1 font-mono text-[17px] font-medium outline-none focus:border-brand" />
+              : <p className="mt-0.5 font-mono text-[19px] font-medium">{woh.toFixed(2)} wks</p>}
+            <p className="mt-0.5 text-[12px] text-text-2">Scales with demand</p>
+          </div>
+          {stat('Source', '852 / 867 feed', 'Wholesaler on-hand · Trade & Distribution')}
+        </div>
+        <div className="grid gap-3 sm:grid-cols-4">
+          {stat('Gross sales', fmtB(b.gross), 'TUD + Δ inv + unexplained')}
+          {stat('Total underlying demand', fmtB(b.tud), 'patient flow · calculated')}
+          {stat('Δ Inventory', `${b.inv >= 0 ? '+' : '−'}${fmtB(Math.abs(b.inv))}`, 'target weeks on hand')}
+          {stat('Unexplained', `${b.ueD >= 0 ? '+' : '−'}${fmtB(Math.abs(b.ueD))}`, `${ueFy(ue).toFixed(1)}% of gross · forecast`)}
+        </div>
+      </>}
       {id === 'fx' && <Card title="Rates · reporting currency USD" pad={false}><table className="w-full text-[13px]">
         <thead><tr className="border-b border-border bg-surface-2 text-[11px] uppercase tracking-wide text-text-3"><th className="px-4 py-2 text-left font-semibold">Market</th><th className="px-4 py-2 text-right font-semibold">Currency</th><th className="px-4 py-2 text-right font-semibold">Planning rate</th><th className="px-4 py-2 text-right font-semibold">FX impact</th></tr></thead>
         <tbody><tr><td className="px-4 py-2.5">United States</td><td className="px-4 py-2.5 text-right font-mono">USD</td><td className="px-4 py-2.5 text-right font-mono">1.0000</td><td className="px-4 py-2.5 text-right font-mono text-text-3">$0</td></tr></tbody></table></Card>}

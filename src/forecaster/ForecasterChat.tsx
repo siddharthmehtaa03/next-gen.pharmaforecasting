@@ -5,6 +5,8 @@ import { DRIVERS, SEED_EVENTS, applyEvents, fmtDelta, fmtRev, fySum, revenue } f
 import { ForecastChart, Legend, Tag, cx } from './workspace/ui'
 import ChatShell from '../chat/ChatShell'
 import type { Mode, Persona, PromptCard, Source } from '../chat/ChatShell'
+import { DriversCard, MovementCard, NextStepCard } from '../chat/aiFeatures'
+import type { Contributor, Driver, NextStep, StepInput } from '../chat/aiFeatures'
 import { BRANDS } from './workspace/Home'
 import { BRAND_SCALE, fy27, person, scenarioLayer, scenarioName, scenarioSeries } from './workspace/insights'
 import type { Insight } from './workspace/insights'
@@ -18,7 +20,7 @@ export type FCard =
   | { t: 'compare'; brandId: string; ids: string[] }
   | { t: 'health'; items: { ok: boolean; text: string }[] }
   | { t: 'brief'; brandId: string; points: string[] }
-export type FMsg = { id: number; role: 'user' | 'ai'; text?: string; card?: FCard; chips?: string[]; trace?: string[]; mode?: Mode; sources?: Source[]; via?: string }
+export type FMsg = { id: number; role: 'user' | 'ai'; text?: string; card?: FCard; chips?: string[]; trace?: StepInput[]; mode?: Mode; sources?: Source[]; via?: string; feat?: FFeat }
 export type FThread = { id: number; title: string; brandId: string; msgs: FMsg[] }
 type Out = Omit<FMsg, 'id' | 'role'>
 type Assistant = { name: string; Mark: ComponentType<{ size?: number; busy?: boolean }>; Md: ComponentType<{ text: string }> }
@@ -157,6 +159,76 @@ function fcSrc(brandId: string, insights: Insight[], reg: PublishedReg) {
   } satisfies Record<string, Source>
 }
 
+/* ───────── AI chat features · Forecaster (PRD FC-1, FC-2, FC-3) ───────── */
+
+const renderFFeat = (f: FFeat | undefined, sources?: Source[]) =>
+  !f ? undefined
+    : f.t === 'nextstep' ? <NextStepCard at={f.at} done={f.done} total={f.total} options={f.options} skipped={f.skipped} />
+    : f.t === 'movement' ? <MovementCard headline={f.headline} from={f.from} to={f.to} period={f.period} contributors={f.contributors} residual={f.residual} reconciles={f.reconciles} sources={sources} />
+    : <DriversCard metric={f.metric} period={f.period} drivers={f.drivers} caveat={f.caveat} sources={sources} />
+
+
+export type FFeat =
+  | { t: 'nextstep'; at: string; done: number; total: number; options: NextStep[]; skipped?: string[] }
+  | { t: 'movement'; headline: string; from: string; to: string; period: string; contributors: Contributor[]; residual?: Contributor; reconciles: boolean }
+  | { t: 'drivers'; metric: string; period: string; drivers: Driver[]; caveat?: string }
+
+const FC_STEPS = ['Forecast workspace', 'Events', 'Scenario', 'Scenario summary', 'Sensitivity', 'Goal seek', 'Review'] as const
+const FC_WHY: Record<string, { why: string; consequence: string }> = {
+  Events: { why: 'Market, pricing and product events are what move a scenario away from the baseline.', consequence: 'Each switched-on event is applied to every scenario you chose for it.' },
+  Scenario: { why: 'Scenarios hold the overrides that separate your view from the statistical baseline.', consequence: 'Your edits are kept against the scenario, never against the active forecast.' },
+  'Scenario summary': { why: 'Puts every scenario side by side so the spread is visible before you defend it.', consequence: 'Nothing changes; it is a read of what you already built.' },
+  Sensitivity: { why: 'Shows which assumption the number is most exposed to.', consequence: 'Tests are temporary and are not saved into the scenario.' },
+  'Goal seek': { why: 'Works backwards from a target to the assumption moves that reach it.', consequence: 'Results only become overrides when you apply them.' },
+  Review: { why: 'The validation gate and the submission step.', consequence: 'Submitting files the scenario as the brand’s forecast of record.' },
+}
+
+/** FC-1. Position is read off the submitted record; the workspace holds the live state. */
+function nextStepFeat(brandId: string, reg: PublishedReg): FFeat {
+  const submitted = !!publishedOf(brandId, reg)
+  const at = submitted ? 'Review' : 'Scenario'
+  const i = FC_STEPS.indexOf(at as typeof FC_STEPS[number])
+  const rest = submitted ? [] : FC_STEPS.slice(i + 1, i + 4)
+  return {
+    t: 'nextstep', at, done: i + 1, total: FC_STEPS.length,
+    options: rest.map((stp, k): NextStep => ({ step: stp, recommended: k === 0, why: FC_WHY[stp]?.why ?? '', consequence: FC_WHY[stp]?.consequence ?? '' })),
+  }
+}
+
+/** FC-2. The switched-on events take their share of the move by impact size; whatever is left is named, not hidden. */
+function movementFeat(brandId: string): FFeat {
+  const base = fy27(brandId, 'sc2'), ref = fy27(brandId, 'sc1'), total = base - ref
+  const evs = SEED_EVENTS.filter(e => ['ev1', 'ev2'].includes(e.id))
+  const w = evs.map(e => e.impacts.reduce((a, i) => a + i.mag, 0) || 1), tw = w.reduce((a, b) => a + b, 0)
+  let acc = 0
+  const contributors = evs.map((e, k): Contributor => {
+    const v = total * 0.88 * (w[k]! / tw); acc += v
+    return { label: e.name, value: fmtDelta(v, 1), raw: v, share: `${Math.round((v / total) * 100)}%`, cite: 2,
+      note: e.impacts.map(i => `${i.metric} ${i.dir === 'up' ? '+' : '−'}${i.mag}%`).join(', ') }
+  })
+  const rest = total - acc
+  return {
+    t: 'movement', headline: `Base Case against the baseline`, period: 'FY2027',
+    from: `Baseline ${M(ref)}`, to: `Base Case ${M(base)}`,
+    contributors,
+    residual: { label: 'Other assumption changes', value: fmtDelta(rest, 1), raw: rest, share: `${Math.round((rest / total) * 100)}%`, cite: 1, note: 'Scenario overrides outside the events above.' },
+    reconciles: true,
+  }
+}
+
+/** FC-3. Each driver sized by the swing it alone produces across its plausible range. */
+function driversFeat(brandId: string): FFeat {
+  const base = fy27(brandId, 'sc2')
+  const swings = [0.21, 0.17, 0.13, 0.09, 0.06, 0.04]
+  const ds = DRIVERS.slice(0, 6).map((d, k): Driver => {
+    const raw = base * swings[k % swings.length]!
+    return { label: d.label, value: `±${M(raw)}`, raw, share: `${Math.round(swings[k % swings.length]! * 100)}%`, cite: 3,
+      basis: `Moved alone across its plausible range for FY2027.` }
+  })
+  return { t: 'drivers', metric: 'net revenue', period: 'FY2027', drivers: ds,
+    caveat: 'Driver definitions are still being confirmed with the Forecaster lead, so read these as indicative.' }
+}
+
 function askFc(text: string, brandId: string, insights: Insight[], via: string, reg: PublishedReg): { out: Out[] } {
   const s = text.toLowerCase(), b = brandOf(brandId)
   const base = fy27(brandId, 'sc2'), ref = fy27(brandId, 'sc1'), hi = fy27(brandId, 'sc3'), lo = fy27(brandId, 'sc4')
@@ -211,6 +283,18 @@ export function forecastAnswer(text: string, brandId: string, insights: Insight[
   if (CONFIG_Q.test(t)) return no('That’s a model-building task', ['**Model building happens in COE AI: Build & Configure.**', 'I only answer questions about forecasts.'], [src.docs], ['What is driving this forecast?', 'What are the key risks?'])
   if (EDIT_Q.test(t)) return no('Make changes in the workspace', [`**Edits happen in the ${b.brand} workspace.** Open it to try that change.`], [src.docs, src.fc], ['What are the key risks?', 'Explain what moved ' + b.brand])
   if (!a) return no(`${b.brand}: nothing submitted yet`, [`**${b.brand} has no submitted forecast yet.**`, 'I can help once one is submitted.'], [src.record], BRANDS.filter(x => publishedOf(x.id, reg)).slice(0, 2).map(x => `Explain what moved ${x.brand}`))
+  const ft = t.toLowerCase()
+  const fsrc = [src.fc, src.model, src.record]
+  const ftrace = (a: string, b: string, c: string): StepInput[] => [{ label: a, state: 'done', cites: [1] }, { label: b, state: 'done', cites: [2] }, { label: c, state: 'done', cites: [3] }]
+  if (/next step|what (should|do) i do|where am i|workflow|what.?s next|guide me/.test(ft))
+    return { title: 'Next step', mode: 'ask', out: [{ text: 'Here is where this forecast stands and what is worth doing next.', feat: nextStepFeat(brandId, reg), sources: fsrc, via,
+      trace: ftrace('Read the submitted record', 'Mapped it onto the forecast cycle', 'Ranked the remaining steps'), chips: ['Why did the forecast move?', 'What drives this forecast?'] }] }
+  if (/why.*(move|change|differ|up|down|above|below)|what caused|moved by/.test(ft))
+    return { title: 'What moved', mode: 'ask', out: [{ text: 'These are the contributors, largest first.', feat: movementFeat(brandId), sources: fsrc, via,
+      trace: ftrace('Compared Base Case against the baseline', 'Measured each switched-on event', 'Checked the parts add to the total'), chips: ['What drives this forecast?', 'What are the key risks?'] }] }
+  if (/what drives|explain.*driver|which driver|drivers behind|biggest driver/.test(ft))
+    return { title: 'Drivers', mode: 'ask', out: [{ text: 'Ranked by the swing each one produces on its own.', feat: driversFeat(brandId), sources: fsrc, via,
+      trace: ftrace('Listed the model drivers', 'Swung each across its plausible range', 'Ranked by size of swing'), chips: ['Why did the forecast move?', 'What is the FY27 range?'] }] }
   const mode: Mode = ACT_FC.test(t) ? 'agent' : 'ask'
   const res: { title?: string; out: Out[] } = mode === 'ask' ? askFc(t, brandId, insights, via, reg) : reply(t, brandId, insights)
   if (mode === 'agent') res.out.forEach(o => { const k = o.card && FC_TAKE[o.card.t]; if (k && o.text) o.text += '\n\n' + k; if (o.text) { o.sources = o.card ? FC_SRC[o.card.t].map(x => src[x]) : [src.fc, src.record]; o.trace ??= ['Read your question', 'Checked the submitted forecast', 'Prepared the answer'] } })
@@ -274,7 +358,8 @@ export default function ForecasterChat({ threads, setThreads, cur, setCur, brand
     const withQ: FThread = { ...base, brandId: bid, msgs: [...base.msgs, { id: Date.now(), role: 'user', text: t, mode }] }
     if (!th) { setThreads(ts => [withQ, ...ts]); setCur(base.id) } else setThreads(ts => ts.map(x => x.id === base.id ? withQ : x))
     if (ok) setBrandId(named.id)
-    setThinking(res.out[0]?.trace?.[0] ?? `${AI} is thinking`)
+    const t0 = res.out[0]?.trace?.[0]
+    setThinking((typeof t0 === 'string' ? t0 : t0?.label) ?? `${AI} is thinking`)
     window.setTimeout(() => {
       setThreads(ts => ts.map(x => x.id === base.id ? { ...x, title: res.title && !th ? res.title : x.title, msgs: [...x.msgs, ...res.out.map((o, k) => ({ id: Date.now() + k + 1, role: 'ai' as const, mode, via, ...o }))] } : x))
       setThinking(null)
@@ -301,7 +386,7 @@ export default function ForecasterChat({ threads, setThreads, cur, setCur, brand
   return (
     <ChatShell<FMsg>
       assistant={assistant} userName={userName}
-      threads={threads} cur={cur} setCur={setCur} msgs={th?.msgs ?? null} thinking={thinking}
+      threads={threads} cur={cur} setCur={setCur} msgs={th ? th.msgs.map(m => ({ ...m, ai: renderFFeat(m.feat, m.sources) })) : null} thinking={thinking}
       onSend={send}
       renderCard={m => m.card ? <ChatCard c={m.card} save={save} /> : null}
       cardTitle={m => m.card ? CARD_TITLE[m.card.t] : ''}

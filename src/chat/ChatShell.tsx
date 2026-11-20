@@ -1,12 +1,25 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ComponentType, ReactNode } from 'react'
 import type { LucideIcon } from 'lucide-react'
-import { ArrowUpRight, BadgeCheck, BookOpen, Bookmark, Boxes, Check, ChevronDown, Database, FileText, LineChart, Copy, Loader2, MessageSquare, Mic, RotateCw, ShieldCheck, Square, ThumbsDown, ThumbsUp, Wand2 } from 'lucide-react'
+import { ArrowUp, ArrowUpRight, BadgeCheck, BookOpen, Bookmark, Boxes, Check, ChevronDown, ChevronRight, Database, FileText, LineChart, Copy, Loader2, MessageSquare, Mic, RotateCw, ShieldCheck, Square, ThumbsDown, ThumbsUp, Wand2 } from 'lucide-react'
+import { CheckpointCard, ExportMenu, NextPrompts, SourcePanel, SourceProvider, StepList } from './aiFeatures'
+import type { Checkpoint, Origin, StepInput } from './aiFeatures'
+export type { Checkpoint, Origin, Step, StepInput } from './aiFeatures'
 
 export type Mode = 'ask' | 'agent'
 export type SourceKind = 'Model library' | 'Engine docs' | 'Data feed' | 'File' | 'Policy' | 'Insight' | 'Scenario' | 'Forecast'
-export type Source = { name: string; kind: SourceKind; detail: string; meta?: string }
-export type ShellMsg = { id: number; role: 'user' | 'ai'; text?: string; trace?: string[]; chips?: string[]; mode?: Mode; sources?: Source[]; via?: string; card?: unknown }
+export type Source = { name: string; kind: SourceKind; detail: string; meta?: string
+  /** CF-2: where the value came from. Defaults to platform-stored. */
+  origin?: Origin; owner?: string; updated?: string
+  /** The logic behind a calculated value, shown behind "Show formula". */
+  formula?: string
+  /** Some values are outside the reader's access and are masked. */
+  restricted?: boolean }
+export type ShellMsg = { id: number; role: 'user' | 'ai'; text?: string; trace?: StepInput[]; chips?: string[]; mode?: Mode; sources?: Source[]; via?: string; card?: unknown
+  /** CF-6: the assistant pauses here until the reader approves, refines or cancels. */
+  checkpoint?: Checkpoint
+  /** COE and Forecaster feature cards rendered under the answer. */
+  ai?: ReactNode }
 export type PromptCard = { icon: LucideIcon; title: string; prompts: string[] }
 /** Which AI experience this chat is: names the mode, its purpose and how it greets. */
 export type Persona = { label: string; purpose: string; greeting: string; icon: LucideIcon; mode?: string }
@@ -25,27 +38,6 @@ const pickedModel = 'sonnet'
 
 const KIND_ICON: Record<SourceKind, LucideIcon> = { 'Model library': Boxes, 'Engine docs': BookOpen, 'Data feed': Database, File: FileText, Policy: ShieldCheck, Insight: Bookmark, Scenario: LineChart, Forecast: BadgeCheck }
 const DEFAULT_STEPS = ['Reading your request', 'Preparing the workspace', 'Assembling the result']
-
-function Process({ steps }: { steps: string[] }) {
-  const [open, setOpen] = useState(false)
-  return (
-    <div className="mb-2.5">
-      <button type="button" aria-expanded={open} onClick={() => setOpen(v => !v)} className="inline-flex h-7 items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 text-[12px] font-medium text-text-2 hover:border-brand hover:text-brand">
-        <Check size={12} className="text-ok" />{steps.length} step{steps.length === 1 ? '' : 's'}<ChevronDown size={12} className={cx('text-text-3 transition-transform', open && 'rotate-180')} /></button>
-      {open && (
-        <ol className="rise mt-2.5 ml-1.5" aria-label="Process">
-          {steps.map((x, k) => (
-            <li key={x} className="relative flex gap-3 pb-3.5 last:pb-0">
-              {k < steps.length - 1 && <span aria-hidden className="absolute left-[9px] top-5 h-[calc(100%-12px)] w-px bg-border-strong" />}
-              <span className="relative z-10 grid h-[19px] w-[19px] shrink-0 place-items-center rounded-full bg-ok-soft text-ok"><Check size={11} /></span>
-              <span className="min-w-0 flex-1 text-[12.5px] leading-5 text-text-2">{x}</span>
-              <span className="shrink-0 font-mono text-[11px] leading-5 text-text-3">{(0.3 + ((k * 37) % 9) / 10).toFixed(1)}s</span>
-            </li>))}
-        </ol>
-      )}
-    </div>
-  )
-}
 
 const SENT = /(?<=[.!?])\s+(?=[A-Z*])/
 function structure(text: string): string {
@@ -72,7 +64,7 @@ function Paras({ text, Md }: { text: string; Md: Assistant['Md'] }) {
   )
 }
 
-function Actions({ m, last, onRegen }: { m: ShellMsg; last: boolean; onRegen: () => void }) {
+function Actions({ m, last, onRegen, exportId, module: mod }: { m: ShellMsg; last: boolean; onRegen: () => void; exportId?: string; module?: string }) {
   const [copied, setCopied] = useState(false)
   const [vote, setVote] = useState<'up' | 'down' | null>(null)
   const [why, setWhy] = useState<string | null>(null)
@@ -84,6 +76,7 @@ function Actions({ m, last, onRegen }: { m: ShellMsg; last: boolean; onRegen: ()
         <button type="button" className={cx(btn, vote === 'up' && 'bg-brand-soft text-brand')} aria-label="Good response" aria-pressed={vote === 'up'} title="Good response" onClick={() => { setVote(v => v === 'up' ? null : 'up'); setWhy(null) }}><ThumbsUp size={14} /></button>
         <button type="button" className={cx(btn, vote === 'down' && 'bg-err-soft text-err')} aria-label="Bad response" aria-pressed={vote === 'down'} title="Bad response" onClick={() => { setVote(v => v === 'down' ? null : 'down'); setWhy(null) }}><ThumbsDown size={14} /></button>
         {last && <button type="button" className={btn} aria-label="Regenerate response" title="Regenerate" onClick={onRegen}><RotateCw size={14} /></button>}
+        {exportId && <span className="ml-1.5"><ExportMenu targetId={exportId} title={plain(m.text ?? 'answer').slice(0, 48)} module={mod} restricted={m.sources?.some(x => x.restricted)} /></span>}
         {vote === 'up' && <span className="ml-2 text-[12px] text-text-3">Thanks, glad it helped.</span>}
       </div>
       {vote === 'down' && (why
@@ -93,7 +86,7 @@ function Actions({ m, last, onRegen }: { m: ShellMsg; last: boolean; onRegen: ()
   )
 }
 
-function AskAnswer({ m, Md }: { m: ShellMsg; Md: Assistant['Md'] }) {
+function AskAnswer({ m, Md, onOpenSource }: { m: ShellMsg; Md: Assistant['Md']; onOpenSource?: (n: number) => void }) {
   const [tab, setTab] = useState<'answer' | 'sources'>('answer')
   const src = m.sources ?? []
   return (
@@ -110,7 +103,7 @@ function AskAnswer({ m, Md }: { m: ShellMsg; Md: Assistant['Md'] }) {
           {src.length > 0 && (
             <div className="mt-3 flex flex-wrap items-center gap-1.5" aria-label="Citations">
               <span className="text-[11px] font-semibold uppercase tracking-wide text-text-3">Cited</span>
-              {src.map((s, k) => <button key={s.name} type="button" onClick={() => setTab('sources')} title={s.detail}
+              {src.map((s, k) => <button key={s.name} type="button" onClick={() => onOpenSource?.(k + 1)} title={s.detail}
                 className="inline-flex max-w-[240px] items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] text-text-2 hover:border-brand hover:text-brand"><span className="font-mono text-text-3">[{k + 1}]</span><span className="truncate">{s.name}</span></button>)}
             </div>
           )}
@@ -122,7 +115,9 @@ function AskAnswer({ m, Md }: { m: ShellMsg; Md: Assistant['Md'] }) {
                 <li key={s.name} className="flex items-start gap-3 px-3.5 py-3">
                   <span className="mt-0.5 w-5 shrink-0 font-mono text-[11px] text-text-3">[{k + 1}]</span>
                   <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-surface-2 text-text-2"><I size={15} /></span>
-                  <span className="min-w-0 flex-1"><span className="block text-[13px] font-medium">{s.name}</span><span className="block text-[12px] text-text-2">{s.detail}</span></span>
+                  <span className="min-w-0 flex-1">
+                    <button type="button" onClick={() => onOpenSource?.(k + 1)} className="block max-w-full truncate text-left text-[13px] font-medium hover:text-brand hover:underline">{s.name}</button>
+                    <span className="block text-[12px] text-text-2">{s.detail}</span></span>
                   <span className="shrink-0 text-right"><span className="block text-[11px] font-semibold uppercase tracking-wide text-text-3">{s.kind}</span>{s.meta && <span className="block text-[11px] text-text-3">{s.meta}</span>}</span>
                 </li>) })}
             </ol>
@@ -133,38 +128,16 @@ function AskAnswer({ m, Md }: { m: ShellMsg; Md: Assistant['Md'] }) {
   )
 }
 
-function PromptCards({ cards, onPick }: { cards: PromptCard[]; onPick: (t: string) => void }) {
-  const [on, setOn] = useState<number | null>(null)
-  const open = on === null ? null : cards[on]
-  return (
-    <div className="relative" onMouseLeave={() => setOn(null)} onBlur={e => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setOn(null) }}>
-      <div className="grid grid-cols-3 gap-2.5">
-        {cards.map((c, k) => (
-          <button key={c.title} type="button" aria-haspopup="true" aria-expanded={on === k} onMouseEnter={() => setOn(c.prompts.length > 1 ? k : null)} onFocus={() => setOn(c.prompts.length > 1 ? k : null)} onClick={() => c.prompts.length === 1 && onPick(c.prompts[0]!)}
-            className={cx('inline-flex h-10 w-full min-w-0 items-center justify-center gap-2 rounded-full border bg-surface px-3 text-[13px] font-medium transition-colors', on === k ? 'border-brand text-brand' : 'border-border hover:border-brand hover:text-brand')}>
-            <c.icon size={15} className={cx('shrink-0', on === k ? 'text-brand' : 'text-text-3')} /><span className="truncate">{c.title}</span></button>))}
-      </div>
-      {open && (
-        <div className="absolute inset-x-0 top-full z-30 pt-2 text-left">
-          <div role="menu" aria-label={`${open.title} prompts`} className="dropdown-container rise p-1.5">
-            {open.prompts.map(t => <button key={t} type="button" role="menuitem" onClick={() => { setOn(null); onPick(t) }} className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-[14px] text-text-2 hover:bg-brand-soft hover:text-brand"><span className="flex-1">{t}</span><ArrowUpRight size={14} className="shrink-0 opacity-60" /></button>)}
-          </div>
-        </div>
-      )}
-    </div>
-  )
-}
-
-/** Forecast AI's empty state: a short list of business questions, not a grid of build actions. */
-function QuestionList({ cards, onPick }: { cards: PromptCard[]; onPick: (t: string) => void }) {
-  const rows = cards.flatMap(c => c.prompts.map(t => ({ t, icon: c.icon })))
+function Examples({ cards, onPick }: { cards: PromptCard[]; onPick: (t: string) => void }) {
+  // stable sort on index interleaves categories, so the four shown span more than one card
+  const rows = cards.flatMap(c => c.prompts.map((t, i) => ({ t, i }))).sort((x, y) => x.i - y.i).slice(0, 4)
   return (
     <div className="text-left">
-      <p className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wide text-text-3">Questions people ask</p>
-      <ul className="divide-y divide-border overflow-hidden rounded-2xl border border-border bg-surface">
-        {rows.map(({ t, icon: I }) => (
-          <li key={t}><button type="button" onClick={() => onPick(t)} className="group flex w-full items-center gap-3 px-4 py-3 text-left text-[14px] text-text-2 transition-colors hover:bg-brand-soft/50 hover:text-text">
-            <I size={15} className="shrink-0 text-text-3 group-hover:text-brand" /><span className="flex-1">{t}</span><ArrowUpRight size={14} className="shrink-0 text-text-3 opacity-0 transition-opacity group-hover:opacity-100" /></button></li>
+      <p className="mb-3 text-[13px] font-medium text-text">Examples of queries:</p>
+      <ul className="flex flex-col items-start gap-2">
+        {rows.map(({ t }) => (
+          <li key={t}><button type="button" onClick={() => onPick(t)} className="inline-flex items-center gap-1.5 rounded-full border border-dashed border-border-strong bg-surface/60 px-3.5 py-1.5 text-left text-[13.5px] text-text-2 transition-colors hover:border-brand hover:text-text">
+            {t}<ChevronRight size={14} className="shrink-0 text-text-3" /></button></li>
         ))}
       </ul>
     </div>
@@ -175,7 +148,7 @@ function Sandbox<M extends ShellMsg>({ items, activeId, setActive, renderCard, c
   const active = items.find(m => m.id === activeId) ?? items[items.length - 1]
   const built = useRef(new Set<number>())
   const [st, setSt] = useState({ id: -1, n: 0 })
-  const steps = active ? (active.trace ?? DEFAULT_STEPS) : []
+  const steps: string[] = active ? (active.trace ?? DEFAULT_STEPS).map(x => typeof x === 'string' ? x : x.label) : []
   const n = !active ? 0 : built.current.has(active.id) ? steps.length : st.id === active.id ? st.n : 0
   const done = !!active && n >= steps.length
   useEffect(() => {
@@ -242,12 +215,15 @@ type Props<M extends ShellMsg> = {
   grounding?: ReactNode
   /** Workbench only: live progress shown in the header band, e.g. "Model build · step 3 of 7". */
   status?: string
+  /** CF-6: the reader's decision on an open checkpoint. */
+  onCheckpoint?: (id: number, action: 'approve' | 'refine' | 'cancel' | 'skip', text?: string) => void
 }
 
 export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
   const { name: AI, Mark, Md } = p.assistant
   const [q, setQ] = useState('')
   const [selId, setSelId] = useState<number | null>(null)
+  const [src, setSrc] = useState<{ list: Source[]; n: number } | null>(null)
   const [voice, setVoice] = useState<'idle' | 'listening' | 'transcribing'>('idle')
   const [heard, setHeard] = useState('')
   const [ratio, setRatio] = useState(0.5)
@@ -268,17 +244,8 @@ export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
   const split = !brief && !!msgs && artifacts.length > 0
   const P = p.persona
   const pill = P && <span className="inline-flex items-center gap-1.5 rounded-full border border-brand/25 bg-brand-soft px-3 py-1 text-[12px] font-semibold text-brand"><P.icon size={13} />{P.label}</span>
-  const band = !brief && P && (
-    <div className="shrink-0 border-b border-brand/15 bg-brand-soft/60 px-5 py-2">
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
-        <span className="inline-flex items-center gap-2 text-[13px] font-semibold text-brand"><span className="grid h-6 w-6 place-items-center rounded-md bg-brand text-white"><P.icon size={13} /></span>{P.label}</span>
-        {P.mode && <span className="rounded-full border border-brand/30 bg-surface px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-brand">{P.mode}</span>}
-        {p.status && <span className="inline-flex items-center gap-1.5 text-[12px] text-text-2">{/done/.test(p.status) ? <Check size={12} className="text-ok" /> : <Loader2 size={12} className={cx('text-brand', !/needs approval/.test(p.status) && 'animate-spin')} />}{p.status}</span>}
-        <span title="For example BD / Pipeline." className="ml-auto inline-flex items-center gap-1.5 text-[12px] text-text-2"><ShieldCheck size={13} className="text-ok" />Restricted data hidden</span>
-      </div>
-    </div>
-  )
-  const groundBar = brief && p.grounding && <div className="shrink-0 border-b border-border bg-surface px-5 py-2"><div className="mx-auto max-w-3xl">{p.grounding}</div></div>
+  const band = null
+  const groundBar = null
 
   useEffect(() => { setSelId(null) }, [p.cur]) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setSelId(null) }, [artifacts.length])
@@ -299,7 +266,7 @@ export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
   }
 
   const composer = (big: boolean, up: boolean) => (
-    <form onSubmit={e => { e.preventDefault(); send(q) }} className="relative rounded-2xl border border-[#2f9e73]/30 bg-surface p-3 shadow-[0_0_0_4px_rgb(47_158_115/0.07)] transition-shadow focus-within:border-[#2f9e73]/60 focus-within:shadow-[0_0_0_4px_rgb(47_158_115/0.14)]">
+    <form onSubmit={e => { e.preventDefault(); send(q) }} className={cx('relative bg-surface p-3 transition-shadow', big ? 'rounded-xl border border-border shadow-[0_6px_20px_rgb(26_26_26/0.06)] focus-within:border-border-strong' : 'rounded-2xl border border-[#2f9e73]/30 shadow-[0_0_0_4px_rgb(47_158_115/0.07)] focus-within:border-[#2f9e73]/60 focus-within:shadow-[0_0_0_4px_rgb(47_158_115/0.14)]')}>
       {voice === 'idle' ? (
         <textarea rows={big ? 3 : 1} value={q} onChange={e => setQ(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(q) } }}
           placeholder={p.placeholder} aria-label={`Message ${AI}`}
@@ -319,8 +286,8 @@ export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
         {p.context}
         <div className="ml-auto flex items-center gap-2">
           <button type="button" onClick={startVoice} aria-label={voice === 'idle' ? 'Voice input' : 'Stop voice input'} aria-pressed={voice !== 'idle'} title={voice === 'idle' ? 'Voice input' : 'Stop'}
-            className={cx('grid h-10 w-10 place-items-center rounded-full border transition-colors', voice === 'idle' ? 'border-border text-text-2 hover:border-brand hover:text-brand' : 'mic-live border-err bg-err text-white')}>{voice === 'idle' ? <Mic size={17} /> : <Square size={14} fill="currentColor" />}</button>
-          <button type="submit" disabled={!q.trim() || !!p.thinking || voice !== 'idle'} aria-label="Send" className="grid h-10 w-10 place-items-center rounded-full bg-brand text-white transition-colors hover:bg-brand-hover disabled:bg-text-3/60"><ArrowUpRight size={17} /></button>
+            className={cx('grid place-items-center rounded-full border transition-colors', big ? 'h-8 w-8' : 'h-10 w-10', voice === 'idle' ? (big ? 'border-transparent bg-surface-2 text-text-2 hover:text-text' : 'border-border text-text-2 hover:border-brand hover:text-brand') : 'mic-live border-err bg-err text-white')}>{voice === 'idle' ? <Mic size={big ? 15 : 17} /> : <Square size={14} fill="currentColor" />}</button>
+          <button type="submit" disabled={!q.trim() || !!p.thinking || voice !== 'idle'} aria-label="Send" className={cx('grid place-items-center rounded-full text-white transition-colors', big ? 'h-8 w-8 bg-text hover:bg-text/85 disabled:bg-text/40' : 'h-10 w-10 bg-brand hover:bg-brand-hover disabled:bg-text-3/60')}>{big ? <ArrowUp size={16} /> : <ArrowUpRight size={17} />}</button>
         </div>
       </div>
     </form>
@@ -331,16 +298,24 @@ export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
     const art = m.id === (selId ?? lastArt)
     if (brief) return (
       <div key={m.id} className="rise flex gap-3"><Mark size={28} /><div className="min-w-0 flex-1 rounded-2xl rounded-tl-sm border border-border bg-surface px-5 py-4 shadow-sm">
-        {m.trace && m.trace.length > 0 && <Process steps={m.trace} />}
-        {m.sources ? <AskAnswer m={m} Md={Md} /> : m.text && <Paras text={m.text} Md={Md} />}
+        {m.trace !== undefined && <StepList steps={m.trace} sources={m.sources} onCite={n => setSrc({ list: m.sources ?? [], n })} />}
+        <div id={`ai-answer-${m.id}`}>
+          {m.sources ? <AskAnswer m={m} Md={Md} onOpenSource={n => setSrc({ list: m.sources ?? [], n })} /> : m.text && <Paras text={m.text} Md={Md} />}
+          {m.ai && <SourceProvider value={n => setSrc({ list: m.sources ?? [], n })}>{m.ai}</SourceProvider>}
+        </div>
+        {m.checkpoint && <CheckpointCard cp={m.checkpoint} live={m.id === lastAi && !p.thinking} onApprove={() => p.onCheckpoint?.(m.id, 'approve')} onRefine={t => p.onCheckpoint?.(m.id, 'refine', t)} onCancel={() => p.onCheckpoint?.(m.id, 'cancel')} onSkipSession={() => p.onCheckpoint?.(m.id, 'skip')} />}
         {showArt && p.renderCard(m, m.id === lastArt && !p.thinking)}
-        {m.text && <Actions m={m} last={m.id === lastAi && !p.thinking} onRegen={() => { const i = (msgs ?? []).findIndex(x => x.id === m.id), q = [...(msgs ?? []).slice(0, i)].reverse().find(x => x.role === 'user'); if (q?.text) send(q.text) }} />}
+        {m.text && <Actions m={m} exportId={`ai-answer-${m.id}`} module={p.persona?.label} last={m.id === lastAi && !p.thinking} onRegen={() => { const i = (msgs ?? []).findIndex(x => x.id === m.id), q = [...(msgs ?? []).slice(0, i)].reverse().find(x => x.role === 'user'); if (q?.text) send(q.text) }} />}
       </div></div>
     )
     return (
       <div key={m.id} className="rise flex gap-3"><Mark size={28} /><div className="min-w-0 flex-1 pt-0.5">
-        {m.trace && m.trace.length > 0 && <Process steps={m.trace} />}
-        {m.sources ? <AskAnswer m={m} Md={Md} /> : m.text && <Paras text={m.text} Md={Md} />}
+        {m.trace !== undefined && <StepList steps={m.trace} sources={m.sources} onCite={n => setSrc({ list: m.sources ?? [], n })} />}
+        <div id={`ai-answer-${m.id}`}>
+          {m.sources ? <AskAnswer m={m} Md={Md} onOpenSource={n => setSrc({ list: m.sources ?? [], n })} /> : m.text && <Paras text={m.text} Md={Md} />}
+          {m.ai && <SourceProvider value={n => setSrc({ list: m.sources ?? [], n })}>{m.ai}</SourceProvider>}
+        </div>
+        {m.checkpoint && <CheckpointCard cp={m.checkpoint} live={m.id === lastAi && !p.thinking} onApprove={() => p.onCheckpoint?.(m.id, 'approve')} onRefine={t => p.onCheckpoint?.(m.id, 'refine', t)} onCancel={() => p.onCheckpoint?.(m.id, 'cancel')} onSkipSession={() => p.onCheckpoint?.(m.id, 'skip')} />}
         {showArt && (
           <button type="button" onClick={() => { setSelId(m.id) }} className={cx('mt-3 flex w-full items-center gap-3 rounded-xl border px-3 py-2.5 text-left transition-colors', split && art ? 'border-brand bg-brand-soft' : 'border-border bg-surface hover:border-brand')}>
             <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-soft text-brand"><Wand2 size={15} /></span>
@@ -348,7 +323,7 @@ export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
             <ArrowUpRight size={14} className="shrink-0 text-text-3" /></button>
         )}
         {!m.sources && m.via && <p className="mt-2 text-[11px] text-text-3">via {m.via}</p>}
-        {m.text && <Actions m={m} last={m.id === lastAi && !p.thinking && m.card === undefined} onRegen={() => { const i = (msgs ?? []).findIndex(x => x.id === m.id), q = [...(msgs ?? []).slice(0, i)].reverse().find(x => x.role === 'user'); if (q?.text) send(q.text) }} />}
+        {m.text && <Actions m={m} exportId={`ai-answer-${m.id}`} module={p.persona?.label} last={m.id === lastAi && !p.thinking && m.card === undefined} onRegen={() => { const i = (msgs ?? []).findIndex(x => x.id === m.id), q = [...(msgs ?? []).slice(0, i)].reverse().find(x => x.role === 'user'); if (q?.text) send(q.text) }} />}
       </div></div>
     )
   }
@@ -360,14 +335,15 @@ export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
       <div ref={wrap} className={cx('relative flex min-h-0 flex-1', drag && 'select-none')}>
       <div className={cx('relative flex min-h-0 min-w-0 flex-col', !split && 'flex-1', brief && 'bg-surface-2/50')} style={split ? { width: `${ratio * 100}%`, flex: 'none' } : undefined}>
         {!msgs ? (
-          <div className="flex min-h-0 flex-1 overflow-y-auto px-5">
-            <div className={cx('mx-auto w-full max-w-3xl pb-16 text-center', brief ? 'pt-[calc(5vh+12px)]' : 'pt-[calc(7vh+20px)]')}>
-              {pill && brief && <div className="mb-4">{pill}</div>}
-              <h1 className="text-[28px] font-semibold tracking-tight">Hi {p.userName}, {P ? P.greeting : 'how can I help you today?'}</h1>
-              {P && <p className="mt-2 text-[14px] text-text-2">{P.purpose}</p>}
-              <div className="mt-7 text-left">{composer(true, false)}</div>
-              <div className="mt-6">{brief ? <QuestionList cards={p.cards} onPick={send} /> : <PromptCards cards={p.cards} onPick={send} />}</div>
-              <p className="mx-auto mt-5 max-w-xl text-[12.5px] text-text-3">{p.note}</p>
+          <div className="relative flex min-h-0 flex-1 overflow-y-auto bg-surface px-5">
+            <div aria-hidden className="pointer-events-none absolute inset-0 overflow-hidden">
+              <div className="absolute left-1/2 top-1/2 h-[560px] w-[900px] max-w-[140%] -translate-x-1/2 -translate-y-1/2 blur-3xl" style={{ background: 'radial-gradient(closest-side at 50% 42%, rgb(252 226 100 / 0.8), transparent 70%), radial-gradient(closest-side at 28% 62%, rgb(248 190 218 / 0.5), transparent 75%), radial-gradient(closest-side at 72% 60%, rgb(248 190 218 / 0.45), transparent 75%)' }} />
+            </div>
+            <div className="relative m-auto w-full max-w-[656px] py-12 text-center">
+              <h1 className="text-[24px] font-semibold tracking-tight text-text">{P ? P.greeting.charAt(0).toUpperCase() + P.greeting.slice(1) : 'What can I help with?'}</h1>
+              <div className="mt-8 text-left">{composer(true, false)}</div>
+              <div className="mt-9"><Examples cards={p.cards} onPick={send} /></div>
+              <p className="mt-10 text-[12px] text-text-3">{p.note}</p>
             </div>
           </div>
         ) : (
@@ -384,7 +360,7 @@ export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
               </div>
             </div>
             <div className={cx('shrink-0 px-5 pb-4 pt-2', brief ? 'border-t border-border bg-surface pt-3' : 'border-t border-transparent bg-surface')}>
-              <div className="mx-auto max-w-3xl">{chips && <div className="mb-2.5 flex flex-wrap gap-1.5" aria-label="Suggested follow-ups">{chips.map(c => <button type="button" key={c} onClick={() => send(c)} className="rounded-full border border-border bg-surface px-3 py-1 text-xs text-text-2 hover:border-brand hover:text-brand">{c}</button>)}</div>}
+              <div className="mx-auto max-w-3xl">{chips && <NextPrompts chips={chips} onSend={send} onEdit={setQ} />}
                 {composer(false, true)}</div>
               <p className="mx-auto mt-2 max-w-3xl text-center text-[11px] text-text-3">{p.note}</p>
             </div>
@@ -409,6 +385,7 @@ export default function ChatShell<M extends ShellMsg>(p: Props<M>) {
         </div>
       )}
       </div>
+      {src && src.list[src.n - 1] && <SourcePanel source={src.list[src.n - 1]!} n={src.n} onClose={() => setSrc(null)} />}
     </section>
   )
 }

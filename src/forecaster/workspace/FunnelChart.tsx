@@ -1,11 +1,10 @@
-import { Lock } from 'lucide-react'
 import { DRV, POP, fyAvg, fmtV } from './engine'
 import type { DriverId, Layer, ModelCfg } from './engine'
-import { cx, InfoTip } from './ui'
+import { AssumptionCard, GroupHead, cx, InfoTip } from './ui'
 import { ChartActions } from '../../chart/ChartActions'
 
 /*
- * Vertical patient funnel, drawn as equal-width cards. Clicking a card selects that driver.
+ * The patient funnel as a grouped list of assumption cards. Clicking a card selects that driver.
  */
 
 /** The percentage drivers, in model order. Non-percentage inputs (Rx, price) sit outside the funnel. */
@@ -29,63 +28,47 @@ export function funnelLevels(working: Layer, model: ModelCfg, changedIds: Partia
   })
 }
 
-export function FunnelChart({ levels, sel, onSel, startLabel, startValue }: {
+/** The funnel split into the two questions it answers; stages keep their model order inside each group. */
+const FUNNEL_GROUPS: { title: string; sub: string; ids: DriverId[] }[] = [
+  { title: 'Patient pool', sub: 'How many people can be treated?', ids: ['diag', 'treat'] },
+  { title: 'New to brand', sub: 'Who starts on the brand?', ids: ['access', 'share'] },
+]
+
+export function FunnelChart({ levels, sel, onSel, startLabel, startValue, embedded }: {
   levels: FunnelLevel[]; sel: DriverId | null; onSel: (id: DriverId) => void
   startLabel: string; startValue: string
+  /** Drops this component's own card border/background so it can sit inside a shared card with other sections. */
+  embedded?: boolean
 }) {
+  const groups = FUNNEL_GROUPS.map(g => ({ ...g, rows: levels.filter(l => g.ids.includes(l.id)) })).filter(g => g.rows.length)
+  // The starting pool comes from the model and is never editable.
+  const start = <AssumptionCard step="Core archetype" label={startLabel} value={startValue} locked title="Set by the published model" />
   return (
-    <div id="patient-funnel-chart" className="rounded-xl border border-border bg-surface p-3">
-      <div className="mb-2 flex items-center justify-between gap-1.5 px-1">
-        <div className="flex items-center gap-1.5">
-        <h3 className="text-[11px] font-semibold uppercase tracking-wider text-text-3">Patient funnel</h3>
-        <InfoTip text="Each card is the population still in the funnel after that stage, as an FY average. Click a stage to edit its assumption; formulas come from the CoE model and stay locked." />
+    <div id="patient-funnel-chart" className={cx(!embedded && 'rounded-xl border border-border bg-surface p-3')}>
+      {!embedded && (
+        <div className="mb-2 flex items-center justify-between gap-1.5 px-1">
+          <div className="flex items-center gap-1.5">
+            <h3 className="text-[11px] font-semibold uppercase tracking-wider text-text-3">Patient funnel</h3>
+            <InfoTip text="Each card is the population still in the funnel after that stage, as an FY average. Click a stage to edit its assumption; formulas come from the CoE model and stay locked." />
+          </div>
+          <ChartActions target="patient-funnel-chart" title="Patient funnel" subtitle="FY average" />
         </div>
-        <ChartActions target="patient-funnel-chart" title="Patient funnel" subtitle="FY average" />
-      </div>
+      )}
 
-      {/* Starting pool is never editable. */}
-      <div className="flex items-center justify-between gap-2 rounded-lg border border-dashed border-border-strong bg-surface-2 px-3 py-2">
-        <span className="min-w-0">
-          <span className="block text-[10px] font-semibold uppercase tracking-wider text-text-3">Starting point</span>
-          <span className="block truncate text-[12.5px] font-semibold">{startLabel}</span>
-        </span>
-        <span className="flex shrink-0 items-center gap-1 font-data text-[12.5px] text-text-2"><Lock size={10} />{startValue}</span>
-      </div>
-
-      <ul className="w-full">
-        {levels.map(l => {
-          const on = sel === l.id
-          return (
-            <li key={l.id} className="flex w-full flex-col items-center">
-              <span aria-hidden className="h-2.5 w-px bg-border-strong" />
-              <button
-                type="button" onClick={() => onSel(l.id)} aria-current={on ? 'true' : undefined}
-                aria-label={`${l.label}, ${fmtV(l.id, l.pct)}, ${people(l.headcount)} patients`}
-                className={cx(
-                  'flex w-full min-w-0 items-center justify-between gap-2 rounded-lg border bg-surface px-3 py-2 text-left transition-[border-color,box-shadow]',
-                  on ? 'border-brand shadow-[var(--ring-glow-strong)]' : 'border-border hover:border-border-strong',
-                )}
-              >
-                <span className="min-w-0">
-                  <span className="block truncate text-[10px] font-semibold uppercase tracking-wider text-text-3">{l.step}</span>
-                  <span className="block truncate text-[12.5px] font-medium text-text">{l.label}</span>
-                </span>
-                <span className="flex shrink-0 flex-col items-end">
-                  <span className="font-data text-[13px] font-semibold text-text">{fmtV(l.id, l.pct)}</span>
-                  <span className="font-data text-[10.5px] text-text-3">{people(l.headcount)}</span>
-                </span>
-              </button>
-              <span className="mt-0.5 flex items-center gap-1 text-[10px]">
-                {!l.editable
-                  ? <span className="inline-flex items-center gap-1 text-text-3"><Lock size={8} />System-fed</span>
-                  : l.changed
-                    ? <span className="inline-flex items-center gap-1 font-medium text-brand"><span className="h-1.5 w-1.5 rounded-full bg-warn" />Modified</span>
-                    : <span className="text-text-3">FY average</span>}
-              </span>
-            </li>
-          )
-        })}
-      </ul>
+      {!groups.length && <div className="flex flex-col gap-1.5">{start}</div>}
+      {groups.map((g, gi) => (
+        <div key={g.title}>
+          <GroupHead title={g.title} sub={g.sub} className={gi === 0 ? 'pt-1' : undefined} />
+          <div className="flex flex-col gap-1.5">
+            {gi === 0 && start}
+            {g.rows.map(l => (
+              <AssumptionCard key={l.id} step={l.step} label={l.label} value={fmtV(l.id, l.pct)} sub={`${people(l.headcount)} patients`}
+                locked={!l.editable} changed={l.changed} on={sel === l.id} onClick={() => onSel(l.id)}
+                title={l.editable ? `${people(l.headcount)} patients after this stage · editable` : `${people(l.headcount)} patients after this stage · locked by the model`} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }

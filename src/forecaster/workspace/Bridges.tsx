@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { GTN, MONTHS, POP, idxOf, netPrice, scenarioLayer } from './engine'
 import type { DriverId, EventDef, Layer, Scenario } from './engine'
 import type { Calc } from './Stages'
@@ -23,13 +23,14 @@ const netOf = (s: Record<DriverId, number[]>) => s.diag.reduce((a, _, k) => a + 
 const trxOf = (s: Record<DriverId, number[]>) => s.diag.reduce((a, _, k) => a + POP * (s.diag[k]! / 100) * (s.treat[k]! / 100) * (s.access[k]! / 100) * (s.share[k]! / 100) * s.rx[k]!, 0)
 const $m = (v: number) => `${v < 0 ? '−' : ''}$${Math.abs(v).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}M`
 const $d = (v: number) => `${v >= 0 ? '+' : '−'}${$m(Math.abs(v))}`
+const capt = 'mb-1 block text-[11px] font-semibold uppercase tracking-wide text-text-3'
 const pct = (v: number) => `${v >= 0 ? '' : '−'}${Math.abs(v).toFixed(1)}%`
 
 export function BridgesView({ scenarios, calc, events, selId }: { scenarios: Scenario[]; calc: Calc; events: EventDef[]; selId: string }) {
   const [scId, setScId] = useState(selId)
   const [cmp, setCmp] = useState('budget')
   const [period, setPeriod] = useState<PeriodId>('2027')
-  const [mode, setMode] = useState<'finance' | 'drivers' | 'events'>('finance')
+  const [mode, setMode] = useState<'finance' | 'drivers'>('finance')
   const tip = useHoverTip()
   const [hv, setHv] = useState<number | null>(null)
   const sc = scenarios.find(s => s.id === scId) ?? scenarios[0]!
@@ -37,7 +38,7 @@ export function BridgesView({ scenarios, calc, events, selId }: { scenarios: Sce
   const pLabel = PERIODS.find(p => p.id === period)!.label
   const to: Plane = { name: sc.name, l: calc[sc.id]!.layer, w: W, gtn: GTN }
   const work = calc.__working!.layer
-  const from: Plane = mode === 'events' || cmp === 'work' ? { name: 'Active forecast', l: work, w: W, gtn: GTN }
+  const from: Plane = cmp === 'work' ? { name: 'Active forecast', l: work, w: W, gtn: GTN }
     : cmp === 'budget' ? { name: 'Budget', l: BUDGET, w: W, gtn: BUDGET_GTN }
     : cmp === 'ly' ? { name: 'Last year', l: to.l, w: W.map(i => i - 12), gtn: GTN }
     : { name: scenarios.find(s => s.id === cmp)?.name ?? 'Scenario', l: calc[cmp]!.layer, w: W, gtn: GTN }
@@ -53,14 +54,17 @@ export function BridgesView({ scenarios, calc, events, selId }: { scenarios: Sce
       { label: 'Price (WAC)', sub: 'list', v: tb * (gpb - gpa) * (1 - from.gtn) },
       { label: 'Gross-to-net', sub: 'rate', v: -tb * gpb * (to.gtn - from.gtn) },
     ]
-  } else if (mode === 'drivers') {
+  } else {
     const cur = { ...a }; let prev = start
     steps = DRV.map(d => { cur[d] = b[d]; const n = netOf(cur), v = n - prev; prev = n; return { label: DRV_LABEL[d], sub: 'model driver', v } })
-  } else {
-    const on = events.filter(e => sc.active.includes(e.id)); let prev = start
-    steps = on.map((e, k) => { const n = netOf(series({ ...to, l: scenarioLayer(work, { ...sc, adj: {}, ovr: [], active: on.slice(0, k + 1).map(x => x.id) }, events) })); const v = n - prev; prev = n; return { label: e.name, sub: `${e.prob}% likely`, v } })
-    steps.push({ label: 'Adjustments & overrides', sub: 'scenario-only', v: end - prev })
   }
+  const onEv = events.filter(e => sc.active.includes(e.id)).slice().sort((x, y) => x.date - y.date)
+  const evKey = `${sc.id}|${onEv.map(e => e.id).join(',')}|${period}|${scId}`
+  const eventRows = useMemo(() => {
+    const net = (ids: string[]) => netOf(series({ ...to, l: scenarioLayer(work, { ...sc, adj: {}, ovr: [], active: ids }, events) }))
+    let prev = net([])
+    return onEv.map((e, k) => { const n = net(onEv.slice(0, k + 1).map(x => x.id)); const v = n - prev; prev = n; return { e, v } })
+  }, [evKey])  // eslint-disable-line react-hooks/exhaustive-deps
   const total = end - start, sum = steps.reduce((x, s) => x + s.v, 0), ok = Math.abs(sum - total) < 0.05
   const lift = [...steps].sort((x, y) => y.v - x.v)[0], drag = [...steps].sort((x, y) => x.v - y.v)[0]
 
@@ -82,22 +86,23 @@ export function BridgesView({ scenarios, calc, events, selId }: { scenarios: Sce
       <PageHeader><PageTitle title="Financial bridges" info="What moved net revenue between two forecasts. Read-only; follows your scenarios and events." /></PageHeader>
 
       <Card>
-        <div className="flex flex-wrap items-end gap-4">
-          <label className="block"><span className="mb-1 block text-[13px] font-medium text-text-2">Scenario</span>
+        <div className="flex flex-wrap items-end gap-x-6 gap-y-3">
+          <label className="block"><span className={capt}>Scenario</span>
             <select value={sc.id} onChange={e => setScId(e.target.value)} className={cx(field, 'w-44')}>{scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-          <label className="block"><span className="mb-1 block text-[13px] font-medium text-text-2">Compare against</span>
-            <select value={mode === 'events' ? 'work' : cmp} disabled={mode === 'events'} onChange={e => setCmp(e.target.value)} className={cx(field, 'w-44')}>
+          <label className="block"><span className={capt}>Compare against</span>
+            <select value={cmp} onChange={e => setCmp(e.target.value)} className={cx(field, 'w-44')}>
               <option value="budget">Budget</option><option value="ly">Last year</option><option value="work">Active forecast</option>
               {scenarios.filter(s => s.id !== sc.id).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
             </select></label>
-          <label className="block"><span className="mb-1 block text-[13px] font-medium text-text-2">Period</span>
-            <select aria-label="Period" value={period} onChange={e => setPeriod(e.target.value as PeriodId)} className={cx(field, 'h-8 w-auto min-w-[150px] pr-7 text-[14px]')}>{PERIODS.map(p => <option key={p.id} value={p.id}>{p.label}</option>)}</select></label>
-          <p className="ml-auto max-w-sm text-[12px] text-text-3">One attribution engine, three views. The commercial drivers add up exactly to Finance’s volume and channel bars, so both teams quote the same movement.</p>
+          <div><span className={capt}>Period</span>
+            <Seg label="Period" value={period} onChange={setPeriod} options={PERIODS.map(x => ({ id: x.id, label: x.label }))} /></div>
+          <div><span className={capt}>View</span>
+            <Seg label="Bridge view" value={mode} onChange={setMode} options={[{ id: 'finance', label: 'Finance · price–volume–GtN' }, { id: 'drivers', label: 'Commercial · model drivers' }]} /></div>
         </div>
       </Card>
 
-      <Card frame title={`Net revenue bridge · ${from.name} → ${to.name} · ${pLabel}`}
-        right={<div className="flex flex-wrap items-center justify-end gap-2"><Seg label="Bridge view" value={mode} onChange={setMode} options={[{ id: 'finance', label: 'Finance · price–volume–GtN' }, { id: 'drivers', label: 'Commercial · model drivers' }, { id: 'events', label: 'Commercial · by event (vs forecast)' }]} /><ChartActions target="financial-bridge-chart" title="Net revenue bridge" subtitle={`${from.name} → ${to.name} · ${pLabel}`} /></div>}>
+      <Card title={`Net revenue bridge · ${from.name} → ${to.name} · ${pLabel}`}
+          right={<ChartActions target="financial-bridge-chart" title="Net revenue bridge" subtitle={`${from.name} → ${to.name} · ${pLabel}`} />}>
         <div id="financial-bridge-chart" ref={tip.wrap} className="relative">
         <svg viewBox={`0 0 ${VW} ${TOP + H + 52}`} className="w-full" role="img" aria-label={`Waterfall from ${from.name} ${$m(start)} to ${to.name} ${$m(end)}`}>
           {ticks.map(t => <g key={t}><line x1={L} x2={VW - 10} y1={y(t)} y2={y(t)} stroke="#ebebed" strokeDasharray="4 4" /><text x={L - 8} y={y(t) + 4} textAnchor="end" className="fill-[#8f9199] text-[11px]">{`$${Math.round(t).toLocaleString('en-US')}M`}</text></g>)}
@@ -130,23 +135,48 @@ export function BridgesView({ scenarios, calc, events, selId }: { scenarios: Sce
         </svg>
         {tip.node}
         </div>
-        <p className="mt-1 text-[12px] text-text-3">The value axis does not start at zero, so the movements are readable.</p>
+          <p className="mt-1 text-[12px] text-text-3">The value axis does not start at zero, so the movements are readable. Hover a bar for its exact value.</p>
+        </Card>
 
-        <div className="mt-4 grid gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-          <table className="w-full text-[13px]">
-            <thead><tr className="border-b border-border text-left text-[12px] text-text-3"><th className="py-2 font-medium">Driver</th><th className="py-2 text-right font-medium">Impact</th><th className="py-2 text-right font-medium">% of start</th><th className="py-2 text-right font-medium">Share of change</th></tr></thead>
-            <tbody>
-              {steps.map(s => <tr key={s.label} className="border-b border-border"><td className="py-2">{s.label}</td><td className={cx('py-2 text-right tabular-nums', s.v > 0.05 ? 'text-ok' : s.v < -0.05 ? 'text-err' : 'text-text-2')}>{$d(s.v)}</td><td className="py-2 text-right tabular-nums text-text-2">{pct((s.v / start) * 100)}</td><td className="py-2 text-right tabular-nums text-text-2">{total ? `${Math.round((s.v / total) * 100)}%` : '—'}</td></tr>)}
-              <tr className="bg-surface-2/60 font-semibold"><td className="py-2 pl-1">Total change</td><td className="py-2 text-right tabular-nums">{$d(total)}</td><td className="py-2 text-right tabular-nums">{pct((total / start) * 100)}</td><td className="py-2 text-right tabular-nums">100%</td></tr>
-            </tbody>
-          </table>
-          <div className="space-y-2.5">
-            <p className="rounded-lg border-l-2 border-brand bg-brand-soft/40 px-4 py-3 text-[13px]"><b className="font-semibold">Read-out:</b> {to.name} is {$d(total)} ({pct((total / start) * 100)}) against {from.name} for {pLabel}.{lift && lift.v > 0.05 && <> The biggest lift is {lift.label} ({$d(lift.v)})</>}{drag && drag.v < -0.05 && <>; the biggest drag is {drag.label} ({$d(drag.v)})</>}.</p>
-            <p className={cx('rounded-lg px-4 py-2.5 text-[13px]', ok ? 'bg-ok-soft text-ok' : 'bg-err-soft text-err')}>{ok ? 'Reconciles: the bars sum to the change exactly.' : `Does not reconcile: bars sum to ${$d(sum)}.`}</p>
-            <p className="text-[12px] text-text-3">{mode === 'events' ? 'By event always starts from the active forecast and adds each switched-on event in turn; adjustments and overrides close the gap.' : from.name === 'Budget' ? 'Budget is the placeholder plane used on Performance until the FP&A plane is connected. Its bars will change once real budget drivers load.' : 'Both sides are read from the same forecast engine, so the movement is like for like.'}</p>
-          </div>
-        </div>
-      </Card>
+      <div className="grid items-start gap-5 lg:grid-cols-2">
+          <Card title="What moved">
+            <table className="w-full text-[13px]">
+              <thead><tr className="border-b border-border text-left text-[11px] uppercase tracking-wide text-text-3">
+                <th className="py-2 font-semibold">Driver</th><th className="py-2 text-right font-semibold">Impact</th>
+                <th className="py-2 text-right font-semibold">% of start</th><th className="py-2 text-right font-semibold">Share of change</th></tr></thead>
+              <tbody>
+                {steps.map(s => <tr key={s.label} className="border-b border-border"><td className="py-2">{s.label}</td>
+                  <td className={cx('py-2 text-right font-mono', s.v > 0 ? 'text-ok' : s.v < 0 ? 'text-err' : 'text-text-2')}>{$d(s.v)}</td>
+                  <td className="py-2 text-right font-mono text-text-2">{pct((s.v / start) * 100)}</td>
+                  <td className="py-2 text-right font-mono text-text-2">{total ? pct((s.v / total) * 100) : '—'}</td></tr>)}
+                <tr className="bg-surface-2/60 font-semibold"><td className="py-2">Total change</td>
+                  <td className="py-2 text-right font-mono">{$d(total)}</td>
+                  <td className="py-2 text-right font-mono">{pct((total / start) * 100)}</td>
+                  <td className="py-2 text-right font-mono">100%</td></tr>
+              </tbody>
+            </table>
+          </Card>
+
+          <Card title="Events behind these drivers" info="Each switched-on event, and what it adds to net revenue over the period.">
+            {eventRows.length === 0
+              ? <p className="py-2 text-[13px] text-text-3">No events are switched on in {sc.name}.</p>
+              : <ul>{eventRows.map(({ e, v }) => (
+                  <li key={e.id} className="flex items-start justify-between gap-3 border-b border-border py-2.5 last:border-0">
+                    <span className="min-w-0"><span className="block text-[13.5px] font-medium">{e.name}</span>
+                      <span className="block text-[12px] text-text-3">{e.impacts.length
+                        ? `moves ${e.impacts.map(i => `${DRV_LABEL[i.metric].toLowerCase()} ${i.dir === 'up' ? '+' : '−'}${i.mag}%`).join(', ')}`
+                        : e.sub === 'Gross-to-Net / Rebate Change' ? 'moves gross-to-net, not gross' : 'no modelled driver move'}</span></span>
+                    <span className={cx('shrink-0 font-mono text-[13px] font-semibold', v >= 0 ? 'text-ok' : 'text-err')}>{$d(v)}</span>
+                  </li>))}</ul>}
+            <p className="mt-3 text-[12px] text-text-3">An event moves the same drivers shown above, so its effect is already inside those bars. This list splits out what each event adds to net revenue for the period, in date order.</p>
+          </Card>
+      </div>
+
+      <div className="space-y-2.5">
+          <p className="rounded-lg border-l-2 border-brand bg-brand-soft/40 px-4 py-3 text-[13px]"><b className="font-semibold">Read-out:</b> {to.name} is {$d(total)} ({pct((total / start) * 100)}) against {from.name} for {pLabel}. The biggest lift is {lift!.label} ({$d(lift!.v)}); the biggest drag is {drag!.label} ({$d(drag!.v)}).</p>
+          <p className={cx('rounded-lg px-4 py-2.5 text-[13px]', ok ? 'bg-ok-soft text-ok' : 'bg-err-soft text-err')}>{ok ? '✓ Reconciles: the bars sum to the change exactly.' : 'The bars do not reconcile with the total. Check the drivers.'}</p>
+          {cmp === 'budget' && <p className="text-[12px] text-text-3">Budget is the placeholder plane used on the Performance dashboard until the FP&amp;A plane is connected: the statistical trend with 3% more volume and 0.4 pt less gross-to-net. Its bars will change once real Budget drivers load.</p>}
+      </div>
     </div>
   )
 }

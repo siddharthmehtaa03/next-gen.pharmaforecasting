@@ -141,7 +141,7 @@ function BdAssetList({ onOpenAsset, onBack }: { onOpenAsset: (id: string) => voi
         <div className="mb-8 flex items-start justify-between gap-6">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-text-3">Business development</p>
-            <h2 className="mt-1 text-[28px] font-semibold tracking-tight">Size a new asset</h2>
+            <h2 className="mt-1 text-[22px] font-semibold tracking-tight">Size a new asset</h2>
             <p className="mt-1.5 max-w-2xl text-[14px] text-text-2">
               Shape the opportunity for a pipeline or BD&amp;L vaccine asset before a model is built. Set assumptions,
               see the engine chain, run a sandbox. Hand off to the CoE when it is ready to become a certified model.
@@ -795,7 +795,7 @@ function BdWorkspace({ asset, onBack, onHome }: { asset: Asset; onBack: () => vo
         </div>
       </div>
 
-      <div className="workspace-page grid flex-1 grid-cols-[280px_minmax(0,1fr)] gap-5 py-5">
+      <div className="workspace-page grid flex-1 grid-cols-[280px_minmax(0,1fr)] gap-5 pb-5 pt-6">
         <aside className="sticky top-5 self-start">
           <Card>
             <div className="px-5 py-4">

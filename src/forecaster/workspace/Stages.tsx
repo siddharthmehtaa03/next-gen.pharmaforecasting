@@ -24,12 +24,12 @@ const typeTone = (t: EventType): 'brand' | 'ok' | 'warn' | 'neutral' => t === 'M
 /* ───────── Events ───────── */
 const blankEvent = (): EventDef => ({ id: '', name: '', type: 'Market Event', date: ACT + 5, prob: 50, impacts: [], notes: '' })
 
-export function EventsStage({ events, setEvents, scenarios, setScenarios, calc, selId, setSelId, model, metric, setMetric, modified, notify, onNext }: {
+export function EventsStage({ events, setEvents, scenarios, setScenarios, calc, selId, setSelId, model, metric, setMetric, modified, notify, onNext, onScenarios }: {
   events: EventDef[]; setEvents: (f: (e: EventDef[]) => EventDef[]) => void; scenarios: Scenario[]; setScenarios: (f: (s: Scenario[]) => Scenario[]) => void; calc: Calc; selId: string; setSelId: (id: string) => void
-  model: ModelCfg; metric: OutputId; setMetric: (m: OutputId) => void; modified: number; notify: Notify; onNext: () => void
+  model: ModelCfg; metric: OutputId; setMetric: (m: OutputId) => void; modified: number; notify: Notify; onNext: () => void; onScenarios: () => void
 }) {
   const [form, setForm] = useState<EventDef | null>(null)
-  const [filterMode, setFilterMode] = useState<'scenario' | 'all'>('scenario')
+  const [filterMode, setFilterMode] = useState<'scenario' | 'all'>('all')
   const agent = useAgentFocus()
   const sel = scenarios.find(s => s.id === selId) ?? scenarios[0]!
   const c = calc[sel.id]!, work = calc.__working!, o = OUTPUTS[metric]
@@ -49,62 +49,85 @@ export function EventsStage({ events, setEvents, scenarios, setScenarios, calc, 
   const dup = (e: EventDef) => { setEvents(xs => [...xs, { ...e, id: `ev${Date.now()}`, name: `${e.name} (copy)` }]); notify({ tone: 'info', text: 'Event duplicated. The copy is off in every scenario.' }) }
   const del = (e: EventDef) => { setEvents(xs => xs.filter(x => x.id !== e.id)); notify({ tone: 'info', text: `“${e.name}” deleted from the library and removed from all scenarios.` }) }
   const displayed = filterMode === 'scenario' ? events.filter(e => sel.active.includes(e.id)) : events
-  const flip = (sid: string, eid: string, on: boolean) => {
-    if (scenarios.find(s => s.id === sid)?.locked) return notify({ tone: 'info', text: 'This scenario is final and locked. Reopen it to change events.' })
-    setScenarios(ss => ss.map(s => s.id === sid ? { ...s, active: on ? [...s.active, eid] : s.active.filter(x => x !== eid) } : s))
-  }
   return (
     <div className="space-y-5">
       <PageHeader>
-        <PageTitle title="Scenario events" info={`Create an event once and choose the scenarios it applies to. New events apply to ${sel.name}.`} />
+        <div className="min-w-0">
+          <PageTitle title="Scenario events" info={`Create an event once and choose the scenarios it applies to. New events apply to ${sel.name}.`} />
+        </div>
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-sm font-semibold">Scenario
-            <select value={sel.id} onChange={e => setSelId(e.target.value)} aria-label="Selected scenario for events" className={cx(field, 'w-44 font-medium text-text')}>{scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+          <label className="flex items-center gap-2 text-sm font-semibold">Chart scenario
+            <select value={sel.id} onChange={e => setSelId(e.target.value)} aria-label="Scenario charted in Event impact" className={cx(field, 'w-44 font-medium text-text')}>{scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
           <span data-tour="add-event" className="inline-flex"><Btn onClick={() => setForm(blankEvent())} icon={<Plus size={15} />} disabled={!!form && !form.id}>Add event</Btn></span>
         </div>
       </PageHeader>
 
-      <Card frame title="Event impact" info={`${sel.name}: forecast with events applied`}
-        right={<OutputSelect model={model} metric={metric} onChange={setMetric} />}>
-        <div className="mb-2 flex flex-wrap items-center justify-between gap-2"><Legend s={{ ...series, lo: undefined }} />
-          <span className="text-[13px] text-text-2">{c.events.length} event{c.events.length === 1 ? '' : 's'} applied · FY{FY} impact <b className={cx('font-mono', evDelta >= 0 ? 'text-ok' : 'text-err')}>{o.delta(evDelta)}</b></span></div>
-        <ForecastChart title="Events impact" s={series} fmt={v => o.fmt(v, 1)} dp={0} unit={o.unit} height={280} />
-      </Card>
-
-      <div>
-        <AgentFrame on={agent.section === 'events'} label={`${agent.name} is updating events`}>
-        <Card pad={false} title={`Events for ${sel.name}`} right={<Seg label="Filter" value={filterMode} onChange={setFilterMode} options={[{ id: 'scenario', label: `Included in ${sel.name} (${c.events.length})` }, { id: 'all', label: `All library events (${events.length})` }]} />}>
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[720px] text-left text-[13px]">
-              <thead><tr className="border-b border-border bg-surface-2 text-[11px] uppercase tracking-wide text-text-3"><th className="px-4 py-2.5 font-semibold">Event</th><th className="px-3 py-2.5 font-semibold">Timing</th><th className="px-3 py-2.5 font-semibold">Impacted metrics</th><th className="px-3 py-2.5 text-right font-semibold">Probability</th><th className="px-3 py-2.5 text-center font-semibold">Apply to {sel.name}</th><th className="px-3 py-2.5" /></tr></thead>
-              <tbody>
-                {displayed.map(e => {
-                  const isApplied = sel.active.includes(e.id)
-                  return (
-                    <tr key={e.id} className={cx('border-b border-border last:border-0', form?.id === e.id && 'bg-brand-soft/40', agent.field === e.id && 'agent-row')}>
-                      <td className="px-4 py-3"><p className="font-medium">{e.name}</p><span className="mt-1 inline-block"><Tag tone={typeTone(e.type)}>{e.type}</Tag>{e.sub && <span className="ml-1.5 text-[12px] text-text-2">{e.sub}{e.mfn && ` · ${e.mfn}`}</span>}</span></td>
-                      <td className="whitespace-nowrap px-3 py-3 text-text-2">{mLong(e.date)}{e.every && <span className="block text-[12px] text-text-3">every {e.every === 6 ? '6 months' : 'year'}</span>}</td>
-                      <td className="px-3 py-3"><div className="flex flex-wrap gap-1">{e.impacts.length === 0 && e.sub === 'Gross-to-Net / Rebate Change' && <span className="rounded bg-surface-2 px-1.5 py-0.5 text-[12px]">GTN · moves net, not gross</span>}{e.impacts.map(i => <span key={i.metric} className="inline-flex items-center gap-1 rounded bg-surface-2 px-1.5 py-0.5 text-[12px]">{DRV[i.metric].label}<b className={cx('font-mono', i.dir === 'up' ? 'text-ok' : 'text-err')}>{i.dir === 'up' ? '+' : '−'}{i.mag}%</b></span>)}</div></td>
-                      <td className="px-3 py-3 text-right font-mono">{e.prob}%</td>
-                      <td className="px-3 py-3 text-center"><div className="flex items-center justify-center gap-2"><Toggle on={isApplied} onChange={v => flip(sel.id, e.id, v)} label={`Include ${e.name} in ${sel.name}`} /><span className="text-xs font-medium">{isApplied ? 'Included' : 'Off'}</span></div></td>
-                      <td className="px-3 py-3"><div className="flex justify-end"><MoreMenu label={`${e.name} actions`} items={[
-                        { label: 'Edit', icon: <Pencil size={14} />, onClick: () => setForm(structuredClone(e)) },
-                        { label: 'Duplicate', icon: <Copy size={14} />, onClick: () => dup(e) },
-                        { label: 'Delete from library', icon: <Trash2 size={14} />, danger: true, onClick: () => del(e) },
-                      ]} /></div></td>
-                    </tr>
-                  )
-                })}
-                {!displayed.length && <tr><td colSpan={6} className="px-4 py-10 text-center text-text-3">{filterMode === 'scenario' ? `No events applied to ${sel.name}. Switch to all library events or click Add event.` : 'No events in the library yet.'}</td></tr>}
-              </tbody>
-            </table>
-          </div>
+      <div className="grid items-start gap-5 xl:grid-cols-2">
+        <Card frame title="Event impact" info={`${sel.name}: forecast with events applied`}
+          right={<OutputSelect model={model} metric={metric} onChange={setMetric} />}>
+          <ForecastChart title="Events impact" s={series} fmt={v => o.fmt(v, 1)} dp={0} unit={o.unit} height={280} canSave={false}
+            toolbarStart={<span className="text-[13px] text-text-2">{c.events.length} event{c.events.length === 1 ? '' : 's'} applied &middot; FY{FY} impact <b className={cx('font-mono', evDelta >= 0 ? 'text-ok' : 'text-err')}>{o.delta(evDelta)}</b></span>} />
+          <div className="mt-3 border-t border-border pt-2.5"><Legend s={{ ...series, lo: undefined }} /></div>
         </Card>
+
+        <AgentFrame on={agent.section === 'events'} label={`${agent.name} is updating events`}>
+          <Card frame title="Event library" info="Every event defined for this forecast. Each one is reusable across scenarios."
+            right={<Seg label="Filter" value={filterMode} onChange={setFilterMode} options={[{ id: 'scenario', label: `In ${sel.name} (${c.events.length})` }, { id: 'all', label: `All (${events.length})` }]} />}>
+            {displayed.length === 0
+              ? <p className="px-4 py-10 text-center text-[13px] text-text-3">{filterMode === 'scenario' ? `No events applied to ${sel.name}. Switch to all events, or add one.` : 'No events in the library yet.'}</p>
+              : <ul className="divide-y divide-border">{displayed.map(e => (
+                  <EventRow key={e.id} e={e} scenarios={scenarios} editing={form?.id === e.id} focused={agent.field === e.id}
+                    onEdit={() => setForm(structuredClone(e))} onDup={() => dup(e)} onDel={() => del(e)} onScenarios={onScenarios} />))}</ul>}
+          </Card>
         </AgentFrame>
-        {form && <EventForm key={form.id || 'new'} initial={form} onSave={save} onCancel={() => setForm(null)} model={model} work={work.layer} metric={metric} />}
       </div>
+
+      {form && <EventForm key={form.id || 'new'} initial={form} onSave={save} onCancel={() => setForm(null)} model={model} work={work.layer} metric={metric} />}
       <p className="rounded-md border border-dashed border-border-strong bg-surface px-4 py-3 text-[13px] text-text-2">Testing “share 2 points higher”? Use <b>Sensitivity</b>, not an event.</p>
     </div>
+  )
+}
+
+const evIconBtn = 'grid h-7 w-7 shrink-0 place-items-center rounded-md text-text-3 transition-colors hover:bg-surface-2 hover:text-text'
+const evChip = 'inline-flex items-center gap-1 rounded-full bg-surface-2 px-2 py-0.5 text-[11.5px] text-text-2'
+
+/** One library entry: what the event is, when it lands, what it moves, and which scenarios currently run it. */
+function EventRow({ e, scenarios, editing, focused, onEdit, onDup, onDel, onScenarios }: {
+  e: EventDef; scenarios: Scenario[]; editing: boolean; focused: boolean
+  onEdit: () => void; onDup: () => void; onDel: () => void; onScenarios: () => void }) {
+  const used = scenarios.filter(s => s.active.includes(e.id))
+  const span = e.impacts.find(i => i.duration)?.duration
+  const mech = e.sub === 'List Price (WAC) Change' ? 'List · moves gross' : e.sub === 'Gross-to-Net / Rebate Change' ? 'GTN · moves net, not gross' : null
+  return (
+    <li className={cx('px-3 py-3', editing && 'bg-brand-soft/40', focused && 'agent-row')}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="text-[14px] font-semibold text-text">{e.name}</p>
+          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-text-2">
+            <Tag tone={typeTone(e.type)}>{e.type}</Tag>
+            {e.sub && <span>{e.sub}{e.mfn && ` · ${e.mfn}`}</span>}
+            <span>{mLong(e.date)} · {span ? `${span} months` : 'open-ended'}</span>
+            <span>{e.prob}% likely</span>
+          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            {e.impacts.map(i => <span key={i.metric} className={evChip}>{DRV[i.metric].label}<b className={cx('font-mono font-semibold', i.dir === 'up' ? 'text-ok' : 'text-err')}>{i.dir === 'up' ? '+' : '−'}{i.mag}%</b></span>)}
+            {mech && <span className={evChip}>{mech}</span>}
+            {e.every && <span className={evChip}>every {e.every === 6 ? '6 months' : 'year'}</span>}
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[12px] text-text-2">
+            {used.length > 0
+              ? <>Used in {used.map(s => <span key={s.id} className="rounded-full border border-brand/40 px-2 py-0.5 text-[11.5px] font-medium text-brand">{s.name}</span>)}</>
+              : <span className="text-text-3">Used in no scenario yet</span>}
+            <button type="button" onClick={onScenarios} className="font-semibold text-brand hover:underline">Switch on or off in Scenarios</button>
+          </div>
+        </div>
+        <div className="flex shrink-0 items-center gap-0.5">
+          <button type="button" onClick={onEdit} aria-label={`Edit ${e.name}`} title="Edit" className={evIconBtn}><Pencil size={14} /></button>
+          <button type="button" onClick={onDup} aria-label={`Duplicate ${e.name}`} title="Duplicate" className={evIconBtn}><Copy size={14} /></button>
+          <button type="button" onClick={onDel} aria-label={`Delete ${e.name} from the library`} title="Delete from the library" className={cx(evIconBtn, 'hover:bg-err-soft hover:text-err')}><Trash2 size={14} /></button>
+        </div>
+      </div>
+    </li>
   )
 }
 

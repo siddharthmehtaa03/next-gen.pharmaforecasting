@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Area, CartesianGrid, ComposedChart, Line, ReferenceLine, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { ChartTip, tipProps } from '../../chart/ChartTip'
@@ -6,6 +6,7 @@ import type { TipRow } from '../../chart/ChartTip'
 import { Bookmark, EllipsisVertical, Info } from 'lucide-react'
 import { ChartActions } from '../../chart/ChartActions'
 import { useInsights } from './insightsCtx'
+import { Overlay } from '../../components/Overlay'
 import { ACT, N, START_YEAR, mLabel, mLong } from './engine'
 
 export const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ')
@@ -19,25 +20,18 @@ export type MenuItem = { label: string; icon?: ReactNode; onClick: () => void; d
 /** Three-dot menu for row and card actions (edit, copy, delete…), same trigger as the chart actions menu. */
 export function MoreMenu({ items, label = 'More actions', align = 'right' }: { items: MenuItem[]; label?: string; align?: 'left' | 'right' }) {
   const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const off = (e: Event) => { if (e instanceof KeyboardEvent ? e.key === 'Escape' : !ref.current?.contains(e.target as Node)) setOpen(false) }
-    document.addEventListener('mousedown', off); document.addEventListener('keydown', off)
-    return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', off) }
-  }, [open])
+  const btn = useRef<HTMLButtonElement>(null)
+  const close = useCallback(() => setOpen(false), [])
   return (
-    <div ref={ref} className="relative shrink-0">
-      <button type="button" title={label} aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(v => !v)}
+    <div className="shrink-0">
+      <button ref={btn} type="button" title={label} aria-label={label} aria-haspopup="menu" aria-expanded={open} onClick={() => setOpen(v => !v)}
         className="grid h-8 w-8 place-items-center rounded-lg border border-border bg-surface text-text-2 transition-colors hover:border-border-strong hover:text-text"><EllipsisVertical size={15} /></button>
-      {open && (
-        <div role="menu" className={cx('dropdown-container rise absolute top-full z-50 mt-1 min-w-44 py-1', align === 'right' ? 'right-0' : 'left-0')}>
-          {items.map(it => (
-            <button key={it.label} type="button" role="menuitem" disabled={it.disabled} onClick={() => { setOpen(false); it.onClick() }}
-                  className={cx('flex w-full items-center gap-2 whitespace-nowrap px-3 py-1.5 text-left text-[14px] hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent', it.danger ? 'text-err hover:!bg-err-soft' : 'text-text')}>{it.icon}{it.label}</button>
-          ))}
-        </div>
-      )}
+      <Overlay anchor={btn} open={open} onClose={close} align={align} width={176}>
+        {items.map(it => (
+          <button key={it.label} type="button" role="menuitem" disabled={it.disabled} onClick={() => { setOpen(false); it.onClick() }}
+                className={cx('flex w-full items-center gap-2 whitespace-nowrap px-3 py-1.5 text-left text-[14px] hover:bg-surface-2 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent', it.danger ? 'text-err hover:!bg-err-soft' : 'text-text')}>{it.icon}{it.label}</button>
+        ))}
+      </Overlay>
     </div>
   )
 }
@@ -70,14 +64,14 @@ export function Card({ title, sub, info, right, children, className, pad = true,
   /** Muted outer frame around a white inner panel for the body, titlebar sitting on the frame itself. */
   frame?: boolean }) {
   return (
-    <section className={cx('min-w-0 border border-border', frame ? 'rounded-xl bg-surface-2' : 'rounded-[20px] bg-surface shadow-card', fill && 'flex h-full flex-col', className)}>
-      {title && <header className={cx('flex flex-wrap items-center justify-between gap-3 pb-0.5', frame ? 'px-3 pt-2.5' : 'px-4 pt-3.5')}>
+    <section className={cx('min-w-0', frame ? '' : 'rounded-[20px] border border-border bg-surface shadow-card', fill && 'flex h-full flex-col', className)}>
+      {title && <header className={cx('flex flex-wrap items-center justify-between gap-3 pb-0.5', frame ? 'px-0.5 pb-1' : 'px-4 pt-3.5')}>
         <div className="min-w-0">
           <h3 className="flex items-center gap-1.5 text-[15px] font-semibold">{title}{info && <InfoTip text={info} />}</h3>
           {sub && <p className="mt-0.5 text-[13px] text-text-3">{sub}</p>}
         </div>{right}</header>}
-      <div className={cx(pad && (frame ? 'px-1.5 pb-2.5 pt-1.5' : title ? 'px-4 pb-4 pt-3' : 'p-4'), fill && 'flex min-h-0 flex-1 flex-col')}>
-        {frame ? <div className={cx('rounded-lg bg-surface p-2.5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]', fill && 'flex min-h-0 flex-1 flex-col')}>{children}</div> : children}
+      <div className={cx(pad && (frame ? '' : title ? 'px-4 pb-4 pt-3' : 'p-4'), fill && 'flex min-h-0 flex-1 flex-col')}>
+        {frame ? <div className={cx('rounded-xl bg-surface p-3 shadow-card', fill && 'flex min-h-0 flex-1 flex-col')}>{children}</div> : children}
       </div>
     </section>
   )
@@ -85,6 +79,43 @@ export function Card({ title, sub, info, right, children, className, pad = true,
 export function Tag({ tone = 'neutral', children }: { tone?: 'neutral' | 'brand' | 'ok' | 'warn' | 'err'; children: ReactNode }) {
   return <span className={cx('tag inline-flex items-center gap-1.5 whitespace-nowrap rounded-full px-2 py-0.5 text-[11px] font-semibold', tone === 'neutral' && 'bg-surface-2 text-text-2', tone === 'brand' && 'bg-brand-soft text-brand', tone === 'ok' && 'bg-ok-soft text-ok', tone === 'warn' && 'bg-warn-soft text-warn', tone === 'err' && 'bg-err-soft text-err')}>{children}</span>
 }
+/** Heading for one section of the assumptions list: the part of the model it covers, and the question it answers. */
+export function GroupHead({ title, sub, className }: { title: string; sub?: string; className?: string }) {
+  return (
+    <div className={cx('px-1 pb-2 pt-5', className)}>
+      <p className="text-[12.5px] font-semibold text-text">{title}</p>
+      {sub && <p className="text-[11px] text-text-3">{sub}</p>}
+    </div>
+  )
+}
+
+/** One row of the assumptions list: the step it covers, its name, and the value with a secondary figure.
+ *  Locked inputs are flat and unclickable; editable ones carry a border and select on click. */
+export function AssumptionCard({ step, label, value, sub, locked, changed, on, onClick, title, className }: {
+  step?: string; label: ReactNode; value?: ReactNode; sub?: ReactNode
+  locked?: boolean; changed?: boolean; on?: boolean; onClick?: () => void; title?: string; className?: string }) {
+  const cls = cx('relative flex w-full min-w-0 items-center justify-between gap-2 rounded-lg border px-3 py-2.5 text-left transition-[border-color,box-shadow]',
+    on ? 'border-brand bg-surface shadow-[var(--ring-glow-strong)]'
+      : locked ? 'border-transparent bg-surface-2'
+      : cx('border-border bg-surface', onClick && 'hover:border-border-strong'), className)
+  const body = (
+    <>
+      <span className="min-w-0">
+        {step && <span className="block truncate text-[10px] font-semibold uppercase tracking-wider text-text-3">{step}</span>}
+        <span className="block truncate text-[13px] font-medium text-text">{label}</span>
+      </span>
+      <span className="flex shrink-0 flex-col items-end">
+        {value !== undefined && <span className="font-data text-[13px] font-semibold text-text">{value}</span>}
+        {sub && <span className="text-[11px] text-text-3">{sub}</span>}
+      </span>
+      {changed && <span aria-label="Modified" className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-warn" />}
+    </>
+  )
+  return onClick
+    ? <button type="button" onClick={onClick} aria-current={on ? 'true' : undefined} title={title} className={cls}>{body}</button>
+    : <div title={title} className={cls}>{body}</div>
+}
+
 export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
     <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className={cx('relative h-5 w-9 shrink-0 rounded-full transition-colors', on ? 'bg-brand' : 'bg-border-strong')}>
@@ -92,10 +123,10 @@ export function Toggle({ on, onChange, label }: { on: boolean; onChange: (v: boo
     </button>
   )
 }
-export function Seg<T extends string>({ value, options, onChange, label }: { value: T; options: { id: T; label: ReactNode }[]; onChange: (v: T) => void; label: string }) {
+export function Seg<T extends string>({ value, options, onChange, label }: { value: T; options: { id: T; label: ReactNode; disabled?: boolean; title?: string }[]; onChange: (v: T) => void; label: string }) {
   return (
     <div role="radiogroup" aria-label={label} className="inline-flex flex-wrap rounded-[14px] bg-surface-2 p-0.5">
-      {options.map(o => <button key={o.id} type="button" role="radio" aria-checked={value === o.id} onClick={() => onChange(o.id)} className={cx('rounded-[11px] px-2.5 py-1 text-[14px] font-medium transition-colors', value === o.id ? 'bg-surface text-text shadow-[0_1px_2px_rgba(16,24,40,0.1)]' : 'text-text-2 hover:text-text')}>{o.label}</button>)}
+      {options.map(o => <button key={o.id} type="button" role="radio" aria-checked={value === o.id} disabled={o.disabled} title={o.title} onClick={() => onChange(o.id)} className={cx('rounded-[11px] px-2.5 py-1 text-[14px] font-medium transition-colors', value === o.id ? 'bg-surface text-text shadow-[0_1px_2px_rgba(16,24,40,0.1)]' : 'text-text-2 hover:text-text', o.disabled && 'cursor-not-allowed opacity-40 hover:text-text-2')}>{o.label}</button>)}
     </div>
   )
 }

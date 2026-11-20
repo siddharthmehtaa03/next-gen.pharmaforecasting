@@ -61,8 +61,8 @@ function Pill({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neu
 }
 function Panel({ title, sub, right, children, className, frame = false }: { title: string; sub?: string; right?: ReactNode; children: ReactNode; className?: string; frame?: boolean }) {
   return (
-    <section className={cx('min-w-0', frame ? 'rounded-xl border border-border bg-surface-2 p-1.5 shadow-card' : 'rounded-lg border border-border bg-surface', className)}>
-      <div className={cx(frame && 'rounded-lg bg-surface')}>
+    <section className={cx('min-w-0', frame ? '' : 'rounded-lg border border-border bg-surface', className)}>
+      <div className={cx(frame && 'rounded-xl bg-surface shadow-card')}>
         <header className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-b border-border px-5 py-3.5"><div className="min-w-0"><h3 className="text-[15px] font-semibold">{title}</h3>{sub && <p className="text-xs text-text-2">{sub}</p>}</div>{right && <div className="flex flex-wrap items-center gap-2">{right}</div>}</header>
         <div className="p-5">{children}</div>
       </div>
@@ -325,12 +325,12 @@ export function ScenarioWorkspace(p: WorkspaceProps) {
   }
 
   return (
-    <div className="workspace-page rise py-7">
+    <div className="workspace-page rise pb-7 pt-6">
       <button type="button" onClick={p.onBack} className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-text-2 hover:text-brand"><ArrowLeft size={15} />{p.cycleName}</button>
       <PageHeader className="items-start">
         <div className="min-w-0">
           <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Scenario workspace · {p.brand}</p>
-          <div className="flex flex-wrap items-center gap-2"><h1 className="text-[28px] font-semibold tracking-tight">{id}</h1><Pill tone={p.submitted ? 'ok' : 'neutral'}>{readOnly ? 'Read-only' : p.submitted ? 'Submitted' : 'Draft'}</Pill><Pill>Model {p.version}</Pill></div>
+          <div className="flex flex-wrap items-center gap-2"><h1 className="text-[22px] font-semibold tracking-tight">{id}</h1><Pill tone={p.submitted ? 'ok' : 'neutral'}>{readOnly ? 'Read-only' : p.submitted ? 'Submitted' : 'Draft'}</Pill><Pill>Model {p.version}</Pill></div>
           <p className="mt-1 text-sm text-text-2">{readOnly ? 'The locked statistical baseline. Copy it into a new scenario to make changes.' : overrideCount ? `${overrideCount} override${overrideCount > 1 ? 's' : ''} · ${signed(cur - trendTotal)}M vs baseline over FY26–30` : 'Generated from its own assumptions and inputs. Adjust them in the tabs below and the result updates.'}</p>
         </div>
         <div className="relative flex flex-wrap items-center gap-2">

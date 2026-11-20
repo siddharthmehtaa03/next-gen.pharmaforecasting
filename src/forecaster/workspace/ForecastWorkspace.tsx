@@ -1,10 +1,11 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { ComponentType } from 'react'
+import type { ComponentType, ReactNode } from 'react'
 import { scrollFrameTop } from '../../frame'
-import { ArrowRight, Check, ChevronDown, Eye, EyeOff, PanelRightOpen, Plus, Save } from 'lucide-react'
+import { ArrowRight, Check, ChevronDown, Eye, EyeOff, House, PanelRightClose, PanelRightOpen, Save } from 'lucide-react'
 import { ACT, DEFAULT_MODEL, DRV, FY, N, SEED_EVENTS, SEED_SCENARIOS, UNBIASED, defaultEdit, fyAvg, fySum, revenue, scenarioLayer, workingLayer } from './engine'
 import type { DriverId, EventDef, ModelCfg, OutputId, Scenario } from './engine'
-import { Btn, PageHeader, PageTitle, cx, field } from './ui'
+import { Btn, Card, PageHeader, PageTitle, cx, field } from './ui'
+import { Overlay } from '../../components/Overlay'
 import type { Grain } from './ui'
 import { DriverWorkspace, ForecastMap } from './Drivers'
 import { FunnelChart, funnelLevels } from './FunnelChart'
@@ -18,7 +19,7 @@ import type { Calc } from './Stages'
 import { ActualKpis } from './Actuals'
 import { PerformanceView } from './Performance'
 import { BridgesView } from './Bridges'
-import { ModuleView, ueDefault, ueFy } from './Modules'
+import { ModuleView, WOH_DEFAULT, ueDefault, ueFy } from './Modules'
 import type { ModId } from './Modules'
 import { InsightsCtx } from './insightsCtx'
 import type { SaveReq } from './insightsCtx'
@@ -29,30 +30,33 @@ import type { AgentView, CopilotProps } from './agent'
 import { RotateCcw } from 'lucide-react'
 
 type View = AgentView
-// Scenarios are created inside the Forecast workspace (ScenarioBar), so there is no separate step for them.
-const STEPS: View[] = ['Assumptions', 'Events', 'Summary', 'Sensitivity', 'Goal seek', 'Review']
+const STEPS: View[] = ['Assumptions', 'Events', 'Scenarios', 'Summary', 'Sensitivity', 'Goal seek', 'Review']
 // Tab names shown to forecasters; internal ids stay stable for the assistant.
 // CR-004: analytics layer below the workflow tabs. Tab content is defined in follow-up change requests.
 const ANALYTICS = ['Performance Dashboard', 'Financial Bridges', 'Patient Funnel', 'Sales Drivers', 'Judgement Layer', 'Long Range Plan', 'Competition', 'Needs-to-Meet', 'GTN Analysis']
 // Only these views are built; the rest show as coming soon and can't be opened.
 const AN_BUILT = ['Performance Dashboard', 'Financial Bridges']
 // Analytics views live in a separate dropdown below the workflow tabs.
-// 'Scenario' stays in GROUPS (for the assistant's own `view` lookups) but is left out of the rendered tab bar below.
 const GROUPS: { id: string; items: string[] }[] = [
   { id: 'Forecast workspace', items: ['Assumptions'] },
-  { id: 'Events', items: ['Events'] }, { id: 'Scenario summary', items: ['Summary'] },
+  { id: 'Events', items: ['Events'] }, { id: 'Scenario', items: ['Scenarios'] },
+  { id: 'Scenario summary', items: ['Summary'] },
   { id: 'Sensitivity', items: ['Sensitivity'] }, { id: 'Goal seek', items: ['Goal seek'] }, { id: 'Review', items: ['Review'] },
-  { id: 'Scenario', items: ['Scenarios'] },
 ]
 const LABEL: Record<View, string> = { Assumptions: 'Forecast workspace', Events: 'Events', Scenarios: 'Scenario', Sensitivity: 'Sensitivity', 'Goal seek': 'Goal seek', Summary: 'Scenario summary', Review: 'Review' }
 const NEXT: Partial<Record<View, View>> = Object.fromEntries(STEPS.slice(0, -1).map((v, i) => [v, STEPS[i + 1]!]))
 
-export default function ForecastWorkspace({ notify, brand = 'Nurtec', brandId = 'nurtec', cycle = 'AOP 2027', stream = 'US net revenue', model = DEFAULT_MODEL, insights, setInsights, onAsk, Copilot, assistant = 'Charles', onPublished }: { notify: Notify; brand?: string; brandId?: string; cycle?: string; stream?: string; model?: ModelCfg; insights: Insight[]; setInsights: (f: (x: Insight[]) => Insight[]) => void; onAsk?: (brandId?: string) => void; Copilot?: ComponentType<CopilotProps>; assistant?: string
+export default function ForecastWorkspace({ notify, brand = 'Nurtec', brandId = 'nurtec', cycle = 'AOP 2027', stream = 'US net revenue', model = DEFAULT_MODEL, insights, setInsights, onAsk, Copilot, assistant = 'Charles', onPublished, onBack, topRight }: { notify: Notify; brand?: string; brandId?: string; cycle?: string; stream?: string; model?: ModelCfg; insights: Insight[]; setInsights: (f: (x: Insight[]) => Insight[]) => void; onAsk?: (brandId?: string) => void; Copilot?: ComponentType<CopilotProps>; assistant?: string
   /** Called when a scenario is finalised: files it as the brand's submitted version for Forecast AI. */
-  onPublished?: (brandId: string, scenario: string) => void }) {
+  onPublished?: (brandId: string, scenario: string) => void
+  /** Returns to the brand list; shown as the leading control in the merged top bar. */
+  onBack?: () => void
+  /** App-level controls (notifications) shown at the right end of the top bar. */
+  topRight?: ReactNode }) {
   const [view, setView] = useState<View>('Assumptions')
   const [an, setAn] = useState<string | null>(null)
   const [ue, setUe] = useState(ueDefault)
+  const [woh, setWoh] = useState(WOH_DEFAULT)
   // A default module picked in the forecast map replaces the driver view; picking a driver clears it.
   const [mod, setMod] = useState<ModId | null>(null)
   const [mapOpen, setMapOpen] = useState(true)
@@ -72,6 +76,7 @@ export default function ForecastWorkspace({ notify, brand = 'Nurtec', brandId = 
   const [modelTab, setModelTab] = useState<'model' | 'versions'>('model')
   const [modelHidden, setModelHidden] = useState(false)
   const [scenarioBuilderOpen, setScenarioBuilderOpen] = useState(false)
+  const [assumptionsOpen, setAssumptionsOpen] = useState(true)
   const [presenting, setPresenting] = useState(false)
   const [driverDirty, setDriverDirty] = useState(false)
   const actions = useRef<DriverActions | null>(null)
@@ -121,13 +126,8 @@ export default function ForecastWorkspace({ notify, brand = 'Nurtec', brandId = 
   const group = an ? 'Analytics' : GROUPS.find(g => g.items.includes(view))!.id
   const subs = GROUPS.find(g => g.id === group)?.items ?? []
   const [anMenu, setAnMenu] = useState(false)
-  const anRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!anMenu) return
-    const off = (e: Event) => { if (e instanceof KeyboardEvent ? e.key === 'Escape' : !anRef.current?.contains(e.target as Node)) setAnMenu(false) }
-    document.addEventListener('mousedown', off); document.addEventListener('keydown', off)
-    return () => { document.removeEventListener('mousedown', off); document.removeEventListener('keydown', off) }
-  }, [anMenu])
+  const anRef = useRef<HTMLButtonElement>(null)
+  const closeAnMenu = useCallback(() => setAnMenu(false), [])
   const pick = (s: Sel) => { if ((s !== sel || mod) && leaveOk()) selDriver(s) }
   const onDirty = useCallback((v: boolean) => setDriverDirty(v), [])
   const mapView = view === 'Assumptions'
@@ -153,42 +153,39 @@ export default function ForecastWorkspace({ notify, brand = 'Nurtec', brandId = 
     <InsightsCtx.Provider value={{ save: saveInsight }}>
     <AgentFocusCtx.Provider value={{ ...agent.focus, name: assistant }}>
     {Copilot && <Copilot {...agent.copilot(() => show('Review'))} />}
-    <div className="min-h-full bg-bg">
+    <div className="min-h-full bg-surface-2">
       {!presenting && (
-        <div className="sticky top-0 z-30 border-b border-border bg-surface/95 backdrop-blur">
+        <div className="sticky top-0 z-30 border-b border-border bg-surface">
           {/* Two levels: a few global tabs, and one sub-tab row for the active group. */}
-          <nav data-tour="tabs" aria-label="Forecast sections" className="workspace-gutter">
-            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 py-2">
-              <div role="tablist" className="flex flex-wrap items-center gap-0.5">
-                {GROUPS.filter(g => g.id !== 'Scenario').map(g => (
+          <nav data-tour="tabs" aria-label="Forecast sections" className="px-6">
+            <div className="flex min-h-14 flex-wrap items-center gap-x-4 gap-y-2 py-2">
+              {onBack && <button type="button" onClick={onBack} aria-label="Back to my forecasts" title="Back to my forecasts" className="-ml-2 grid h-9 w-9 shrink-0 place-items-center rounded-lg text-text hover:bg-surface-2"><House size={20} /></button>}
+              <div role="tablist" className="flex flex-1 flex-wrap items-center justify-center gap-x-1">
+                {GROUPS.map(g => (
                   <button key={g.id} type="button" role="tab" aria-selected={g.id === group} onClick={() => g.id !== group && go(g.items[0] as View)}
-                    className={cx('inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-medium transition-colors', g.id === group ? 'bg-[#f1f1f3] text-text shadow-[inset_0_0_0_1px_rgba(16,24,40,0.04)]' : 'text-text-2 hover:bg-black/[0.04] hover:text-text')}>
+                    className={cx('relative inline-flex h-9 items-center whitespace-nowrap px-3 text-[14px] font-medium transition-colors', g.id === group ? 'text-text after:absolute after:inset-x-3 after:-bottom-2 after:h-0.5 after:rounded-full after:bg-brand' : 'text-text-2 hover:text-text')}>
                     {g.id}</button>
                 ))}
                 {/* Analytics views live in one dropdown so they don't crowd the workflow tabs. */}
-                <div ref={anRef} className="relative">
-                  <button data-tour="analytics" type="button" role="tab" aria-selected={group === 'Analytics'} aria-haspopup="menu" aria-expanded={anMenu} onClick={() => setAnMenu(v => !v)}
-                    className={cx('inline-flex h-8 items-center gap-1.5 whitespace-nowrap rounded-lg px-2.5 text-[13px] font-medium transition-colors', group === 'Analytics' ? 'bg-[#f1f1f3] text-text shadow-[inset_0_0_0_1px_rgba(16,24,40,0.04)]' : 'text-text-2 hover:bg-black/[0.04] hover:text-text')}>
-                    {an ? `Analytics · ${an}` : 'Analytics'}<ChevronDown size={14} className={cx('transition-transform', anMenu && 'rotate-180')} /></button>
-                  {anMenu && <>
-                    <div role="menu" className="dropdown-container rise absolute left-0 top-full z-50 mt-1 w-60 overflow-hidden py-1">
-                      <p className="px-3 pb-1 pt-1.5 text-[12px] text-text-3">Analytics views · read-only</p>
-                      {ANALYTICS.map(a => !AN_BUILT.includes(a)
-                        ? <span key={a} role="menuitem" aria-disabled="true" title="Coming soon" className="flex w-full cursor-not-allowed items-center justify-between px-3 py-1.5 text-[13px] text-text-3">{a}<span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-text-3">Coming soon</span></span>
-                        : <button key={a} type="button" role="menuitem" onClick={() => { setAnMenu(false); openAn(a) }}
-                        className={cx('flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px] hover:bg-surface-2', an === a ? 'font-medium text-text' : 'text-text-2')}>{a}{an === a && <Check size={14} className="text-brand" />}</button>)}
-                    </div>
-                  </>}
-                </div>
+                <button ref={anRef} data-tour="analytics" type="button" role="tab" aria-selected={group === 'Analytics'} aria-haspopup="menu" aria-expanded={anMenu} onClick={() => setAnMenu(v => !v)}
+                  className={cx('relative inline-flex h-9 items-center gap-1 whitespace-nowrap px-3 text-[14px] font-medium transition-colors', group === 'Analytics' ? 'text-text after:absolute after:inset-x-3 after:-bottom-2 after:h-0.5 after:rounded-full after:bg-brand' : 'text-text-2 hover:text-text')}>
+                  {an ? `Analytics · ${an}` : 'Analytics'}<ChevronDown size={14} className={cx('transition-transform', anMenu && 'rotate-180')} /></button>
+                <Overlay anchor={anRef} open={anMenu} onClose={closeAnMenu} align="left" width={240}>
+                  <p className="px-3 pb-1 pt-1.5 text-[12px] text-text-3">Analytics views · read-only</p>
+                  {ANALYTICS.map(a => !AN_BUILT.includes(a)
+                    ? <span key={a} role="menuitem" aria-disabled="true" title="Coming soon" className="flex w-full cursor-not-allowed items-center justify-between px-3 py-1.5 text-[13px] text-text-3">{a}<span className="rounded-md bg-surface-2 px-1.5 py-0.5 text-[11px] font-medium text-text-3">Coming soon</span></span>
+                    : <button key={a} type="button" role="menuitem" onClick={() => { setAnMenu(false); openAn(a) }}
+                    className={cx('flex w-full items-center justify-between px-3 py-1.5 text-left text-[13px] hover:bg-surface-2', an === a ? 'font-medium text-text' : 'text-text-2')}>{a}{an === a && <Check size={14} className="text-brand" />}</button>)}
+                </Overlay>
               </div>
-              <label className="ml-auto flex shrink-0 items-center gap-2">
-                <span className="text-[11px] font-medium text-text-2">Revenue stream</span>
-                <select aria-label="Revenue stream" value={streamSelection} onChange={e => setStreamSelection(e.target.value)}
-                  className="h-8 min-w-[140px] rounded-md border border-border-strong bg-surface px-2.5 text-[14px] text-text outline-none focus:border-brand focus:ring-2 focus:ring-brand/15">
+              <div className="flex shrink-0 items-center gap-2">
+                <select aria-label="Revenue stream" title="Revenue stream" value={streamSelection} onChange={e => setStreamSelection(e.target.value)}
+                  className="h-9 min-w-[160px] rounded-lg border border-border bg-surface px-2.5 text-[13px] text-text outline-none focus:border-brand focus:ring-2 focus:ring-brand/15">
                   <option value="all">All streams (roll-up)</option>
                   {stream && stream !== 'All streams (roll-up)' && <option value="current">{stream}</option>}
                 </select>
-              </label>
+                {topRight}
+              </div>
             </div>
           </nav>
           {subs.length > 1 && (
@@ -234,10 +231,10 @@ export default function ForecastWorkspace({ notify, brand = 'Nurtec', brandId = 
         </div>
       ) : <>
       {mapView && !presenting && (
-        <div className="workspace-gutter pt-4">
+        <div className="workspace-gutter pt-6">
           <PageHeader>
             <PageTitle title="Forecast Workspace" />
-            <Btn onClick={() => setScenarioBuilderOpen(true)} icon={<Plus size={14} />} className="shrink-0">New scenario</Btn>
+            <Btn variant="secondary" onClick={() => setAssumptionsOpen(v => !v)} icon={assumptionsOpen ? <PanelRightClose size={14} /> : <PanelRightOpen size={14} />} className="shrink-0">{assumptionsOpen ? 'Hide assumptions' : 'Show assumptions'}</Btn>
           </PageHeader>
         </div>
       )}
@@ -259,28 +256,29 @@ export default function ForecastWorkspace({ notify, brand = 'Nurtec', brandId = 
           onClose={() => setScenarioBuilderOpen(false)}
         />
       )}
-      <div className={cx('workspace-gutter pb-8 pt-4', mapView && !presenting && 'grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)]')}>
+      <div className={cx('workspace-gutter pb-8 pt-6', mapView && !presenting && 'grid gap-6 lg:grid-cols-[300px_minmax(0,1fr)]')}>
         {mapView && (
-          <aside aria-label="Assumptions" className="flex min-w-0 flex-col gap-2 rounded-xl bg-surface-2 p-2 lg:sticky lg:top-[98px] lg:self-start lg:h-[calc(100dvh-220px)]">
-            <h3 className="px-1 text-[13px] font-semibold">Assumptions</h3>
-            <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-              <FunnelChart levels={funnelLevels(work.layer, model, edits)} sel={mod ? null : (sel as DriverId)} onSel={pick}
-                startLabel={model.start.label} startValue={model.start.value} />
-              <ForecastMap sel={sel} onSel={pick} edits={edits} working={work.layer} model={model} metric={metric} mod={mod} onMod={m => { if (m !== mod && leaveOk()) setMod(m) }} uePct={ueFy(ue)} onCollapse={undefined} funnelHandled />
-            </div>
+          <aside aria-label="Assumptions" className="min-w-0 lg:sticky lg:top-[80px] lg:self-start lg:h-[calc(100dvh-240px)]">
+            <Card title="Assumptions" sub="Pick an input to edit it alongside the chart." frame fill>
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <FunnelChart levels={funnelLevels(work.layer, model, edits)} sel={mod ? null : (sel as DriverId)} onSel={pick}
+                  startLabel={model.start.label} startValue={model.start.value} embedded />
+                <ForecastMap sel={sel} onSel={pick} edits={edits} working={work.layer} model={model} metric={metric} mod={mod} onMod={m => { if (m !== mod && leaveOk()) setMod(m) }} uePct={ueFy(ue)} onCollapse={undefined} funnelHandled embedded />
+              </div>
+            </Card>
           </aside>
         )}
         <main className="min-w-0">
-          {mapView && mod && <ModuleView id={mod} net={work.fy} gp={fyAvg(work.layer.price)} ue={ue} setUe={setUe} editable={view === 'Assumptions'} onEdit={() => go('Assumptions')} />}
+          {mapView && mod && <ModuleView id={mod} net={work.fy} gp={fyAvg(work.layer.price)} ue={ue} setUe={setUe} woh={woh} setWoh={setWoh} layer={work.layer} editable={view === 'Assumptions'} onEdit={() => go('Assumptions')} />}
           {mapView && !mod && (view === 'Assumptions' && scope !== FORECAST && sel !== 'rev'
             ? <ScenarioDriverView id={sel} scenario={scenarios.find(s => s.id === scope)!} setScenarios={setScenarios} work={work.layer} layer={calc[scope]!.layer} events={events} model={model} notify={notify} />
             : <DriverWorkspace mode="assumptions" sel={sel} edits={edits} setEdits={setEdits}
-                grain={wsGrain} setGrain={setWsGrain}
+                grain={wsGrain} setGrain={setWsGrain} panelOpen={assumptionsOpen}
                 bar={view === 'Assumptions' ? <ScenarioBar scenarios={scenarios} scope={scope} setScope={setScope} year={wsYear} setYear={setWsYear} grain={wsGrain} setGrain={setWsGrain} /> : undefined}
                 scenarioLayer={sc.layer} scenarioName={scName} workingLayer={work.layer} model={model} metric={metric} setMetric={setMetric}
                 onOpenAssumptions={() => go('Assumptions')} onGo={() => go('Assumptions')} onDirty={onDirty} actions={actions} notify={notify} />)}
           {view === 'Scenarios' && <ScenariosStage events={events} scenarios={scenarios} setScenarios={setScenarios} selId={selId} setSelId={setSelId} calc={calc} workFy={work.fy} model={model} metric={metric} setMetric={setMetric} toggleFinal={toggleFinal} notify={notify} />}
-          {view === 'Events' && <EventsStage events={events} setEvents={setEvents} scenarios={scenarios} setScenarios={setScenarios} calc={calc} selId={selId} setSelId={setSelId} model={model} metric={metric} setMetric={setMetric} modified={modified} notify={notify} onNext={() => go('Sensitivity')} />}
+          {view === 'Events' && <EventsStage events={events} setEvents={setEvents} scenarios={scenarios} setScenarios={setScenarios} calc={calc} selId={selId} setSelId={setSelId} model={model} metric={metric} setMetric={setMetric} modified={modified} notify={notify} onNext={() => go('Sensitivity')} onScenarios={() => go('Scenarios')} />}
           {view === 'Sensitivity' && <SensitivityStage scenarios={scenarios} setScenarios={setScenarios} calc={calc} selId={selId} setSelId={setSelId} model={model} notify={notify} />}
           {view === 'Goal seek' && <GoalSeekStage scenarios={scenarios} setScenarios={setScenarios} calc={calc} selId={selId} setSelId={setSelId} model={model} notify={notify} onNext={() => go('Summary')} />}
           {view === 'Summary' && <ScenarioSummary uePct={ueFy(ue)} scenarios={scenarios} setScenarios={setScenarios} calc={calc} events={events} selId={selId} setSelId={setSelId} model={model} notify={notify} renderPart={part => <ScenariosStage events={events} scenarios={scenarios} setScenarios={setScenarios} selId={selId} setSelId={setSelId} calc={calc} workFy={work.fy} model={model} metric={metric} setMetric={setMetric} toggleFinal={toggleFinal} notify={notify} part={part} />} />}
@@ -308,7 +306,7 @@ export default function ForecastWorkspace({ notify, brand = 'Nurtec', brandId = 
             </div>
             {modelTab === 'model' ? (
               <FullModelGrid layer={work.layer} reference={UNBIASED} year={wsYear} title={scope === FORECAST ? 'Active forecast' : scName} hidden={modelHidden}
-                editable={scope === FORECAST ? model.modules.filter(m => m.editable).map(m => m.id) : []} ue={ue} selected={mod ? null : (sel as string)}
+                editable={scope === FORECAST ? model.modules.filter(m => m.editable).map(m => m.id) : []} ue={ue} woh={woh} selected={mod ? null : (sel as string)}
                 onRow={go2 => { const d = model.modules.find(m => m.id === go2); if (d) pick(d.id) }}
                 onCell={updateModelCell} />
             ) : (

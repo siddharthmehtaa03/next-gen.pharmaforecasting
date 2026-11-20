@@ -45,7 +45,7 @@ export default function Dashboard() {
                   <p className="text-sm font-semibold">{name}</p>
                   <span className="rounded-full bg-surface-2 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wider text-text-3">{stage}</span>
                 </div>
-                <p className="mt-2 font-mono text-[28px] font-semibold tracking-tight">{value}</p>
+                <p className="mt-2 font-mono text-[22px] font-semibold tracking-tight">{value}</p>
                 <div className="mt-1 flex gap-3 text-xs font-semibold"><span className={tone(bud)}>{bud}</span><span className={tone(ly)}>{ly}</span></div>
                 <p className="mt-3 border-t border-border pt-3 text-xs leading-relaxed text-text-2">{note.join(' ')}</p>
               </article>

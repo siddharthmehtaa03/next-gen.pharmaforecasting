@@ -1,10 +1,11 @@
-import { Fragment, useEffect, useMemo, useRef, useState } from 'react'
-import { ArrowDown, ArrowUp, Check, ChevronDown, CircleCheck, CircleAlert, CircleMinus, GitBranch, Lock, Plus, Save, Target, Trash2, X, Zap } from 'lucide-react'
+import { Fragment, useCallback, useMemo, useRef, useState } from 'react'
+import { Overlay } from '../../components/Overlay'
+import { Check, ChevronDown, CircleCheck, CircleAlert, CircleMinus, GitBranch, GripVertical, Lock, Plus, Save, Target, Trash2, X, Zap } from 'lucide-react'
 import {
   ACT, BASELINE, CURVE_LABEL, DRV, FC_YEARS, FY, HORIZON_LABEL, MEASURE_LABEL, N, OUTPUTS, OVR_LABEL, UNBIASED,
-  adjusted, applyEvents, applyOverrides, bridge, describeOverride, fmtDelta, fmtRev, fmtV, funnelOf, fyAvg, goalSeekOrdered, netPrice, idxOf, mLong, measure,
+  adjusted, applyEvents, applyOverrides, bridge, describeOverride, fmtDelta, fmtRev, fmtV, funnelOf, fyAvg, netPrice, idxOf, mLong, measure,
 } from './engine'
-import type { Curve, DriverId, EventDef, Goal, GoalStep, Horizon, Layer, ModelCfg, OutputId, OvrKind, Override, Scenario } from './engine'
+import type { Curve, DriverId, EventDef, Horizon, Layer, ModelCfg, OutputId, OvrKind, Override, Scenario } from './engine'
 import { Btn, COLOR, Card, FiscalYearSelect, ForecastChart, Label, Legend, PageHeader, PageTitle, Seg, Tag, cx, field, InfoTip } from './ui'
 import type { ChartSeries } from './ui'
 import { NumField, Period } from './Drivers'
@@ -37,19 +38,8 @@ export function FunnelCompare({ scenarios, calc, selId, onSelect, model, default
     return Array.from(new Set([base, selId, ...scenarios.map(s => s.id)].filter((x): x is string => !!x))).slice(0, 4)
   })
   const [scenarioMenu, setScenarioMenu] = useState(false)
-  const scenarioMenuRef = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!scenarioMenu) return
-    const off = (e: Event) => {
-      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !scenarioMenuRef.current?.contains(e.target as Node)) setScenarioMenu(false)
-    }
-    document.addEventListener('mousedown', off)
-    document.addEventListener('keydown', off)
-    return () => {
-      document.removeEventListener('mousedown', off)
-      document.removeEventListener('keydown', off)
-    }
-  }, [scenarioMenu])
+  const scenarioMenuRef = useRef<HTMLButtonElement>(null)
+  const closeScenarioMenu = useCallback(() => setScenarioMenu(false), [])
   const live = picks.filter(id => calc[id])
   const [anchor, setAnchor] = useState(live[0] ?? scenarios[0]!.id)
   const anc = calc[anchor] ? anchor : live[0]!
@@ -70,14 +60,13 @@ export function FunnelCompare({ scenarios, calc, selId, onSelect, model, default
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
         <FiscalYearSelect value={year} years={FC_YEARS} onChange={setYear} />
         <InfoTip text={`Rates are FY${year} averages. Each driver’s dollar figure is its share of the net revenue gap, swapping drivers in funnel order, so the figures add up to the total.`} />
-        <div ref={scenarioMenuRef} className="relative">
-          <button type="button" aria-haspopup="menu" aria-expanded={scenarioMenu} aria-label={`Scenarios to compare, ${live.length} selected`}
+        <>
+          <button ref={scenarioMenuRef} type="button" aria-haspopup="menu" aria-expanded={scenarioMenu} aria-label={`Scenarios to compare, ${live.length} selected`}
             onClick={() => setScenarioMenu(open => !open)}
             className={cx('inline-flex h-9 items-center gap-2 rounded-lg border px-3 text-[14px] font-medium transition-colors', scenarioMenu ? 'border-border-strong bg-surface-2 text-text' : 'border-border-strong bg-surface text-text-2 hover:bg-surface-2 hover:text-text')}>
             Scenarios ({live.length})<ChevronDown size={15} className={cx('transition-transform', scenarioMenu && 'rotate-180')} />
           </button>
-          {scenarioMenu && (
-            <div role="menu" aria-label="Scenarios to compare" className="dropdown-container rise absolute left-0 top-full z-30 mt-1 w-64 p-1.5">
+          <Overlay anchor={scenarioMenuRef} open={scenarioMenu} onClose={closeScenarioMenu} align="left" width={256}>
               <p className="px-2 py-1.5 text-[12px] text-text-3">Choose up to 5 scenarios</p>
               {scenarios.map((s, k) => {
                 const selected = live.includes(s.id)
@@ -93,9 +82,8 @@ export function FunnelCompare({ scenarios, calc, selId, onSelect, model, default
                   </button>
                 )
               })}
-            </div>
-          )}
-        </div>
+          </Overlay>
+        </>
       </div>
       <div id={exportId} className="overflow-x-auto rounded-md border border-border bg-surface">
         <table className="w-full min-w-[720px] border-collapse text-[13px]">
@@ -260,6 +248,47 @@ const windowed = (l: Layer, cs: Change[], sign: 1 | -1 = 1): Layer => cs.reduce(
   return { ...acc, [c.driver]: s }
 }, l)
 const winAvg = (s: number[], from: number, to: number) => { const xs = s.slice(Math.max(ACT, from), Math.min(N - 1, to) + 1); return xs.reduce((a, b) => a + b, 0) / (xs.length || 1) }
+
+type LeverRow = { id: DriverId; on: boolean; weight: number; cap: number }
+const leverHow = (id: DriverId): 'pts' | 'pct' => DRV[id].pct ? 'pts' : 'pct'
+/** One target, several levers. Each ticked lever takes its weighted share of the gap, capped by its own limit,
+ *  then one scalar is bisected across all of them so the levers interacting still lands on the target. */
+function solveLevers(base: Layer, metric: OutputId, h: Horizon, target: number, rows: LeverRow[], start: number) {
+  const on = rows.filter(r => r.on && r.weight > 0)
+  const apply = (steps: { id: DriverId; step: number }[]) =>
+    windowed(base, steps.map(s => ({ id: s.id, driver: s.id, how: leverHow(s.id), step: s.step, from: start, to: N - 1 })))
+  const before = measure(metric, base, h), LIM = 400
+  // The step that would close the whole gap with this lever alone; the weights then divide it.
+  const full = on.map(r => {
+    const f = (x: number) => measure(metric, apply([{ id: r.id, step: x }]), h)
+    if (Math.abs(f(LIM) - f(-LIM)) < 1e-9) return 0
+    const up = f(LIM) > f(-LIM)
+    let lo = -LIM, hi = LIM
+    for (let k = 0; k < 60; k++) { const mid = (lo + hi) / 2; (f(mid) < target) === up ? lo = mid : hi = mid }
+    return (lo + hi) / 2
+  })
+  const wsum = on.reduce((a, r) => a + r.weight, 0) || 1
+  const at = (t: number) => on.map((r, i) => {
+    const want = t * (r.weight / wsum) * full[i]!
+    return { id: r.id, step: Math.sign(want) * Math.min(Math.abs(want), r.cap) }
+  })
+  const g = (t: number) => measure(metric, apply(at(t)), h) - target
+  const T = 60
+  let t = 0
+  if (on.length && Math.abs(g(0)) > 1e-9) {
+    if (g(0) * g(T) > 0) t = T
+    else { let lo = 0, hi = T; for (let k = 0; k < 60; k++) { const mid = (lo + hi) / 2; (g(mid) < 0) === (g(0) < 0) ? lo = mid : hi = mid } t = (lo + hi) / 2 }
+  }
+  const steps = at(t).map((s, i) => ({ ...s, weight: on[i]!.weight, cap: on[i]!.cap, capped: Math.abs(s.step) >= on[i]!.cap - 1e-6 }))
+  const layer = apply(steps), after = measure(metric, layer, h)
+  return { steps, layer, before, after, target, met: Math.abs(after - target) <= Math.max(1e-6, Math.abs(target) * 1e-3) }
+}
+if (import.meta.env.DEV) {
+  // Two levers at equal weight with room to move must land on the target, both pushing the same way.
+  const t0 = measure('rev', UNBIASED, FY) * 1.05
+  const r = solveLevers(UNBIASED, 'rev', FY, t0, [{ id: 'share', on: true, weight: 50, cap: 50 }, { id: 'diag', on: true, weight: 50, cap: 50 }], ACT)
+  console.assert(r.met && r.steps.every(s => s.step > 0), 'solveLevers: equal weights must reach the target')
+}
 const stepTxt = (c: Change) => `${c.step >= 0 ? '+' : '−'}${Math.abs(+c.step.toFixed(2))}${c.how === 'pts' ? (Math.abs(c.step) === 1 ? ' pt' : ' pts') : '%'}`
 const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 /** Month and year as two short pickers instead of one long list of months. */
@@ -290,6 +319,8 @@ export function SensitivityStage({ scenarios, setScenarios, calc, selId, setSelI
   const [pick, setPick] = useState<DriverId | null>(null)
   const [view, setView] = useState<'chart' | 'tornado'>('tornado')
   const [sensStream, setSensStream] = useState('all')
+  const [dragId, setDragId] = useState<string | null>(null)
+  const reorder = (from: number, to: number) => setChanges(cs => { const n = [...cs]; n.splice(to, 0, ...n.splice(from, 1)); return n })
   const patch = (id: string, p: Partial<Change>) => setChanges(cs => cs.map(c => {
     if (c.id !== id) return c
     const n = { ...c, ...p }
@@ -369,20 +400,25 @@ export function SensitivityStage({ scenarios, setScenarios, calc, selId, setSelI
                 <option value="primary">Primary stream · US net revenue</option>
               </select></label>
           </div>
-          <ol className="mt-4 space-y-2.5">
+          <ul className="mt-4 space-y-2.5">
             {changes.map((c, k) => {
               const d = DRV[c.driver], before = winAvg(base[c.driver], c.from, c.to), after = c.how === 'pts' ? before + c.step : before * (1 + c.step / 100)
               const isOpen = open === c.id
               return (
-                <li key={c.id} className={cx('overflow-hidden rounded-lg border bg-surface transition-colors', isOpen ? 'border-brand/40 shadow-[0_1px_3px_rgba(16,24,40,0.06)]' : 'border-border')}>
-                  <div className={cx('flex items-center gap-2.5 px-3 py-2.5', isOpen && 'bg-brand-soft/30')}>
+                <li key={c.id} draggable={dragId === c.id} onDragEnd={() => setDragId(null)}
+                  onDragOver={e => { if (!dragId || dragId === c.id) return; e.preventDefault(); reorder(changes.findIndex(x => x.id === dragId), k) }}
+                  className={cx('overflow-hidden rounded-lg border bg-surface transition-colors', isOpen ? 'border-brand/40 shadow-[0_1px_3px_rgba(16,24,40,0.06)]' : 'border-border', dragId === c.id && 'opacity-60')}>
+                  <div className={cx('flex items-center gap-2 px-3 py-2.5', isOpen && 'bg-brand-soft/30')}>
+                    <button type="button" title="Drag to reorder" disabled={!plural} aria-label={`Reorder ${d.label} change, ${k + 1} of ${changes.length}. Arrow keys move it.`}
+                      onPointerDown={() => setDragId(c.id)} onPointerUp={() => setDragId(null)}
+                      onKeyDown={e => { const n = e.key === 'ArrowUp' ? -1 : e.key === 'ArrowDown' ? 1 : 0; if (!n || k + n < 0 || k + n >= changes.length) return; e.preventDefault(); reorder(k, k + n) }}
+                      className="grid h-7 w-7 shrink-0 cursor-grab place-items-center rounded text-text-3 hover:bg-surface-2 hover:text-text active:cursor-grabbing disabled:pointer-events-none disabled:opacity-30"><GripVertical size={14} /></button>
                     <button type="button" aria-expanded={isOpen} onClick={() => setOpen(isOpen ? null : c.id)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
-                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand text-[11.5px] font-semibold text-white">{k + 1}</span>
                       <span className="min-w-0 flex-1"><span className="block truncate text-[15px] font-semibold">{d.label} {stepTxt(c)}</span>
                         <span className="block truncate text-[12px] text-text-3">{mLong(c.from)} – {mLong(c.to)} · <span className="font-mono">{fmtV(c.driver, before)} → <span className={tone(after - before)}>{fmtV(c.driver, after)}</span></span></span></span>
                       <ChevronDown size={16} className={cx('shrink-0 text-text-3 transition-transform', isOpen && 'rotate-180')} />
                     </button>
-                    {plural && <button type="button" aria-label={`Remove change ${k + 1}`} onClick={() => setChanges(cs => cs.filter(x => x.id !== c.id))} className="grid h-7 w-7 shrink-0 place-items-center rounded text-text-3 hover:bg-err-soft hover:text-err"><Trash2 size={13} /></button>}
+                    <button type="button" title="Remove change" disabled={!plural} aria-label={`Remove ${d.label} change`} onClick={() => setChanges(cs => cs.filter(x => x.id !== c.id))} className="grid h-7 w-7 shrink-0 place-items-center rounded text-text-3 hover:bg-err-soft hover:text-err disabled:pointer-events-none disabled:opacity-30"><Trash2 size={13} /></button>
                   </div>
                   {isOpen && (
                     <div className="grid grid-cols-[88px_minmax(0,1fr)] items-center gap-x-3 gap-y-3 border-t border-border px-3 py-3.5">
@@ -404,7 +440,7 @@ export function SensitivityStage({ scenarios, setScenarios, calc, selId, setSelI
                 </li>
               )
             })}
-          </ol>
+          </ul>
           <div className="mt-auto flex flex-wrap items-center justify-between gap-2 pt-4">
             <Btn variant="secondary" onClick={addChange} disabled={changes.length >= editable.length} icon={<Plus size={14} />}>Add a change</Btn>
             <span className="text-[12px] text-text-3">Points add to a rate; % scales it.</span>
@@ -495,106 +531,141 @@ export function SensitivityStage({ scenarios, setScenarios, calc, selId, setSelI
   )
 }
 
-/* ───────── Ordered goal seek ───────── */
+/* ───────── Goal seek: one target, the levers share the gap ───────── */
 export function GoalSeekPanel({ base, sel, setScenarios, model, notify }: { base: Layer; sel: Scenario; setScenarios: SetScenarios; model: ModelCfg; notify: Notify }) {
   const editable = editableOf(model)
-  const lever = (pref: DriverId) => editable.includes(pref) ? pref : editable[0] ?? pref
-  const init = (): Goal[] => {
-    const g: Goal[] = []
-    if (model.outputs.includes('pts')) { const v = measure('pts', base, FY); g.push({ id: 'g1', metric: 'pts', h: FY, min: +(v * 1.03).toFixed(1), max: +(v * 1.06).toFixed(1), lever: lever('share') }) }
-    const r = measure('rev', base, FY); g.push({ id: 'g2', metric: 'rev', h: FY, min: Math.round(r * 1.06), max: Math.round(r * 1.08), lever: lever(g.length ? 'price' : 'share') })
-    return g
-  }
-  const [goals, setGoals] = useState<Goal[]>(init)
+  const [metric, setMetric] = useState<OutputId>(model.outputs.includes('rev') ? 'rev' : model.outputs[0]!)
+  const [h, setH] = useState<Horizon>(FY)
   const [start, setStart] = useState(ACT)
-  const [res, setRes] = useState<ReturnType<typeof goalSeekOrdered> | null>(null)
+  const [split, setSplit] = useState<'weight' | 'fix' | 'order'>('weight')
+  const even = (ls: LeverRow[]) => { const n = ls.filter(l => l.on).length || 1; return ls.map(l => ({ ...l, weight: l.on ? +(100 / n).toFixed(1) : 0 })) }
+  /** Keeps the ticked rows summing to 100, a newly ticked row taking an even share and the rest scaling to fit. */
+  const rebalance = (ls: LeverRow[], justOn?: DriverId) => {
+    const on = ls.filter(l => l.on)
+    if (!on.length) return ls.map(l => ({ ...l, weight: 0 }))
+    const share = 100 / on.length, others = on.filter(l => l.id !== justOn)
+    const sum = others.reduce((a, l) => a + l.weight, 0), room = justOn ? 100 - share : 100
+    return ls.map(l => !l.on ? { ...l, weight: 0 }
+      : l.id === justOn ? { ...l, weight: +share.toFixed(1) }
+      : { ...l, weight: +(sum > 0 ? (l.weight / sum) * room : room / (others.length || 1)).toFixed(1) })
+  }
+  const [levers, setLevers] = useState<LeverRow[]>(() => even(editable.map((id, i) => ({ id, on: i < 3, weight: 0, cap: 3 }))))
+  const before = measure(metric, base, h)
+  const [target, setTarget] = useState(() => +(before * 1.1).toFixed(model.outputs.includes('rev') ? 0 : 1))
+  const [res, setRes] = useState<ReturnType<typeof solveLevers> | null>(null)
   const [applied, setApplied] = useState(false)
-  const [openG, setOpenG] = useState<string | null>(goals[0]?.id ?? null)
-  const patch = (id: string, p: Partial<Goal>) => { setGoals(gs => gs.map(g => g.id === id ? { ...g, ...p } : g)); setRes(null) }
-  const move = (k: number, dir: -1 | 1) => { setGoals(gs => { const n = [...gs]; [n[k], n[k + dir]] = [n[k + dir]!, n[k]!]; return n }); setRes(null) }
-  const add = () => { const r = measure('rev', base, 'all'); setGoals(gs => [...gs, { id: `g${Date.now()}`, metric: 'rev', h: 'all', min: Math.round(r), max: Math.round(r * 1.05), lever: lever('share') }]); setRes(null) }
-  const valid = goals.length > 0 && goals.every(g => Number.isFinite(g.min) && Number.isFinite(g.max) && g.min <= g.max)
-  const run = () => { setRes(goalSeekOrdered(base, goals, start)); setApplied(false) }
-  const moves = res?.steps.filter(s => Math.abs(s.delta) > 1e-6) ?? []
+  const reset = () => { setRes(null); setApplied(false) }
+  const rebase = (m: OutputId, hh: Horizon) => { setTarget(+(measure(m, base, hh) * 1.1).toFixed(m === 'rev' ? 0 : 1)); reset() }
+  const patchL = (id: DriverId, p: Partial<LeverRow>) => { setLevers(ls => ls.map(l => l.id === id ? { ...l, ...p } : l)); reset() }
+  const toggle = (id: DriverId) => { setLevers(ls => { const next = ls.map(l => l.id === id ? { ...l, on: !l.on } : l); return rebalance(next, next.find(l => l.id === id)!.on ? id : undefined) }); reset() }
+  const total = levers.filter(l => l.on).reduce((a, l) => a + (l.weight || 0), 0)
+  const gap = target - before
+  const unit = metric === 'rev' ? '$M' : 'K'
+  const valid = Number.isFinite(target) && levers.some(l => l.on && l.weight > 0)
+  const run = () => { setRes(solveLevers(base, metric, h, target, levers, start)); setApplied(false) }
+  const moves = res?.steps.filter(s => Math.abs(s.step) > 1e-6) ?? []
   const apply = () => {
     if (!res) return
     if (sel.locked) return notify({ tone: 'info', text: `${sel.name} is final and locked. Reopen it to apply a result.` })
-    addOverrides(setScenarios, sel, moves.map((s, k) => ({ id: `ov${Date.now()}${k}`, driver: s.goal.lever, kind: 'shift', start, end: N - 1, value: s.delta, curve: 'linear', years: {}, note: `Goal seek step ${res.steps.indexOf(s) + 1}: ${MEASURE_LABEL[s.goal.metric]} ${HORIZON_LABEL(s.goal.h)} ${fmtM(s.goal.metric, s.goal.min)}–${fmtM(s.goal.metric, s.goal.max)}`, by: 'goal seek' })))
+    // shortcut: a pts move is filed as the equivalent % shift, since overrides carry no additive kind. Upgrade when OvrKind gains one.
+    addOverrides(setScenarios, sel, moves.map((s, k) => {
+      const now = winAvg(base[s.id], start, N - 1)
+      const pct = leverHow(s.id) === 'pts' ? (now ? (s.step / now) * 100 : 0) : s.step
+      return { id: `ov${Date.now()}${k}`, driver: s.id, kind: 'shift' as const, start, end: N - 1, value: +pct.toFixed(4), curve: 'linear' as const, years: {},
+        note: `Goal seek · ${MEASURE_LABEL[metric]} ${HORIZON_LABEL(h)} to ${fmtM(metric, target)}` }
+    }))
     setApplied(true)
     notify({ tone: 'ok', text: `Goal seek added to ${sel.name} as ${moves.length} override${moves.length === 1 ? '' : 's'}. The active forecast and other scenarios are unchanged.` })
   }
-  const icon = (s: GoalStep['status']) => s === 'met' ? <CircleMinus size={15} className="text-text-3" /> : s === 'solved' ? <CircleCheck size={15} className="text-ok" /> : <CircleAlert size={15} className="text-warn" />
-  const series: ChartSeries | null = res ? { actual: OUTPUTS.rev.fn(UNBIASED), scenario: OUTPUTS.rev.fn(base), scenarioName: `${sel.name} · current`, extra: [{ name: 'After goal seek', color: COLOR.preview, series: OUTPUTS.rev.fn(res.layer) }] } : null
-  const chart: ChartSeries = series ?? { actual: OUTPUTS.rev.fn(UNBIASED), scenario: OUTPUTS.rev.fn(base), scenarioName: `${sel.name} · current` }
-  const unit = (g: Goal) => (g.metric === 'rev' ? '$M' : 'K')
+  const o = OUTPUTS[metric]
+  const chart: ChartSeries = { actual: o.fn(UNBIASED), scenario: o.fn(base), scenarioName: `${sel.name} · current`,
+    ...(res ? { extra: [{ name: 'After goal seek', color: COLOR.preview, series: o.fn(res.layer) }] } : {}) }
+  const num = 'h-9 w-full rounded-md border border-border-strong bg-surface px-2 text-right font-mono text-[13px] outline-none focus:border-brand disabled:bg-surface-2 disabled:text-text-3'
   return (
     <div className="space-y-5">
       <div className="grid items-stretch gap-5 lg:grid-cols-[minmax(0,7fr)_minmax(0,5fr)]">
-        <Card title="Targets" info="Solved in order, each by moving one assumption." fill className="lg:order-last">
-          <ol className="space-y-2.5">
-            {goals.map((g, k) => {
-              const isOpen = openG === g.id
-              return (
-                <li key={g.id} className={cx('overflow-hidden rounded-lg border bg-surface', isOpen ? 'border-brand/40 shadow-[0_1px_3px_rgba(16,24,40,0.06)]' : 'border-border')}>
-                  <div className={cx('flex items-center gap-2 px-3 py-2.5', isOpen && 'bg-brand-soft/30')}>
-                    <button type="button" aria-expanded={isOpen} onClick={() => setOpenG(isOpen ? null : g.id)} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
-                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-brand text-[11.5px] font-semibold text-white">{k + 1}</span>
-                      <span className="min-w-0 flex-1"><span className="block truncate text-[15px] font-semibold">{MEASURE_LABEL[g.metric]} {HORIZON_LABEL(g.h)}</span>
-                        <span className="block truncate text-[12px] text-text-3">{fmtM(g.metric, g.min)} – {fmtM(g.metric, g.max)} · by {DRV[g.lever].label.toLowerCase()}</span></span>
-                      <ChevronDown size={16} className={cx('shrink-0 text-text-3 transition-transform', isOpen && 'rotate-180')} />
-                    </button>
-                    <button type="button" title="Move up" disabled={k === 0} onClick={() => move(k, -1)} className="grid h-7 w-7 place-items-center rounded text-text-2 hover:bg-surface-2 disabled:opacity-30"><ArrowUp size={13} /></button>
-                    <button type="button" title="Move down" disabled={k === goals.length - 1} onClick={() => move(k, 1)} className="grid h-7 w-7 place-items-center rounded text-text-2 hover:bg-surface-2 disabled:opacity-30"><ArrowDown size={13} /></button>
-                    {goals.length > 1 && <button type="button" title="Remove target" onClick={() => { setGoals(gs => gs.filter(x => x.id !== g.id)); setRes(null) }} className="grid h-7 w-7 place-items-center rounded text-text-3 hover:bg-err-soft hover:text-err"><Trash2 size={13} /></button>}
-                  </div>
-                  {isOpen && (
-                    <div className="grid gap-3 border-t border-border px-3 py-3.5 sm:grid-cols-2">
-                      <label className="block"><Label className="mb-1">Target</Label><select value={g.metric} onChange={e => { const mm = e.target.value as OutputId, v = measure(mm, base, g.h); patch(g.id, { metric: mm, min: +(v * 1.02).toFixed(mm === 'rev' ? 0 : 1), max: +(v * 1.05).toFixed(mm === 'rev' ? 0 : 1) }) }} className={field}>{model.outputs.map(o => <option key={o} value={o}>{MEASURE_LABEL[o]}</option>)}</select></label>
-                      <label className="block"><Label className="mb-1">Period</Label><select value={String(g.h)} onChange={e => patch(g.id, { h: e.target.value === 'all' ? 'all' : +e.target.value })} className={field}>{HORIZONS.map(x => <option key={String(x)} value={String(x)}>{HORIZON_LABEL(x)}</option>)}</select></label>
-                      <NumField label={`From (${unit(g)})`} value={g.min} step={g.metric === 'rev' ? 5 : 0.5} onChange={v => patch(g.id, { min: v })} />
-                      <NumField label={`To (${unit(g)})`} value={g.max} step={g.metric === 'rev' ? 5 : 0.5} onChange={v => patch(g.id, { max: v })} />
-                      <label className="block"><Label className="mb-1">By moving</Label><select value={g.lever} onChange={e => patch(g.id, { lever: e.target.value as DriverId })} className={field}>{editable.map(id => <option key={id} value={id}>{DRV[id].label}</option>)}</select></label>
-                      <p className="self-end pb-2 text-[12px] text-text-3">Now <b className="font-mono text-text">{fmtM(g.metric, measure(g.metric, base, g.h))}</b>{g.min > g.max && <span className="text-err"> · From must be below To</span>}</p>
-                      <p className="text-[12px] text-text-3 sm:col-span-2">{(() => { const y = g.h === 'all' ? FY : g.h, r = RANGES[g.lever]; return `Statistical range FY${y}: ${fmtV(g.lever, fyAvg(BASELINE[g.lever].lo, y))} – ${fmtV(g.lever, fyAvg(BASELINE[g.lever].hi, y))} · ${r.conf.toLowerCase()} confidence · ${r.src}` })()}</p>
-                    </div>
-                  )}
-                </li>
-              )
-            })}
-          </ol>
-          <div className="mt-4 flex flex-wrap items-end gap-3">
-            <Btn variant="secondary" onClick={() => { add(); setOpenG(null) }} disabled={goals.length >= 4} icon={<Plus size={14} />}>Add a target</Btn>
-            <div className="w-48"><Period label="Changes start" value={start} min={ACT} max={N - 1} onChange={v => { setStart(v); setRes(null) }} /></div>
+        <Card title="Target and levers" info="Set one target, then tick the inputs that may move to close the gap." fill className="lg:order-last">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <label className="block"><Label className="mb-1">Target</Label>
+              <select value={metric} onChange={e => { const m = e.target.value as OutputId; setMetric(m); rebase(m, h) }} className={field}>{model.outputs.map(o => <option key={o} value={o}>{MEASURE_LABEL[o]}</option>)}</select></label>
+            <label className="block"><Label className="mb-1">Period</Label>
+              <select value={String(h)} onChange={e => { const hh = e.target.value === 'all' ? 'all' : +e.target.value as Horizon; setH(hh); rebase(metric, hh) }} className={field}>{HORIZONS.map(x => <option key={String(x)} value={String(x)}>{HORIZON_LABEL(x)}</option>)}</select></label>
+            <label className="block"><Label className="mb-1">Target value ({unit})</Label>
+              <input type="number" value={target} onChange={e => { setTarget(e.target.value === '' ? NaN : +e.target.value); reset() }} className={cx(field, 'font-mono')} /></label>
           </div>
-          <div className="mt-auto flex justify-end border-t border-border pt-4"><Btn onClick={run} disabled={!valid} icon={<Target size={15} />}>Run goal seek</Btn></div>
+          <p className="mt-2 text-[12.5px] text-text-2">Now <b className="font-mono text-text">{fmtM(metric, before)}</b> · gap to target <b className={cx('font-mono', gap >= 0 ? 'text-ok' : 'text-err')}>{gap >= 0 ? '+' : '−'}{fmtM(metric, Math.abs(gap))}</b>{before ? ` (${(gap / before * 100).toFixed(1)}%)` : ''}</p>
+
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+            <Seg label="How the gap is split" value={split} onChange={setSplit} options={[
+              { id: 'weight', label: 'Split by weight' },
+              { id: 'fix', label: 'Fix, then split', disabled: true, title: 'Not built yet' },
+              { id: 'order', label: 'Fix, then fill in order', disabled: true, title: 'Not built yet' }]} />
+            <button type="button" onClick={() => { setLevers(even); reset() }} className="text-[13px] font-semibold text-brand hover:underline">Even split</button>
+          </div>
+          <p className="mt-2 text-[12px] text-text-3">Each ticked input covers its share of the gap, up to its limit. If one hits its limit, the others take over its share.</p>
+
+          <table className="mt-3 w-full table-fixed text-[13px]">
+            <colgroup><col /><col className="w-[92px]" /><col className="w-[92px]" /></colgroup>
+            <thead><tr className="border-b border-border bg-surface-2 text-[11px] uppercase leading-tight tracking-wide text-text-3">
+              <th className="px-3 py-2 text-left font-semibold">Input</th>
+              <th className="px-2 py-2 text-right font-semibold">Share of gap</th>
+              <th className="px-2 py-2 text-right font-semibold">May move up to</th></tr></thead>
+            <tbody>{levers.map(l => {
+              const d = DRV[l.id], r = RANGES[l.id], now = winAvg(base[l.id], start, N - 1)
+              return (
+                <tr key={l.id} className={cx('border-b border-border last:border-0', !l.on && 'text-text-3')}>
+                  <td className="px-3 py-2.5">
+                    <label className="flex items-start gap-2.5">
+                      <input type="checkbox" checked={l.on} onChange={() => toggle(l.id)} className="mt-1 h-4 w-4 shrink-0 accent-[var(--color-brand)]" />
+                      <span className="min-w-0"><span className={cx('block truncate font-medium', l.on && 'text-text')}>{d.label}</span>
+                        <span className="block text-[12px] leading-snug text-text-3">Now {fmtV(l.id, now)} · plausible {fmtV(l.id, now * (1 - r.lo / 100))}–{fmtV(l.id, now * (1 + r.hi / 100))}</span></span>
+                    </label>
+                  </td>
+                  <td className="px-2 py-2.5"><div className="relative">
+                    <input type="number" aria-label={`${d.label} share of gap`} disabled={!l.on} value={l.on ? l.weight : 0} onChange={e => patchL(l.id, { weight: e.target.value === '' ? 0 : +e.target.value })} className={cx(num, 'pr-6')} />
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[12px] text-text-3">%</span></div></td>
+                  <td className="px-2 py-2.5"><div className="relative">
+                    <input type="number" aria-label={`${d.label} limit`} disabled={!l.on} value={l.cap} onChange={e => patchL(l.id, { cap: e.target.value === '' ? 0 : +e.target.value })} className={cx(num, 'pr-8')} />
+                    <span className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-[12px] text-text-3">{leverHow(l.id) === 'pts' ? 'pts' : '%'}</span></div></td>
+                </tr>)
+            })}</tbody>
+            <tfoot><tr className="bg-surface-2 text-[13px] font-semibold"><td className="px-3 py-2">Total{Math.abs(total - 100) > 0.5 && <span className="ml-1.5 font-normal text-text-3">· split in this proportion</span>}</td>
+              <td className="px-2 py-2 text-right font-mono">{total.toFixed(total % 1 ? 1 : 0)}%</td><td /></tr></tfoot>
+          </table>
+          <p className="mt-2 text-[12px] text-text-3">Only inputs can move. Outputs such as TRx and net revenue follow from them and are never set directly.</p>
+
+          <div className="mt-auto flex flex-wrap items-end justify-between gap-3 border-t border-border pt-4">
+            <div className="w-48"><Period label="Changes start" value={start} min={ACT} max={N - 1} onChange={v => { setStart(v); reset() }} /></div>
+            <Btn onClick={run} disabled={!valid} icon={<Target size={15} />}>Run goal seek</Btn>
+          </div>
         </Card>
 
-        <Card frame title={`Net revenue · ${sel.name}`} info={res ? 'Current path against the path after goal seek.' : 'Run goal seek to see the new path.'} fill>
+        <Card frame title={`${MEASURE_LABEL[metric]} · ${sel.name}`} info={res ? 'Current path against the path after goal seek.' : 'Run goal seek to see the new path.'} fill>
           <div className="mb-1"><Legend s={chart} /></div>
-          <ForecastChart title="Goal seek" s={chart} fmt={v => fmtRev(v, 1)} dp={0} unit="$M" height={360} canSave={false} toolbar={false} />
+          <ForecastChart title={`Goal seek · ${MEASURE_LABEL[metric]}`} s={chart} fmt={v => o.fmt(v, 1)} dp={0} unit={o.unit} height={360} canSave={false} toolbar={false} />
           {res && <div className="mt-auto flex flex-wrap items-center justify-end gap-3 pt-4">
-            <span className="mr-auto text-[12.5px] text-text-2">{res.final.filter(f => f.ok).length} of {res.final.length} targets in range · {moves.length} move{moves.length === 1 ? '' : 's'}</span>
+            <span className="mr-auto text-[12.5px] text-text-2">{res.met ? 'Target reached' : 'Target not reachable inside the limits'} · {moves.length} move{moves.length === 1 ? '' : 's'}</span>
             <Btn disabled={applied || !moves.length || sel.locked} onClick={apply} icon={applied ? <Check size={14} /> : undefined}>{applied ? 'Applied' : `Apply to ${sel.name}`}</Btn>
           </div>}
         </Card>
       </div>
 
       {res && (
-        <Card title="What it takes" info="Each step, in order, and where every target ends up.">
+        <Card title="What it takes" info="How far each ticked input has to move, and where the target lands.">
           <table className="w-full text-[13px]">
-            <thead><tr className="border-b border-border text-[11px] uppercase tracking-wide text-text-3"><th className="w-8 py-2 text-left font-semibold">#</th><th className="py-2 text-left font-semibold">Target</th><th className="py-2 text-left font-semibold">Move</th><th className="py-2 text-right font-semibold">Before</th><th className="py-2 text-right font-semibold">After</th><th className="py-2 text-right font-semibold">After all steps</th></tr></thead>
-            <tbody>{res.steps.map((s, k) => { const f = res.final[k]!; return (
-              <tr key={s.goal.id} className="border-b border-border last:border-0">
-                <td className="py-2.5">{icon(s.status)}</td>
-                <td className="py-2.5"><p className="font-medium">{MEASURE_LABEL[s.goal.metric]} {HORIZON_LABEL(s.goal.h)}</p><p className="text-[12px] text-text-3">{fmtM(s.goal.metric, s.goal.min)} – {fmtM(s.goal.metric, s.goal.max)}</p></td>
-                <td className="py-2.5">{s.status === 'met' ? <span className="text-text-3">Already in range</span> : s.status === 'no-effect' ? <span className="text-warn">{DRV[s.goal.lever].label} has no effect</span>
-                  : <span><b className="font-mono">{DRV[s.goal.lever].label} {s.delta >= 0 ? '+' : '−'}{Math.abs(s.delta).toFixed(2)} {unitOf(s.goal.lever)}</b>{s.status === 'partial' && <span className="text-warn"> · limit reached</span>}</span>}</td>
-                <td className="py-2.5 text-right font-mono">{fmtM(s.goal.metric, s.before)}</td>
-                <td className="py-2.5 text-right font-mono font-semibold">{fmtM(s.goal.metric, s.after)}</td>
-                <td className="py-2.5 text-right"><span className={cx('inline-flex items-center gap-1 font-mono', f.ok ? 'text-ok' : 'text-warn')}>{f.ok ? <Check size={12} /> : <CircleAlert size={12} />}{fmtM(f.goal.metric, f.v)}</span></td>
-              </tr>) })}</tbody>
+            <thead><tr className="border-b border-border text-[11px] uppercase tracking-wide text-text-3">
+              <th className="w-8 py-2 text-left font-semibold" /><th className="py-2 text-left font-semibold">Input</th><th className="py-2 text-right font-semibold">Share of gap</th>
+              <th className="py-2 text-right font-semibold">Move</th><th className="py-2 text-right font-semibold">Limit</th></tr></thead>
+            <tbody>{res.steps.map(s => (
+              <tr key={s.id} className="border-b border-border last:border-0">
+                <td className="py-2.5">{s.capped ? <CircleAlert size={15} className="text-warn" /> : Math.abs(s.step) > 1e-6 ? <CircleCheck size={15} className="text-ok" /> : <CircleMinus size={15} className="text-text-3" />}</td>
+                <td className="py-2.5 font-medium">{DRV[s.id].label}</td>
+                <td className="py-2.5 text-right font-mono">{s.weight}%</td>
+                <td className="py-2.5 text-right"><b className="font-mono">{s.step >= 0 ? '+' : '−'}{Math.abs(s.step).toFixed(2)} {leverHow(s.id) === 'pts' ? 'pts' : '%'}</b></td>
+                <td className="py-2.5 text-right font-mono text-text-3">{s.capped ? `at limit ${s.cap}` : s.cap}</td>
+              </tr>))}</tbody>
           </table>
-          <p className="mt-3 text-[12px] text-text-3">Moves start {mLong(start)}. Applying adds them to {sel.name} as overrides.</p>
+          <p className="mt-3 text-[12px] text-text-3">{MEASURE_LABEL[metric]} {HORIZON_LABEL(h)} {fmtM(metric, res.before)} → <b className="font-mono text-text">{fmtM(metric, res.after)}</b> against a target of {fmtM(metric, res.target)}. Moves start {mLong(start)}. Applying adds them to {sel.name} as overrides.</p>
         </Card>
       )}
     </div>

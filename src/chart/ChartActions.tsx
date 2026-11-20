@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useRef, useState } from 'react'
+import { Overlay } from '../components/Overlay'
 import { Download, EllipsisVertical, FileSpreadsheet, FileText, Image as ImageIcon, Loader2, Presentation } from 'lucide-react'
 
 /* Shared "Actions" menu for every chart: download as PPTX, PDF, Excel (.xlsx/csv), CSV, or PNG image.
@@ -126,14 +127,8 @@ export function ChartActions({ target, title, subtitle, onPptx, className }: {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState<string | null>(null)
   const [err, setErr] = useState('')
-  const box = useRef<HTMLDivElement>(null)
-  useEffect(() => {
-    if (!open) return
-    const h = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false) }
-    const k = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
-    document.addEventListener('mousedown', h); document.addEventListener('keydown', k)
-    return () => { document.removeEventListener('mousedown', h); document.removeEventListener('keydown', k) }
-  }, [open])
+  const btn = useRef<HTMLButtonElement>(null)
+  const close = useCallback(() => setOpen(false), [])
   const el = () => (typeof target === 'string' ? document.getElementById(target) : target())
   const run = async (kind: 'pptx' | 'pdf' | 'xlsx' | 'csv' | 'img') => {
     const node = el()
@@ -152,25 +147,23 @@ export function ChartActions({ target, title, subtitle, onPptx, className }: {
   }
   const item = 'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-[14px] text-text hover:bg-surface-2 disabled:opacity-50'
   return (
-    <div ref={box} className={cx('relative', className)} data-export-ignore>
-      <button type="button" aria-haspopup="menu" aria-expanded={open} aria-label={`Actions for ${title}`} title="Actions" onClick={() => setOpen(v => !v)}
+    <div className={cx('relative', className)} data-export-ignore>
+      <button ref={btn} type="button" aria-haspopup="menu" aria-expanded={open} aria-label={`Actions for ${title}`} title="Actions" onClick={() => setOpen(v => !v)}
         className={cx('grid h-8 w-8 place-items-center rounded-md border text-text-2 transition-colors hover:bg-surface-2 hover:text-text', open ? 'border-border-strong bg-surface-2' : 'border-border bg-surface')}>
         <EllipsisVertical size={15} />
       </button>
-      {open && (
-        <div role="menu" aria-label="Actions" className="dropdown-container rise absolute right-0 top-10 z-40 w-60 p-1.5">
-          <p className="border-b border-border px-2.5 pb-2 pt-1 text-[14px] font-semibold text-text">Actions</p>
-          <div className="pt-1">
-            <button type="button" role="menuitem" disabled={!!busy} onClick={() => run('pptx')} className={item}>{busy === 'pptx' ? <Loader2 size={15} className="animate-spin text-text-2" /> : <Presentation size={15} className="text-text-2" />}Download as PPTX</button>
-            <button type="button" role="menuitem" disabled={!!busy} onClick={() => run('pdf')} className={item}>{busy === 'pdf' ? <Loader2 size={15} className="animate-spin text-text-2" /> : <FileText size={15} className="text-text-2" />}Download as PDF</button>
-            <button type="button" role="menuitem" disabled={!!busy} onClick={() => run('xlsx')} className={item}>{busy === 'xlsx' ? <Loader2 size={15} className="animate-spin text-text-2" /> : <FileSpreadsheet size={15} className="text-text-2" />}Download as Excel (.xlsx)</button>
-            <button type="button" role="menuitem" disabled={!!busy} onClick={() => run('csv')} className={item}>{busy === 'csv' ? <Loader2 size={15} className="animate-spin text-text-2" /> : <Download size={15} className="text-text-2" />}Download as CSV (.csv)</button>
-            <div className="my-1 h-px bg-border" />
-            <button type="button" role="menuitem" disabled={!!busy} onClick={() => run('img')} className={item}>{busy === 'img' ? <Loader2 size={15} className="animate-spin text-text-2" /> : <ImageIcon size={15} className="text-text-2" />}Download as Image (PNG)</button>
-          </div>
-          {err && <p className="px-2.5 pb-1 pt-1 text-[12px] text-err" role="status">{err}</p>}
+      <Overlay anchor={btn} open={open} onClose={close} align="right" width={240}>
+        <p className="border-b border-border px-2.5 pb-2 pt-1 text-[14px] font-semibold text-text">Actions</p>
+        <div className="pt-1">
+          <button type="button" role="menuitem" disabled={!!busy} onClick={() => run('pptx')} className={item}>{busy === 'pptx' ? <Loader2 size={15} className="animate-spin text-text-2" /> : <Presentation size={15} className="text-text-2" />}Download as PPTX</button>
+          <button type="button" role="menuitem" disabled={!!busy} onClick={() => run('pdf')} className={item}>{busy === 'pdf' ? <Loader2 size={15} className="animate-spin text-text-2" /> : <FileText size={15} className="text-text-2" />}Download as PDF</button>
+          <button type="button" role="menuitem" disabled={!!busy} onClick={() => run('xlsx')} className={item}>{busy === 'xlsx' ? <Loader2 size={15} className="animate-spin text-text-2" /> : <FileSpreadsheet size={15} className="text-text-2" />}Download as Excel (.xlsx)</button>
+          <button type="button" role="menuitem" disabled={!!busy} onClick={() => run('csv')} className={item}>{busy === 'csv' ? <Loader2 size={15} className="animate-spin text-text-2" /> : <Download size={15} className="text-text-2" />}Download as CSV (.csv)</button>
+          <div className="my-1 h-px bg-border" />
+          <button type="button" role="menuitem" disabled={!!busy} onClick={() => run('img')} className={item}>{busy === 'img' ? <Loader2 size={15} className="animate-spin text-text-2" /> : <ImageIcon size={15} className="text-text-2" />}Download as Image (PNG)</button>
         </div>
-      )}
+        {err && <p className="px-2.5 pb-1 pt-1 text-[12px] text-err" role="status">{err}</p>}
+      </Overlay>
     </div>
   )
 }

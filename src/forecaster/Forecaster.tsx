@@ -3,7 +3,7 @@ import { scrollFrameTop } from '../frame'
 import type { ComponentType, ReactNode } from 'react'
 import type { CopilotProps } from './workspace/agent'
 import {
-  ArrowDown, Trash2, BookOpen, FolderTree, PanelLeftClose, PanelLeftOpen, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, CalendarClock, Check, ChevronDown, LayoutList, LogOut, Copy, Plus, Search, CheckCircle2, ChevronRight, Database, Download, Info, Lock, RotateCcw, Sparkles, TrendingDown, TrendingUp,
+  ArrowDown, Trash2, BookOpen, FolderTree, ArrowLeft, ArrowRight, ArrowUp, ArrowUpDown, CalendarClock, Check, ChevronDown, LayoutList, LogOut, Copy, Plus, Search, CheckCircle2, ChevronRight, Database, Download, Info, Lock, RotateCcw, Sparkles, TrendingDown, TrendingUp,
   AlertTriangle, Bot, Gauge, Lightbulb, Pin, Send, ShieldCheck, Target, X, XCircle,
 } from 'lucide-react'
 import Workbook from './Workbook'
@@ -416,9 +416,9 @@ function ForecastFlow({ onHome, notify, brand, model, cycle, cycleName, cycleRow
         </aside>
 
         <main className="min-w-0">
-          <div key={step} className="workspace-page rise py-7">
+          <div key={step} className="workspace-page rise pb-7 pt-6">
             <p className="font-mono text-xs uppercase tracking-widest text-brand">Step {step} of {N}</p>
-            <h1 className="mt-1 text-[28px] font-semibold tracking-tight">{STEP_META[curStep].title}</h1>
+            <h1 className="mt-1 text-[22px] font-semibold tracking-tight">{STEP_META[curStep].title}</h1>
 
             {curStep === 'setup' && <CycleContext cycle={cycle} cfg={cfg} sub={sub} setSub={setSub} actuals={actuals}
               onIngest={how => { setActuals({ through: 'Jul 2026', at: new Date().toISOString().slice(0, 10), how }); notify({ tone: 'ok', text: how.startsWith('Manual') ? 'Actuals uploaded. History re-locked; forecast re-anchored off Jul 2026.' : 'Snowflake refresh complete. No new months yet.' }) }} />}
@@ -845,7 +845,7 @@ function CycleWorkspace({ brand, cycleName, sub, tab, setTab, ctx, selected, row
       <button type="button" onClick={onBack} className="mb-3 inline-flex items-center gap-1.5 text-sm font-medium text-text-2 hover:text-brand"><ArrowLeft size={15} />My forecasts</button>
       <p className="font-mono text-[11px] uppercase tracking-widest text-text-3">Cycle workspace · {brand}</p>
       <div className="mt-1 flex flex-wrap items-end justify-between gap-3">
-        <div><h1 className="text-[28px] font-semibold tracking-tight">{cycleName}</h1><p className="mt-1 text-sm text-text-2">{rows.length} scenario{rows.length === 1 ? '' : 's'} · generated from {sub} assumptions and inputs</p></div>
+        <div><h1 className="text-[22px] font-semibold tracking-tight">{cycleName}</h1><p className="mt-1 text-sm text-text-2">{rows.length} scenario{rows.length === 1 ? '' : 's'} · generated from {sub} assumptions and inputs</p></div>
         <div className="flex gap-2"><Btn variant="secondary" onClick={onSetup}>Forecast setup</Btn><Btn onClick={() => onNew()}><Plus size={15} />New scenario</Btn></div>
       </div>
 
@@ -1441,7 +1441,7 @@ function KnowledgeBank({ kb, setKb, onOpen }: { kb: Insight[]; setKb: SetKb; onO
   return (
     <div className="rise">
       <div className="flex flex-wrap items-end justify-between gap-4">
-        <div className="min-w-0"><h1 className="text-[28px] font-semibold tracking-tight">Knowledge bank</h1>
+        <div className="min-w-0"><h1 className="text-[22px] font-semibold tracking-tight">Knowledge bank</h1>
           <p className="mt-1 max-w-2xl text-sm text-text-2">Charts and findings pinned from your forecasts, with the graph captured as it looked. Anyone on the brand team can comment on the assumptions behind them.</p></div>
         <label className="relative w-full max-w-[280px]"><Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-text-3" /><input value={q} onChange={e => setQ(e.target.value)} placeholder="Search" aria-label="Search the knowledge bank" className="h-9 w-full rounded-md border border-border-strong bg-surface pl-8 pr-3 text-sm" /></label>
       </div>
@@ -1457,7 +1457,7 @@ function KnowledgeBank({ kb, setKb, onOpen }: { kb: Insight[]; setKb: SetKb; onO
 export function LegacyForecaster({ onHome, notify }: { onHome: () => void; notify: (t: { tone: 'ok' | 'info' | 'err'; text: string }) => void }) {
   const [brands, setBrands] = useState(SEED_BRANDS)
   const [open, setOpen] = useState<Set<string>>(new Set())
-  const [navMin, setNavMin] = useState(false)
+  const navMin = false
   const [del, setDel] = useState<{ kind: 'scenario' | 'cycle'; b: BrandRow; id: string; name: string; detail: string } | null>(null)
   const confirmDelete = () => {
     if (!del) return
@@ -1532,10 +1532,8 @@ export function LegacyForecaster({ onHome, notify }: { onHome: () => void; notif
     <div className="min-h-full bg-background">
       <div className={cx('grid min-h-full transition-[grid-template-columns] duration-200', navMin ? 'md:grid-cols-[68px_minmax(0,1fr)]' : 'md:grid-cols-[240px_minmax(0,1fr)]')}>
         <nav aria-label="Workspace" className="flex flex-col bg-brand-dark p-3 text-white md:sticky md:top-0 md:h-[calc(100dvh-72px)]">
-          <div className={cx('mb-3 hidden items-center md:flex', navMin ? 'justify-center' : 'justify-between pl-3')}>
+          <div className={cx('mb-3 hidden items-center md:flex', navMin ? 'justify-center' : 'pl-3')}>
             {!navMin && <p className="whitespace-nowrap font-mono text-[11px] uppercase tracking-widest text-white/55">Forecaster</p>}
-            <button type="button" onClick={() => setNavMin(m => !m)} aria-label={navMin ? 'Expand navigation' : 'Collapse navigation'} aria-expanded={!navMin} title={navMin ? 'Expand' : 'Collapse'}
-              className="grid h-8 w-8 place-items-center rounded-md text-white/70 hover:bg-white/10 hover:text-white">{navMin ? <PanelLeftOpen size={16} /> : <PanelLeftClose size={16} />}</button>
           </div>
           <ul className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible">
             {NAV.map(n => {
@@ -1563,7 +1561,7 @@ export function LegacyForecaster({ onHome, notify }: { onHome: () => void; notif
           {section === 'forecasts' && (
             <div className="rise">
               <div className="flex flex-wrap items-end justify-between gap-4">
-                <div><h1 className="text-[28px] font-semibold tracking-tight">My forecasts</h1><p className="mt-1 text-sm text-text-2">Brand, then forecast cycle, then scenarios. Open a cycle to summarise and compare, or a scenario to adjust it.</p></div>
+                <div><h1 className="text-[22px] font-semibold tracking-tight">My forecasts</h1><p className="mt-1 text-sm text-text-2">Brand, then forecast cycle, then scenarios. Open a cycle to summarise and compare, or a scenario to adjust it.</p></div>
                 <button type="button" onClick={() => setOpen(open.size ? new Set() : new Set([...brands.map(b => b.id), ...brands.flatMap(b => b.cycles.map(c => c.id))]))} className="text-sm font-medium text-brand">{open.size ? 'Collapse all' : 'Expand all'}</button>
               </div>
 
@@ -1653,7 +1651,7 @@ export function LegacyForecaster({ onHome, notify }: { onHome: () => void; notif
 
           {section === 'sources' && (
             <div className="rise">
-              <h1 className="text-[28px] font-semibold tracking-tight">Data sources</h1>
+              <h1 className="text-[22px] font-semibold tracking-tight">Data sources</h1>
               <p className="mt-1 text-sm text-text-2">Feeds behind your forecasts and how fresh they are.</p>
               <ul className="mt-6 divide-y divide-border rounded-lg border border-border bg-surface">
                 {FEEDS.map(f => (
@@ -1685,10 +1683,12 @@ export type ForecasterProps = {
   Copilot?: ComponentType<CopilotProps>
   /** A finalised scenario is filed as the brand's submitted version (Forecast AI grounding). */
   onPublished?: (brandId: string, scenario: string) => void
+  /** App-level controls (notifications) for the right end of the workspace top bar. */
+  topRight?: ReactNode
 }
 
 /** Forecaster: brand home → workspace, plus Chat; insights live inside each brand. */
-export default function Forecaster({ section, setSection, notify, insights, setInsights, chat, setChatBrand, onWorkspace, Copilot, onPublished }: ForecasterProps) {
+export default function Forecaster({ section, setSection, notify, insights, setInsights, chat, setChatBrand, onWorkspace, Copilot, onPublished, topRight }: ForecasterProps) {
   const [brand, setBrand] = useState<HomeBrand | null>(null)
   const inWs = section === 'forecasts' && !!brand
   useEffect(() => { onWorkspace?.(inWs) }, [inWs, onWorkspace])
@@ -1696,5 +1696,5 @@ export default function Forecaster({ section, setSection, notify, insights, setI
   if (section === 'chat') return <ForecasterChat {...chat} insights={insights} setInsights={setInsights} notify={notify} />
   if (!brand) return <ForecasterHome onOpen={setBrand} notify={notify} />
   return <ForecastWorkspace key={brand.id} model={brand.model} brand={brand.brand} brandId={brand.id} cycle={brand.cycle} stream={brand.stream} notify={notify}
-    insights={insights} setInsights={setInsights} onAsk={ask} Copilot={Copilot} assistant={chat.assistant.name} onPublished={onPublished} />
+    insights={insights} setInsights={setInsights} onAsk={ask} Copilot={Copilot} assistant={chat.assistant.name} onPublished={onPublished} onBack={() => setBrand(null)} topRight={topRight} />
 }

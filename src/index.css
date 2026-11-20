@@ -27,7 +27,7 @@
   --gray-0:  #FFFFFF;
   --gray-5:  #F9F9FB;          /* derived: app canvas */
   --gray-10: #F5F5F5;          /* brand: alternate surfaces */
-  --gray-20: #ECEDF0;          /* derived: hairline borders, dividers */
+  --gray-20: #E1E3E8;          /* derived: hairline borders, dividers */
   --gray-30: #DCDDE1;          /* derived: input borders, strong dividers */
   --gray-50: #767676;          /* brand: secondary text (AA on white) */
   --gray-70: #4A4A4A;          /* derived: emphasized secondary text */
@@ -192,7 +192,7 @@
 }
 
 @utility workspace-page {
-  @apply mx-auto w-full px-6 py-8;
+  @apply mx-auto w-full px-6 pb-8 pt-6;
 }
 
 @utility workspace-gutter {

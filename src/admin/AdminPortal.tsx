@@ -232,7 +232,7 @@ export default function AdminPortal({ notify, onBack }: { notify: Notify; onBack
     <div className="workspace-page flex flex-1 flex-col">
       <button type="button" onClick={onBack} className="mb-3 flex items-center gap-1 self-start text-sm text-text-2 hover:text-text"><ArrowLeft size={14} />Model library</button>
       <header className="mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div><h1 className="flex items-center gap-2 text-[28px] font-semibold tracking-tight">Admin Portal<span tabIndex={0} role="img" title="Approve access requests and manage who can use the forecaster." aria-label="Approve access requests and manage who can use the forecaster." className="inline-flex cursor-help text-text-3 hover:text-text-2"><Info size={14} /></span></h1></div>
+        <div><h1 className="flex items-center gap-2 text-[22px] font-semibold tracking-tight">Admin Portal<span tabIndex={0} role="img" title="Approve access requests and manage who can use the forecaster." aria-label="Approve access requests and manage who can use the forecaster." className="inline-flex cursor-help text-text-3 hover:text-text-2"><Info size={14} /></span></h1></div>
       </header>
 
       <nav aria-label="Admin sections" className="mb-6 border-b border-border">
